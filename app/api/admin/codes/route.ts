@@ -5,7 +5,7 @@ import { isAllowedReviewUrl } from "../../../../lib/redirect";
 
 const MAX_CODE_LEN = 20;
 const MAX_NAME_LEN = 100;
-const MAX_URL_LEN = 500;
+const MAX_URL_LEN = 2000;
 
 export async function GET() {
   if (!(await isAdminLoggedIn())) {

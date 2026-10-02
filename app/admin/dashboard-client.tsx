@@ -11,11 +11,21 @@ type CardRecord = {
   tapCount?: number;
 };
 
+function generateRandomCode(length = 6): string {
+  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+  let out = "";
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < length; i++) out += chars[arr[i] % chars.length];
+  return out;
+}
+
 export default function AdminDashboard() {
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [code, setCode] = useState("");
   const [storeName, setStoreName] = useState("");
   const [googleReviewUrl, setGoogleReviewUrl] = useState("");
+  const [placeId, setPlaceId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,7 +52,7 @@ export default function AdminDashboard() {
   }, [showSheet]);
 
   function resetForm() {
-    setCode(""); setStoreName(""); setGoogleReviewUrl("");
+    setCode(""); setStoreName(""); setGoogleReviewUrl(""); setPlaceId("");
     setMessage(null); setError(null); setIsEditing(false);
   }
 
@@ -55,6 +65,9 @@ export default function AdminDashboard() {
     setCode(card.code);
     setStoreName(card.storeName);
     setGoogleReviewUrl(card.googleReviewUrl);
+    // Coba ekstrak Place ID dari URL yang ada
+    const match = card.googleReviewUrl.match(/placeid=([^&]+)/);
+    setPlaceId(match ? match[1] : "");
     setMessage(null); setError(null);
     setIsEditing(true);
     setShowSheet(true);
@@ -129,19 +142,32 @@ export default function AdminDashboard() {
     <form onSubmit={handleSubmit}>
       <div className="form-group">
         <label className="label" htmlFor="card-code">Kode Kartu (NFC/QR)</label>
-        <input
-          id="card-code"
-          className="input"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="cth: a8f3k2"
-          maxLength={20}
-          required
-          autoCapitalize="none"
-          autoCorrect="off"
-          readOnly={isEditing}
-          style={isEditing ? { opacity: 0.55, cursor: "not-allowed" } : {}}
-        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            id="card-code"
+            className="input"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="cth: a8f3k2"
+            maxLength={20}
+            required
+            autoCapitalize="none"
+            autoCorrect="off"
+            readOnly={isEditing}
+            style={isEditing ? { opacity: 0.55, cursor: "not-allowed", flex: 1 } : { flex: 1 }}
+          />
+          {!isEditing && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: "0 12px", fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0 }}
+              onClick={() => setCode(generateRandomCode())}
+              title="Generate kode acak"
+            >
+              🎲 Generate
+            </button>
+          )}
+        </div>
         {isEditing && (
           <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
             Kode tidak bisa diubah saat edit.
@@ -163,6 +189,39 @@ export default function AdminDashboard() {
       </div>
 
       <div className="form-group">
+        <label className="label" htmlFor="place-id">
+          Google Place ID
+          <a
+            href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ marginLeft: 8, fontSize: "0.65rem", color: "#A5B4FC", fontWeight: 400 }}
+          >
+            🔍 Cari Place ID ↗
+          </a>
+        </label>
+        <input
+          id="place-id"
+          className="input"
+          value={placeId}
+          onChange={(e) => {
+            const pid = e.target.value.trim();
+            setPlaceId(pid);
+            if (pid.startsWith("ChIJ") || pid.startsWith("Eh")) {
+              setGoogleReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
+            }
+          }}
+          placeholder="ChIJxxxxxxxxxxxxxxxxx"
+          maxLength={200}
+          autoCapitalize="none"
+          autoCorrect="off"
+        />
+        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+          Paste Place ID dari Place ID Finder → URL review otomatis terisi
+        </p>
+      </div>
+
+      <div className="form-group">
         <label className="label" htmlFor="review-url">Link Google Review</label>
         <input
           id="review-url"
@@ -171,13 +230,13 @@ export default function AdminDashboard() {
           value={googleReviewUrl}
           onChange={(e) => setGoogleReviewUrl(e.target.value)}
           placeholder="https://search.google.com/local/writereview?placeid=..."
-          maxLength={500}
+          maxLength={2000}
           required
           autoCapitalize="none"
           autoCorrect="off"
         />
         <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-          Harus berawalan search.google.com atau www.google.com
+          Auto-terisi dari Place ID di atas, atau isi manual.
         </p>
       </div>
 
