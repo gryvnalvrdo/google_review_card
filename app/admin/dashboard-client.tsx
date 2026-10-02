@@ -34,6 +34,8 @@ export default function AdminDashboard() {
   const [showSheet, setShowSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
+  const [copiedNfc, setCopiedNfc] = useState(false);
 
   async function loadCards() {
     const res = await fetch("/api/admin/codes");
@@ -54,6 +56,7 @@ export default function AdminDashboard() {
   function resetForm() {
     setCode(""); setStoreName(""); setGoogleReviewUrl(""); setPlaceId("");
     setMessage(null); setError(null); setIsEditing(false);
+    setSavedCardUrl(null); setCopiedNfc(false);
   }
 
   function openNewForm() {
@@ -93,9 +96,11 @@ export default function AdminDashboard() {
     const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (res.ok) {
+      const cardUrl = `${window.location.origin}/c/${code.trim()}`;
+      setSavedCardUrl(cardUrl);
       setMessage(`✅ "${storeName.trim()}" berhasil ${isEditing ? "diupdate" : "disimpan"}!`);
       await loadCards();
-      setTimeout(closeSheet, 1400);
+      // Jangan auto-close — biarkan user copy URL dulu
     } else {
       setError(data?.error ?? "Gagal menyimpan. Cek kembali datanya.");
     }
@@ -232,18 +237,81 @@ export default function AdminDashboard() {
       {error && <div className="alert alert-error">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
 
-      <button
-        type="submit"
-        className="btn btn-primary"
-        disabled={loading}
-        style={{ width: "100%", justifyContent: "center", padding: "13px 20px", fontSize: "0.95rem" }}
-      >
-        {loading ? (
-          <><div className="spinner" /> Menyimpan...</>
-        ) : (
-          isEditing ? "Update Kartu →" : "Simpan Kartu →"
-        )}
-      </button>
+      {/* NFC URL box — muncul setelah berhasil simpan */}
+      {savedCardUrl && (
+        <div style={{
+          background: "rgba(16,185,129,0.08)",
+          border: "1px solid rgba(16,185,129,0.3)",
+          borderRadius: 12,
+          padding: "14px 16px",
+          marginBottom: 14,
+        }}>
+          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#34D399", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            📱 URL untuk NFC Tools
+          </div>
+          <div style={{
+            fontFamily: "monospace",
+            fontSize: "0.82rem",
+            color: "#F0F0FF",
+            wordBreak: "break-all",
+            background: "rgba(0,0,0,0.3)",
+            padding: "8px 10px",
+            borderRadius: 6,
+            marginBottom: 10,
+            lineHeight: 1.5,
+            userSelect: "all",
+          }}>
+            {savedCardUrl}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(savedCardUrl).then(() => {
+                setCopiedNfc(true);
+                setTimeout(() => setCopiedNfc(false), 3000);
+              });
+            }}
+            style={{
+              width: "100%",
+              padding: "11px",
+              background: copiedNfc ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.15)",
+              border: "1px solid rgba(16,185,129,0.4)",
+              borderRadius: 8,
+              color: "#34D399",
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              transition: "all 0.2s",
+            }}
+          >
+            {copiedNfc ? "✅ Disalin! Buka NFC Tools → paste" : "📋 Salin URL untuk NFC Tools"}
+          </button>
+          <button
+            type="button"
+            onClick={closeSheet}
+            className="btn btn-ghost"
+            style={{ width: "100%", justifyContent: "center", marginTop: 8, fontSize: "0.8rem" }}
+          >
+            Selesai, tutup
+          </button>
+        </div>
+      )}
+
+      {!savedCardUrl && (
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={loading}
+          style={{ width: "100%", justifyContent: "center", padding: "13px 20px", fontSize: "0.95rem" }}
+        >
+          {loading ? (
+            <><div className="spinner" /> Menyimpan...</>
+          ) : (
+            isEditing ? "Update Kartu →" : "Simpan Kartu →"
+          )}
+        </button>
+      )}
     </form>
   );
 
