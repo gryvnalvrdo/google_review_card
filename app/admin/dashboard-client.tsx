@@ -189,52 +189,41 @@ export default function AdminDashboard() {
       </div>
 
       <div className="form-group">
-        <label className="label" htmlFor="place-id">
-          Google Place ID
-          <a
-            href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ marginLeft: 8, fontSize: "0.65rem", color: "#A5B4FC", fontWeight: 400 }}
-          >
-            🔍 Cari Place ID ↗
-          </a>
-        </label>
-        <input
-          id="place-id"
-          className="input"
-          value={placeId}
-          onChange={(e) => {
-            const pid = e.target.value.trim();
-            setPlaceId(pid);
-            if (pid.startsWith("ChIJ") || pid.startsWith("Eh")) {
-              setGoogleReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
-            }
-          }}
-          placeholder="ChIJxxxxxxxxxxxxxxxxx"
-          maxLength={200}
-          autoCapitalize="none"
-          autoCorrect="off"
-        />
-        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
-          Paste Place ID dari Place ID Finder → URL review otomatis terisi
-        </p>
-      </div>
-
-      <div className="form-group">
         <label className="label" htmlFor="review-url">Link Google Review</label>
+        <div style={{
+          background: "rgba(99,102,241,0.08)",
+          border: "1px solid rgba(99,102,241,0.2)",
+          borderRadius: 8,
+          padding: "10px 12px",
+          marginBottom: 8,
+          fontSize: "0.75rem",
+          color: "var(--text-secondary)",
+          lineHeight: 1.6,
+        }}>
+          <strong style={{ color: "#A5B4FC" }}>💡 Cara cepat dari HP:</strong><br />
+          Google Maps → cari toko → tap <em>"Tulis Ulasan"</em> → copy URL → paste di sini.
+        </div>
         <input
           id="review-url"
           className="input"
-          type="url"
           value={googleReviewUrl}
-          onChange={(e) => setGoogleReviewUrl(e.target.value)}
-          placeholder="https://search.google.com/local/writereview?placeid=..."
+          onChange={(e) => {
+            const val = e.target.value;
+            setGoogleReviewUrl(val);
+            const pidMatch = val.match(/placeid=([A-Za-z0-9_-]+)/);
+            if (pidMatch) setPlaceId(pidMatch[1]);
+          }}
+          placeholder="Paste URL dari 'Tulis Ulasan' di Google Maps..."
           maxLength={2000}
           required
           autoCapitalize="none"
           autoCorrect="off"
         />
+        {placeId && (
+          <p style={{ fontSize: "0.7rem", color: "#6EE7B7", marginTop: 4 }}>
+            ✅ Place ID terdeteksi: <code>{placeId}</code>
+          </p>
+        )}
         <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
           Auto-terisi dari Place ID di atas, atau isi manual.
         </p>
