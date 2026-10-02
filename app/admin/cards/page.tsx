@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { id } from "date-fns/locale";
 
 interface CardData {
   code: string;
@@ -71,6 +69,12 @@ export default function CardsPage() {
       alert("Terjadi kesalahan sistem.");
     }
   }
+
+  const formatDate = (d: string) => {
+    return new Date(d).toLocaleDateString("id-ID", {
+      day: "numeric", month: "short", year: "numeric",
+    });
+  };
 
   const filteredCards = cards.filter(c => 
     c.storeName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -175,7 +179,7 @@ export default function CardsPage() {
                     </div>
                   </div>
                   <div style={{ marginTop: 16, fontSize: "0.75rem", color: "#666" }}>
-                    Dibuat: {format(new Date(card.createdAt), "d MMM yyyy", { locale: id })}
+                    Dibuat: {formatDate(card.createdAt)}
                   </div>
                 </div>
               );
