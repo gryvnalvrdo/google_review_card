@@ -14,7 +14,7 @@ const INDEX_KEY = "card:_index";
 
 // Mengambil env vars standar atau nama hasil auto-generate Vercel Integration
 const kvUrl = process.env.KV_REST_API_URL || process.env.KV_REST_API_URL_KV_REST_API_URL;
-const kvToken = process.env.KV_REST_API_TOKEN || process.env.KV_REST_API_URL__REST_API_TOKEN;
+const kvToken = process.env.KV_REST_API_TOKEN || process.env.KV_REST_API_URL_KV_REST_API_TOKEN;
 
 // Fallback in-memory untuk dev lokal tanpa Vercel KV.
 // DATA HILANG tiap restart — jangan dipakai di produksi.
