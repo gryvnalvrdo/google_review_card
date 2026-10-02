@@ -513,11 +513,8 @@ export default function AdminDashboard() {
               <div className="card" style={{ padding: "20px" }}>
                 <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>⚡ Quick Actions</h2>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <button onClick={openNewForm} className="btn" style={{ background: "#10B981", color: "white", flex: 1, minWidth: 140 }}>
-                    ➕ Assign Kartu
-                  </button>
                   <a href="/admin/cards" className="btn" style={{ background: "#374151", color: "white", flex: 1, minWidth: 140, textDecoration: "none", textAlign: "center" }}>
-                    📋 Semua Kartu
+                    📋 Buka Halaman Semua Kartu
                   </a>
                 </div>
               </div>
