@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,16 +80,43 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="label" htmlFor="password">Password Admin</label>
-                <input
-                  id="password"
-                  className="input"
-                  type="password"
-                  placeholder="Masukkan password..."
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    id="password"
+                    className="input"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Masukkan password..."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoFocus
+                    style={{ paddingRight: 44 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    style={{
+                      position: "absolute",
+                      right: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
+                      fontSize: "1.1rem",
+                      padding: 4,
+                      lineHeight: 1,
+                      transition: "color 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+                    title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                  >
+                    {showPassword ? "🙈" : "👁️"}
+                  </button>
+                </div>
               </div>
 
               {error && (
