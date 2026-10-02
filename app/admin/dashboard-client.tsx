@@ -465,6 +465,25 @@ export default function AdminDashboard() {
             ))}
           </div>
 
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+            <a 
+              href="/admin/print" 
+              className="btn" 
+              style={{ 
+                background: "linear-gradient(135deg, #4F46E5, #8B5CF6)", 
+                color: "white", 
+                textDecoration: "none", 
+                padding: "10px 16px", 
+                borderRadius: "8px",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                boxShadow: "0 4px 14px rgba(79,70,229,0.3)"
+              }}
+            >
+              🖨️ Buka Mesin Cetak QR Code
+            </a>
+          </div>
+
           <div className="admin-grid">
             {/* ---- FORM: desktop only ---- */}
             <div className="card desktop-form" style={{ position: "sticky", top: 72 }}>
