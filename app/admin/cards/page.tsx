@@ -8,6 +8,7 @@ interface CardData {
   placeId: string;
   tapCount: number;
   createdAt: string;
+  price?: number;
 }
 
 export default function CardsPage() {
@@ -58,6 +59,7 @@ export default function CardsPage() {
           code: editingCard.code,
           storeName: editingCard.storeName,
           googleReviewUrl: googleReviewUrl,
+          price: editingCard.price ?? 50000,
         }),
       });
       if (res.ok) {
@@ -224,6 +226,16 @@ export default function CardsPage() {
                   type="text" 
                   value={editingCard.placeId} 
                   onChange={e => setEditingCard({...editingCard, placeId: e.target.value})}
+                  required
+                  style={{ width: "100%", padding: 12, borderRadius: 8, background: "#1E1E28", border: "1px solid #4F46E5", color: "white", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", color: "#A5B4FC", fontSize: "0.85rem", marginBottom: 5 }}>Harga Jual (Rp)</label>
+                <input 
+                  type="number" 
+                  value={editingCard.price ?? 50000} 
+                  onChange={e => setEditingCard({...editingCard, price: Number(e.target.value)})}
                   required
                   style={{ width: "100%", padding: 12, borderRadius: 8, background: "#1E1E28", border: "1px solid #4F46E5", color: "white", boxSizing: "border-box" }}
                 />

@@ -9,6 +9,7 @@ type CardRecord = {
   createdAt: string;
   updatedAt?: string;
   tapCount?: number;
+  price?: number;
 };
 
 function generateRandomCode(length = 6): string {
@@ -26,6 +27,7 @@ export default function AdminDashboard() {
   const [storeName, setStoreName] = useState("");
   const [googleReviewUrl, setGoogleReviewUrl] = useState("");
   const [placeId, setPlaceId] = useState("");
+  const [price, setPrice] = useState<number>(50000);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,7 +56,7 @@ export default function AdminDashboard() {
   }, [showSheet]);
 
   function resetForm() {
-    setCode(""); setStoreName(""); setGoogleReviewUrl(""); setPlaceId("");
+    setCode(""); setStoreName(""); setGoogleReviewUrl(""); setPlaceId(""); setPrice(50000);
     setMessage(null); setError(null); setIsEditing(false);
     setSavedCardUrl(null); setCopiedNfc(false);
   }
@@ -71,6 +73,7 @@ export default function AdminDashboard() {
     // Coba ekstrak Place ID dari URL yang ada
     const match = card.googleReviewUrl.match(/placeid=([^&]+)/);
     setPlaceId(match ? match[1] : "");
+    setPrice(card.price ?? 50000);
     setMessage(null); setError(null);
     setIsEditing(true);
     setShowSheet(true);
@@ -91,6 +94,7 @@ export default function AdminDashboard() {
         code: code.trim(),
         storeName: storeName.trim(),
         googleReviewUrl: googleReviewUrl.trim(),
+        price: price,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -241,6 +245,22 @@ export default function AdminDashboard() {
             ✅ URL Review otomatis terbuat!
           </p>
         )}
+      </div>
+
+      <div className="form-group">
+        <label className="label" htmlFor="price">Harga Jual (Rp)</label>
+        <input
+          id="price"
+          type="number"
+          className="input"
+          value={price}
+          onChange={(e) => setPrice(Number(e.target.value))}
+          placeholder="50000"
+          required
+        />
+        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
+          Default: Rp 50.000 (Akan dihitung ke Total Pendapatan).
+        </p>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -450,12 +470,13 @@ export default function AdminDashboard() {
           <div className="stats-grid">
             {[
               { label: "Kartu Aktif", value: cards.length, icon: "💳", color: "#4F46E5" },
-              { label: "Total Tap", value: totalTaps, icon: "👆", color: "#10B981" },
-              { label: "Toko Client", value: cards.length, icon: "🏪", color: "#F59E0B" },
+              { label: "Pendapatan", value: "Rp " + cards.reduce((sum, c) => sum + (c.price ?? 50000), 0).toLocaleString("id-ID"), icon: "💰", color: "#10B981" },
+              { label: "Total Tap", value: totalTaps, icon: "👆", color: "#F59E0B" },
+              { label: "Bulan Ini", value: "Rp " + cards.filter(c => new Date(c.createdAt).getMonth() === new Date().getMonth()).reduce((sum, c) => sum + (c.price ?? 50000), 0).toLocaleString("id-ID"), icon: "📅", color: "#8B5CF6" },
             ].map((s) => (
               <div key={s.label} className="card" style={{ padding: "14px 16px" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: 6 }}>{s.icon}</div>
-                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
                   {s.value}
                 </div>
                 <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 3, lineHeight: 1.3 }}>

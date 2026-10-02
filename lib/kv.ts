@@ -6,6 +6,7 @@ export type CardRecord = {
   googleReviewUrl: string;
   createdAt: string;
   updatedAt: string;
+  price?: number;
 };
 
 const KEY_PREFIX = "card:";

@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
   const code = body?.code?.trim();
   const storeName = body?.storeName?.trim();
   const googleReviewUrl = body?.googleReviewUrl?.trim();
+  const price = typeof body?.price === "number" ? body.price : 50000;
 
   if (!code || !storeName || !googleReviewUrl) {
     return NextResponse.json(
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
     code,
     storeName,
     googleReviewUrl,
+    price,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   });
