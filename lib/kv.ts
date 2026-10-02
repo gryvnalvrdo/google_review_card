@@ -1,4 +1,4 @@
-import { kv as vercelKv } from "@vercel/kv";
+import { createClient } from "@vercel/kv";
 
 export type CardRecord = {
   code: string;
@@ -12,14 +12,20 @@ const KEY_PREFIX = "card:";
 const TAP_PREFIX = "tap:";
 const INDEX_KEY = "card:_index";
 
+// Mengambil env vars standar atau nama hasil auto-generate Vercel Integration
+const kvUrl = process.env.KV_REST_API_URL || process.env.KV_REST_API_URL_KV_REST_API_URL;
+const kvToken = process.env.KV_REST_API_TOKEN || process.env.KV_REST_API_URL__REST_API_TOKEN;
+
 // Fallback in-memory untuk dev lokal tanpa Vercel KV.
 // DATA HILANG tiap restart — jangan dipakai di produksi.
 const memoryStore = new Map<string, CardRecord>();
 const tapStore = new Map<string, number>();
-const hasKv = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
+const hasKv = Boolean(kvUrl && kvToken);
+const vercelKv = hasKv ? createClient({ url: kvUrl!, token: kvToken! }) : null;
 
 export async function getCard(code: string): Promise<CardRecord | null> {
-  if (hasKv) {
+  if (hasKv && vercelKv) {
     const data = await vercelKv.get<CardRecord>(KEY_PREFIX + code);
     return data ?? null;
   }
@@ -27,7 +33,7 @@ export async function getCard(code: string): Promise<CardRecord | null> {
 }
 
 export async function setCard(record: CardRecord): Promise<void> {
-  if (hasKv) {
+  if (hasKv && vercelKv) {
     await vercelKv.set(KEY_PREFIX + record.code, record);
     await vercelKv.sadd(INDEX_KEY, record.code);
     return;
@@ -36,7 +42,7 @@ export async function setCard(record: CardRecord): Promise<void> {
 }
 
 export async function deleteCard(code: string): Promise<void> {
-  if (hasKv) {
+  if (hasKv && vercelKv) {
     await Promise.all([
       vercelKv.del(KEY_PREFIX + code),
       vercelKv.del(TAP_PREFIX + code),
@@ -49,7 +55,7 @@ export async function deleteCard(code: string): Promise<void> {
 }
 
 export async function incrementTapCount(code: string): Promise<void> {
-  if (hasKv) {
+  if (hasKv && vercelKv) {
     await vercelKv.incr(TAP_PREFIX + code);
     return;
   }
@@ -57,7 +63,7 @@ export async function incrementTapCount(code: string): Promise<void> {
 }
 
 export async function listCards(): Promise<(CardRecord & { tapCount: number })[]> {
-  if (hasKv) {
+  if (hasKv && vercelKv) {
     const codes = await vercelKv.smembers<string[]>(INDEX_KEY);
     if (!codes || codes.length === 0) return [];
     const [records, taps] = await Promise.all([
