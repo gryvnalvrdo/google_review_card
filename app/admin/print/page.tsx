@@ -140,7 +140,13 @@ export default function PrintQRCodes() {
                 display: "flex", flexDirection: "column", alignItems: "center", 
                 border: "1px dashed #ccc", padding: "10px", borderRadius: "8px"
               }}>
-                <QRCodeCanvas id={`qr-${c}`} value={url} size={200} level="H" />
+                <QRCodeCanvas 
+                  id={`qr-${c}`} 
+                  value={url} 
+                  size={200} 
+                  level="H" 
+                  style={{ width: "100%", height: "auto", maxWidth: "150px" }}
+                />
                 <div style={{ marginTop: "8px", fontFamily: "monospace", fontSize: "0.9rem", color: "black", fontWeight: "bold" }}>
                   {c}
                 </div>
