@@ -10,12 +10,15 @@
   },
   "dependencies": {
     "@vercel/kv": "^1.0.1",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.2",
     "next": "^14.2.35",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/file-saver": "^2.0.7",
     "@types/node": "26.6.4",
     "@types/react": "19.3.0",
     "typescript": "^5.7.3"

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 function generateRandomCode(length = 6): string {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -16,6 +18,7 @@ export default function PrintQRCodes() {
   const [count, setCount] = useState(10);
   const [codes, setCodes] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState("");
+  const [isZipping, setIsZipping] = useState(false);
 
   useEffect(() => {
     setBaseUrl(window.location.origin);
@@ -33,6 +36,29 @@ export default function PrintQRCodes() {
     window.print();
   }
 
+  async function handleDownloadZip() {
+    setIsZipping(true);
+    const zip = new JSZip();
+    
+    // Cari semua canvas QR code yang ada di layar
+    const canvases = document.querySelectorAll("canvas");
+    
+    canvases.forEach((canvas) => {
+      // Ambil kode dari ID (misal: "qr-a8f3k2" -> "a8f3k2")
+      const code = canvas.id.replace("qr-", "");
+      // Ambil data gambar (base64)
+      const dataUrl = canvas.toDataURL("image/png");
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+      // Masukkan ke dalam file zip
+      zip.file(`QRCode_${code}.png`, base64Data, { base64: true });
+    });
+
+    // Generate dan download file zip
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, "QR_Codes_NFC_Cards.zip");
+    setIsZipping(false);
+  }
+
   return (
     <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "1200px", margin: "0 auto" }}>
       {/* Bagian Kontrol (Tidak akan ikut terprint) */}
@@ -41,10 +67,10 @@ export default function PrintQRCodes() {
         border: "1px solid rgba(255,255,255,0.1)", color: "white" 
       }}>
         <h1 style={{ marginTop: 0 }}>🖨️ Mesin Cetak QR Code Massal</h1>
-        <p style={{ color: "#A5B4FC" }}>Generate puluhan QR Code dalam 1 detik untuk diprint di kertas stiker.</p>
+        <p style={{ color: "#A5B4FC" }}>Generate puluhan QR Code untuk diprint atau didownload sebagai gambar PNG.</p>
         
-        <div style={{ display: "flex", gap: "10px", marginTop: "20px", alignItems: "center" }}>
-          <label>Jumlah yang mau dicetak:</label>
+        <div style={{ display: "flex", gap: "10px", marginTop: "20px", alignItems: "center", flexWrap: "wrap" }}>
+          <label>Jumlah yang mau dicetak/didownload:</label>
           <input 
             type="number" 
             value={count} 
@@ -67,15 +93,28 @@ export default function PrintQRCodes() {
           </button>
           
           {codes.length > 0 && (
-            <button 
-              onClick={handlePrint}
-              style={{ 
-                padding: "10px 20px", borderRadius: "8px", border: "none", 
-                background: "#10B981", color: "white", cursor: "pointer", fontWeight: "bold", marginLeft: "auto"
-              }}
-            >
-              🖨️ Print Sekarang (CTRL+P)
-            </button>
+            <div style={{ display: "flex", gap: 10, marginLeft: "auto", flexWrap: "wrap" }}>
+              <button 
+                onClick={handleDownloadZip}
+                disabled={isZipping}
+                style={{ 
+                  padding: "10px 20px", borderRadius: "8px", border: "none", 
+                  background: "#F59E0B", color: "white", cursor: "pointer", fontWeight: "bold"
+                }}
+              >
+                {isZipping ? "⏳ Memproses ZIP..." : "📁 Download sbg PNG (ZIP)"}
+              </button>
+              
+              <button 
+                onClick={handlePrint}
+                style={{ 
+                  padding: "10px 20px", borderRadius: "8px", border: "none", 
+                  background: "#10B981", color: "white", cursor: "pointer", fontWeight: "bold"
+                }}
+              >
+                🖨️ Print Langsung (CTRL+P)
+              </button>
+            </div>
           )}
         </div>
         
@@ -101,8 +140,8 @@ export default function PrintQRCodes() {
                 display: "flex", flexDirection: "column", alignItems: "center", 
                 border: "1px dashed #ccc", padding: "10px", borderRadius: "8px"
               }}>
-                <QRCodeSVG value={url} size={80} level="H" />
-                <div style={{ marginTop: "8px", fontFamily: "monospace", fontSize: "0.7rem", color: "black", fontWeight: "bold" }}>
+                <QRCodeCanvas id={`qr-${c}`} value={url} size={200} level="H" />
+                <div style={{ marginTop: "8px", fontFamily: "monospace", fontSize: "0.9rem", color: "black", fontWeight: "bold" }}>
                   {c}
                 </div>
               </div>
