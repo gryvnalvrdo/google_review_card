@@ -18,10 +18,10 @@ export default function CardsPage() {
 
   async function fetchCards() {
     try {
-      const res = await fetch("/api/admin/cards");
+      const res = await fetch("/api/admin/codes");
       if (res.ok) {
         const data = await res.json();
-        setCards(data);
+        setCards(data.cards ?? []);
       }
     } catch (e) {
       console.error(e);
@@ -49,13 +49,15 @@ export default function CardsPage() {
     if (!editingCard) return;
 
     try {
-      const res = await fetch("/api/admin/cards", {
-        method: "PUT",
+      // Re-generate the google review URL from the place ID
+      const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${editingCard.placeId}`;
+      const res = await fetch("/api/admin/codes", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: editingCard.code,
           storeName: editingCard.storeName,
-          placeId: editingCard.placeId,
+          googleReviewUrl: googleReviewUrl,
         }),
       });
       if (res.ok) {
