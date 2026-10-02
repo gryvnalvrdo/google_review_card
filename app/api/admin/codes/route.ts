@@ -3,6 +3,10 @@ import { isAdminLoggedIn } from "../../../../lib/auth";
 import { getCard, setCard, listCards } from "../../../../lib/kv";
 import { isAllowedReviewUrl } from "../../../../lib/redirect";
 
+const MAX_CODE_LEN = 20;
+const MAX_NAME_LEN = 100;
+const MAX_URL_LEN = 500;
+
 export async function GET() {
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,12 +32,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Validasi panjang input
+  if (code.length > MAX_CODE_LEN) {
+    return NextResponse.json({ error: `Kode terlalu panjang (maks ${MAX_CODE_LEN} karakter).` }, { status: 400 });
+  }
+  if (storeName.length > MAX_NAME_LEN) {
+    return NextResponse.json({ error: `Nama toko terlalu panjang (maks ${MAX_NAME_LEN} karakter).` }, { status: 400 });
+  }
+  if (googleReviewUrl.length > MAX_URL_LEN) {
+    return NextResponse.json({ error: `URL terlalu panjang (maks ${MAX_URL_LEN} karakter).` }, { status: 400 });
+  }
+
   if (!isAllowedReviewUrl(googleReviewUrl)) {
     return NextResponse.json(
-      {
-        error:
-          "Link harus berupa link Google Review resmi (search.google.com atau google.com). Link lain ditolak demi keamanan.",
-      },
+      { error: "Link harus berupa link Google Review resmi (search.google.com atau google.com). Link lain ditolak demi keamanan." },
       { status: 400 }
     );
   }

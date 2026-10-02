@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCard } from "../../../lib/kv";
+import { getCard, incrementTapCount } from "../../../lib/kv";
 import { isAllowedReviewUrl } from "../../../lib/redirect";
 
 export async function GET(
@@ -9,8 +9,6 @@ export async function GET(
   const card = await getCard(params.code);
 
   if (!card || !isAllowedReviewUrl(card.googleReviewUrl)) {
-    // Kode belum pernah di-assign (atau datanya rusak) -> jangan error,
-    // tampilkan halaman netral.
     return new NextResponse(
       `<!doctype html>
       <html lang="id">
@@ -92,6 +90,9 @@ export async function GET(
       { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
   }
+
+  // Hitung tap secara async — jangan delay redirect
+  incrementTapCount(params.code);
 
   return NextResponse.redirect(card.googleReviewUrl, { status: 302 });
 }

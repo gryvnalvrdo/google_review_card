@@ -9,11 +9,13 @@ export type CardRecord = {
 };
 
 const KEY_PREFIX = "card:";
-const INDEX_KEY = "card:_index"; // set berisi semua kode yang pernah di-assign
+const TAP_PREFIX = "tap:";
+const INDEX_KEY = "card:_index";
 
-// Fallback in-memory supaya `npm run dev` tetap bisa dicoba tanpa Vercel KV
-// terkoneksi. DATA HILANG tiap restart server — jangan dipakai di produksi.
+// Fallback in-memory untuk dev lokal tanpa Vercel KV.
+// DATA HILANG tiap restart — jangan dipakai di produksi.
 const memoryStore = new Map<string, CardRecord>();
+const tapStore = new Map<string, number>();
 const hasKv = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
 export async function getCard(code: string): Promise<CardRecord | null> {
@@ -33,12 +35,43 @@ export async function setCard(record: CardRecord): Promise<void> {
   memoryStore.set(record.code, record);
 }
 
-export async function listCards(): Promise<CardRecord[]> {
+export async function deleteCard(code: string): Promise<void> {
+  if (hasKv) {
+    await Promise.all([
+      vercelKv.del(KEY_PREFIX + code),
+      vercelKv.del(TAP_PREFIX + code),
+      vercelKv.srem(INDEX_KEY, code),
+    ]);
+    return;
+  }
+  memoryStore.delete(code);
+  tapStore.delete(code);
+}
+
+export async function incrementTapCount(code: string): Promise<void> {
+  if (hasKv) {
+    await vercelKv.incr(TAP_PREFIX + code);
+    return;
+  }
+  tapStore.set(code, (tapStore.get(code) ?? 0) + 1);
+}
+
+export async function listCards(): Promise<(CardRecord & { tapCount: number })[]> {
   if (hasKv) {
     const codes = await vercelKv.smembers<string[]>(INDEX_KEY);
     if (!codes || codes.length === 0) return [];
-    const records = await Promise.all(codes.map((c) => getCard(c)));
-    return records.filter((r): r is CardRecord => r !== null);
+    const [records, taps] = await Promise.all([
+      Promise.all(codes.map((c) => getCard(c))),
+      Promise.all(codes.map((c) =>
+        vercelKv.get<number>(TAP_PREFIX + c).then((v) => v ?? 0)
+      )),
+    ]);
+    return records
+      .map((r, i) => (r ? { ...r, tapCount: taps[i] } : null))
+      .filter((r): r is CardRecord & { tapCount: number } => r !== null);
   }
-  return Array.from(memoryStore.values());
+  return Array.from(memoryStore.values()).map((r) => ({
+    ...r,
+    tapCount: tapStore.get(r.code) ?? 0,
+  }));
 }

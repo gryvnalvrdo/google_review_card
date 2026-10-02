@@ -4,13 +4,14 @@ import {
   ADMIN_COOKIE_NAME,
   ADMIN_COOKIE_MAX_AGE_SECONDS,
   isRateLimited,
+  verifyPassword,
 } from "../../../../lib/auth";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "unknown";
   if (isRateLimited(ip)) {
     return NextResponse.json(
-      { error: "Terlalu banyak percobaan, coba lagi nanti." },
+      { error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit." },
       { status: 429 }
     );
   }
@@ -18,7 +19,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const password = body?.password;
 
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
+  if (!password || typeof password !== "string" || password.length > 200) {
+    return NextResponse.json({ error: "Password tidak valid." }, { status: 400 });
+  }
+
+  // Timing-safe comparison — tidak menggunakan === langsung
+  if (!verifyPassword(password)) {
     return NextResponse.json({ error: "Password salah." }, { status: 401 });
   }
 

@@ -8,6 +8,7 @@ type CardRecord = {
   googleReviewUrl: string;
   createdAt: string;
   updatedAt?: string;
+  tapCount?: number;
 };
 
 export default function AdminDashboard() {
@@ -20,6 +21,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [showSheet, setShowSheet] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   async function loadCards() {
     const res = await fetch("/api/admin/codes");
@@ -31,27 +35,65 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadCards(); }, []);
 
+  // Lock body scroll when sheet open
+  useEffect(() => {
+    document.body.style.overflow = showSheet ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [showSheet]);
+
+  function resetForm() {
+    setCode(""); setStoreName(""); setGoogleReviewUrl("");
+    setMessage(null); setError(null); setIsEditing(false);
+  }
+
+  function openNewForm() {
+    resetForm();
+    setShowSheet(true);
+  }
+
+  function openEditForm(card: CardRecord) {
+    setCode(card.code);
+    setStoreName(card.storeName);
+    setGoogleReviewUrl(card.googleReviewUrl);
+    setMessage(null); setError(null);
+    setIsEditing(true);
+    setShowSheet(true);
+  }
+
+  function closeSheet() {
+    setShowSheet(false);
+    setTimeout(resetForm, 350); // after animation
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
-    setError(null);
-    setLoading(true);
+    setMessage(null); setError(null); setLoading(true);
     const res = await fetch("/api/admin/codes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code.trim(), storeName: storeName.trim(), googleReviewUrl: googleReviewUrl.trim() }),
+      body: JSON.stringify({
+        code: code.trim(),
+        storeName: storeName.trim(),
+        googleReviewUrl: googleReviewUrl.trim(),
+      }),
     });
     const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (res.ok) {
-      setMessage(`Kode "${code.trim()}" berhasil disimpan untuk toko "${storeName.trim()}".`);
-      setCode("");
-      setStoreName("");
-      setGoogleReviewUrl("");
-      loadCards();
+      setMessage(`✅ "${storeName.trim()}" berhasil ${isEditing ? "diupdate" : "disimpan"}!`);
+      await loadCards();
+      setTimeout(closeSheet, 1400);
     } else {
       setError(data?.error ?? "Gagal menyimpan. Cek kembali datanya.");
     }
+  }
+
+  async function handleDelete(cardCode: string) {
+    const res = await fetch(`/api/admin/codes/${cardCode}`, { method: "DELETE" });
+    if (res.ok) {
+      setCards((prev) => prev.filter((c) => c.code !== cardCode));
+    }
+    setDeleteConfirm(null);
   }
 
   async function handleLogout() {
@@ -66,12 +108,96 @@ export default function AdminDashboard() {
     });
   }
 
-  const filtered = cards.filter(c =>
-    c.storeName.toLowerCase().includes(search.toLowerCase()) ||
-    c.code.toLowerCase().includes(search.toLowerCase())
+  function formatDate(iso?: string) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString("id-ID", {
+      day: "numeric", month: "short", year: "numeric",
+    });
+  }
+
+  const filtered = cards.filter(
+    (c) =>
+      c.storeName.toLowerCase().includes(search.toLowerCase()) ||
+      c.code.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalTaps = cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0);
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  // ---- Form content (shared between desktop sidebar & mobile sheet) ----
+  const formContent = (
+    <form onSubmit={handleSubmit}>
+      <div className="form-group">
+        <label className="label" htmlFor="card-code">Kode Kartu (NFC/QR)</label>
+        <input
+          id="card-code"
+          className="input"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="cth: a8f3k2"
+          maxLength={20}
+          required
+          autoCapitalize="none"
+          autoCorrect="off"
+          readOnly={isEditing}
+          style={isEditing ? { opacity: 0.55, cursor: "not-allowed" } : {}}
+        />
+        {isEditing && (
+          <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+            Kode tidak bisa diubah saat edit.
+          </p>
+        )}
+      </div>
+
+      <div className="form-group">
+        <label className="label" htmlFor="store-name">Nama Toko</label>
+        <input
+          id="store-name"
+          className="input"
+          value={storeName}
+          onChange={(e) => setStoreName(e.target.value)}
+          placeholder="cth: Kedai Kopi Sudirman"
+          maxLength={100}
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label className="label" htmlFor="review-url">Link Google Review</label>
+        <input
+          id="review-url"
+          className="input"
+          type="url"
+          value={googleReviewUrl}
+          onChange={(e) => setGoogleReviewUrl(e.target.value)}
+          placeholder="https://search.google.com/local/writereview?placeid=..."
+          maxLength={500}
+          required
+          autoCapitalize="none"
+          autoCorrect="off"
+        />
+        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+          Harus berawalan search.google.com atau www.google.com
+        </p>
+      </div>
+
+      {error && <div className="alert alert-error">{error}</div>}
+      {message && <div className="alert alert-success">{message}</div>}
+
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={loading}
+        style={{ width: "100%", justifyContent: "center", padding: "13px 20px", fontSize: "0.95rem" }}
+      >
+        {loading ? (
+          <><div className="spinner" /> Menyimpan...</>
+        ) : (
+          isEditing ? "Update Kartu →" : "Simpan Kartu →"
+        )}
+      </button>
+    </form>
+  );
 
   return (
     <>
@@ -80,241 +206,312 @@ export default function AdminDashboard() {
         <div className="gradient-blob blob-2" />
       </div>
 
+      {/* Mobile bottom sheet backdrop */}
+      <div
+        className={`sheet-backdrop ${showSheet ? "open" : ""}`}
+        onClick={closeSheet}
+      />
+
+      {/* Mobile bottom sheet */}
+      <div className={`sheet ${showSheet ? "open" : ""}`}>
+        <div className="sheet-handle" />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+            {isEditing ? "✏️ Edit Kartu" : "➕ Assign Kartu ke Toko"}
+          </h2>
+          <button onClick={closeSheet} className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+            ✕ Tutup
+          </button>
+        </div>
+        {formContent}
+      </div>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, backdropFilter: "blur(4px)" }}
+            onClick={() => setDeleteConfirm(null)}
+          />
+          <div style={{
+            position: "fixed",
+            top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 301,
+            background: "#16161F",
+            border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: 16,
+            padding: "28px 24px",
+            width: "min(90vw, 360px)",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "2rem", marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Hapus Kartu?</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: 20 }}>
+              Kode <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteConfirm}</span> akan
+              dihapus permanen. Link kartu ini tidak akan aktif lagi.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Batal
+              </button>
+              <button
+                className="btn btn-danger"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => handleDelete(deleteConfirm)}
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       <div style={{ position: "relative", zIndex: 1, minHeight: "100vh" }}>
-        {/* Header */}
+        {/* ---- Header ---- */}
         <header style={{
           borderBottom: "1px solid var(--border)",
-          background: "rgba(10,10,15,0.8)",
-          backdropFilter: "blur(12px)",
+          background: "rgba(10,10,15,0.85)",
+          backdropFilter: "blur(16px)",
           position: "sticky",
           top: 0,
           zIndex: 10,
         }}>
           <div style={{
-            maxWidth: 900,
+            maxWidth: 980,
             margin: "0 auto",
-            padding: "14px 24px",
+            padding: "12px 20px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 12,
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{
-                width: 36, height: 36,
+                width: 34, height: 34,
                 background: "linear-gradient(135deg, #4F46E5, #8B5CF6)",
                 borderRadius: 10,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "1rem",
+                fontSize: "0.9rem", flexShrink: 0,
               }}>⭐</div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-primary)" }}>
-                  Review Card Admin
+                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--text-primary)", lineHeight: 1.2 }}>
+                  Review Card
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Hantic</div>
+                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Admin Panel</div>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span className="badge badge-green">● Online</span>
-              <button onClick={handleLogout} className="btn btn-ghost" style={{ padding: "7px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="badge badge-green" style={{ fontSize: "0.65rem" }}>● Online</span>
+              <button
+                onClick={handleLogout}
+                className="btn btn-ghost"
+                style={{ padding: "7px 14px", fontSize: "0.8rem" }}
+              >
                 Logout
               </button>
             </div>
           </div>
         </header>
 
-        <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
+        {/* ---- Main ---- */}
+        <main style={{ maxWidth: 980, margin: "0 auto", padding: "20px 16px 100px" }}>
 
-          {/* Stats row */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 32 }}>
+          {/* Stats */}
+          <div className="stats-grid">
             {[
-              { label: "Total Kartu Aktif", value: cards.length, icon: "💳", color: "#4F46E5" },
-              { label: "Siap Redirect", value: cards.length, icon: "⚡", color: "#10B981" },
+              { label: "Kartu Aktif", value: cards.length, icon: "💳", color: "#4F46E5" },
+              { label: "Total Tap", value: totalTaps, icon: "👆", color: "#10B981" },
+              { label: "Toko Client", value: cards.length, icon: "🏪", color: "#F59E0B" },
             ].map((s) => (
-              <div key={s.label} className="card" style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{
-                  width: 44, height: 44,
-                  background: `${s.color}22`,
-                  border: `1px solid ${s.color}44`,
-                  borderRadius: 12,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "1.2rem", flexShrink: 0,
-                }}>
-                  {s.icon}
+              <div key={s.label} className="card" style={{ padding: "14px 16px" }}>
+                <div style={{ fontSize: "1.3rem", marginBottom: 6 }}>{s.icon}</div>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
+                  {s.value}
                 </div>
-                <div>
-                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4 }}>{s.label}</div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 3, lineHeight: 1.3 }}>
+                  {s.label}
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 20, alignItems: "start" }}>
-
-            {/* === FORM ASSIGN === */}
-            <div className="card">
-              <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
-                Assign Kartu ke Toko
+          <div className="admin-grid">
+            {/* ---- FORM: desktop only ---- */}
+            <div className="card desktop-form" style={{ position: "sticky", top: 72 }}>
+              <h2 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 4, color: "var(--text-primary)" }}>
+                {isEditing ? "✏️ Edit Kartu" : "Assign Kartu ke Toko"}
               </h2>
-              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 20 }}>
-                Isi kode kartu, nama toko, dan link Google Review-nya.
+              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.5 }}>
+                {isEditing
+                  ? "Ubah nama toko atau link Google Review."
+                  : "Tautkan kode kartu NFC/QR ke toko client."}
               </p>
-
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label className="label" htmlFor="card-code">Kode Kartu (NFC/QR)</label>
-                  <input
-                    id="card-code"
-                    className="input"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="cth: a8f3k2"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="label" htmlFor="store-name">Nama Toko</label>
-                  <input
-                    id="store-name"
-                    className="input"
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    placeholder="cth: Kedai Kopi Sudirman"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="label" htmlFor="review-url">Link Google Review</label>
-                  <input
-                    id="review-url"
-                    className="input"
-                    type="url"
-                    value={googleReviewUrl}
-                    onChange={(e) => setGoogleReviewUrl(e.target.value)}
-                    placeholder="https://search.google.com/local/writereview?placeid=..."
-                    required
-                  />
-                  <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
-                    Harus berawalan search.google.com atau www.google.com
-                  </p>
-                </div>
-
-                {error && <div className="alert alert-error">⚠️ {error}</div>}
-                {message && <div className="alert alert-success">✅ {message}</div>}
-
+              {formContent}
+              {isEditing && (
                 <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={loading}
-                  style={{ width: "100%", justifyContent: "center", marginTop: 4 }}
+                  onClick={resetForm}
+                  className="btn btn-ghost"
+                  style={{ width: "100%", justifyContent: "center", marginTop: 8, fontSize: "0.8rem" }}
                 >
-                  {loading ? <><div className="spinner" /> Menyimpan...</> : "Simpan Kartu →"}
+                  ✕ Batal Edit
                 </button>
-              </form>
+              )}
             </div>
 
-            {/* === DAFTAR KARTU === */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div className="card" style={{ padding: "16px 20px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+            {/* ---- CARD LIST ---- */}
+            <div>
+              <div className="card" style={{ padding: "16px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                  <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
                     Kartu Aktif
-                    <span className="badge badge-purple" style={{ marginLeft: 10 }}>{cards.length}</span>
+                    <span className="badge badge-purple">{cards.length}</span>
                   </h2>
+                  <button
+                    onClick={loadCards}
+                    className="btn btn-ghost"
+                    style={{ padding: "5px 12px", fontSize: "0.75rem" }}
+                  >
+                    ↻ Refresh
+                  </button>
                 </div>
+
                 <input
                   className="input"
-                  placeholder="🔍 Cari toko atau kode kartu..."
+                  placeholder="🔍 Cari nama toko atau kode..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   style={{ marginBottom: 14 }}
                 />
 
-                {filtered.length === 0 && (
+                {filtered.length === 0 ? (
                   <div style={{
                     textAlign: "center",
-                    padding: "32px 16px",
+                    padding: "40px 16px",
                     color: "var(--text-muted)",
                     fontSize: "0.875rem",
+                    lineHeight: 1.7,
                   }}>
                     {cards.length === 0
-                      ? "💳 Belum ada kartu yang di-assign.\nGunakan form di samping untuk menambahkan."
+                      ? <>💳<br />Belum ada kartu aktif.<br /><span style={{ fontSize: "0.8rem" }}>Tekan <strong>+</strong> untuk assign kartu pertama.</span></>
                       : "Tidak ada hasil pencarian."}
                   </div>
-                )}
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 480, overflowY: "auto" }}>
-                  {filtered.map((c) => {
-                    const cardUrl = `${baseUrl}/c/${c.code}`;
-                    return (
-                      <div key={c.code} style={{
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 10,
-                        padding: "14px 16px",
-                        transition: "border-color 0.2s, background 0.2s",
-                      }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(99,102,241,0.4)")}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
-                      >
-                        {/* Store name + badge */}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                          <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--text-primary)" }}>
-                            {c.storeName}
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {filtered.map((c) => {
+                      const cardUrl = `${baseUrl}/c/${c.code}`;
+                      return (
+                        <div key={c.code} className="card-item">
+                          {/* Row 1: Nama + badges */}
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--text-primary)", lineHeight: 1.3 }}>
+                              {c.storeName}
+                            </div>
+                            <div style={{ display: "flex", gap: 5, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                              <span className="badge badge-green" style={{ fontSize: "0.62rem" }}>Aktif</span>
+                              {(c.tapCount ?? 0) > 0 && (
+                                <span className="badge badge-orange" style={{ fontSize: "0.62rem" }}>
+                                  👆 {c.tapCount}×
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <span className="badge badge-green" style={{ fontSize: "0.65rem" }}>Aktif</span>
-                        </div>
 
-                        {/* Code + copy */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                          <span style={{
-                            fontFamily: "monospace",
-                            fontSize: "0.8rem",
-                            background: "rgba(99,102,241,0.15)",
-                            color: "#A5B4FC",
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                          }}>
-                            {c.code}
-                          </span>
-                          <button
-                            className="copy-btn"
-                            title="Salin URL kartu"
-                            onClick={() => copyToClipboard(cardUrl, c.code + "-url")}
+                          {/* Row 2: kode + copy URL */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                            <span style={{
+                              fontFamily: "monospace",
+                              fontSize: "0.82rem",
+                              background: "rgba(99,102,241,0.15)",
+                              color: "#A5B4FC",
+                              padding: "2px 9px",
+                              borderRadius: 5,
+                              letterSpacing: "0.04em",
+                            }}>
+                              {c.code}
+                            </span>
+                            <button
+                              className="copy-btn"
+                              onClick={() => copyToClipboard(cardUrl, c.code + "-url")}
+                            >
+                              {copiedCode === c.code + "-url" ? "✅ Disalin!" : "📋 Salin URL"}
+                            </button>
+                          </div>
+
+                          {/* Row 3: Link Google Review */}
+                          <a
+                            href={c.googleReviewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: "0.72rem",
+                              color: "var(--text-muted)",
+                              wordBreak: "break-all",
+                              textDecoration: "none",
+                              display: "block",
+                              lineHeight: 1.5,
+                              marginBottom: 12,
+                              transition: "color 0.2s",
+                            }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "#A5B4FC")}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
                           >
-                            {copiedCode === c.code + "-url" ? "✅ Disalin!" : "📋 Salin URL"}
-                          </button>
-                        </div>
+                            🔗 {c.googleReviewUrl.length > 60
+                              ? c.googleReviewUrl.slice(0, 60) + "…"
+                              : c.googleReviewUrl}
+                          </a>
 
-                        {/* Google Review URL */}
-                        <a
-                          href={c.googleReviewUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: "0.73rem",
-                            color: "var(--text-muted)",
-                            wordBreak: "break-all",
-                            textDecoration: "none",
-                            display: "block",
-                            lineHeight: 1.4,
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.color = "#A5B4FC")}
-                          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
-                        >
-                          🔗 {c.googleReviewUrl.length > 55 ? c.googleReviewUrl.slice(0, 55) + "..." : c.googleReviewUrl}
-                        </a>
-                      </div>
-                    );
-                  })}
-                </div>
+                          {/* Row 4: Tanggal + action buttons */}
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            flexWrap: "wrap",
+                            gap: 8,
+                            paddingTop: 10,
+                            borderTop: "1px solid var(--border)",
+                          }}>
+                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                              {c.updatedAt
+                                ? `📅 ${formatDate(c.updatedAt)}`
+                                : formatDate(c.createdAt)}
+                            </span>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button
+                                className="btn btn-ghost"
+                                style={{ padding: "6px 14px", fontSize: "0.75rem", minHeight: 36 }}
+                                onClick={() => openEditForm(c)}
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                className="btn btn-danger"
+                                style={{ padding: "6px 14px", fontSize: "0.75rem", minHeight: 36 }}
+                                onClick={() => setDeleteConfirm(c.code)}
+                              >
+                                🗑️ Hapus
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </main>
       </div>
+
+      {/* Mobile FAB */}
+      <button className="fab" onClick={openNewForm} title="Assign kartu baru">
+        +
+      </button>
     </>
   );
 }
