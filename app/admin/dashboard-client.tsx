@@ -144,6 +144,22 @@ export default function AdminDashboard() {
   );
 
   const totalTaps = cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0);
+
+  const monthlyRevenueObj = cards.reduce((acc, card) => {
+    const d = new Date(card.createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    acc[key] = (acc[key] || 0) + (card.price ?? 50000);
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const sortedMonthKeys = Object.keys(monthlyRevenueObj).sort((a, b) => b.localeCompare(a)).slice(0, 5);
+
+  const formatMonthKey = (key: string) => {
+    const [y, m] = key.split("-");
+    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return date.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  };
+
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   // ---- Form content (shared between desktop sidebar & mobile sheet) ----
@@ -565,6 +581,29 @@ export default function AdminDashboard() {
                         </div>
                         <div style={{ background: "rgba(16,185,129,0.15)", color: "#10B981", padding: "4px 10px", borderRadius: 12, fontSize: "0.85rem", fontWeight: 700 }}>
                           👆 {c.tapCount || 0}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* MONTHLY REVENUE */}
+              <div className="card" style={{ padding: "20px" }}>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
+                  📊 Pendapatan Bulanan
+                </h2>
+                {sortedMonthKeys.length === 0 ? (
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada data penjualan.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {sortedMonthKeys.map((key) => (
+                      <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
+                        <div style={{ fontWeight: 600, color: "white", fontSize: "0.9rem" }}>
+                          {formatMonthKey(key)}
+                        </div>
+                        <div style={{ color: "#10B981", fontWeight: 700, fontSize: "0.95rem" }}>
+                          Rp {monthlyRevenueObj[key].toLocaleString("id-ID")}
                         </div>
                       </div>
                     ))}

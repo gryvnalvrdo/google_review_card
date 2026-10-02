@@ -125,65 +125,73 @@ export default function CardsPage() {
               const url = `https://search.google.com/local/writereview?placeid=${card.placeId}`;
               return (
                 <div key={card.code} style={{ 
-                  background: "#1E1E28", padding: 16, borderRadius: 12, 
-                  border: "1px solid rgba(255,255,255,0.05)"
+                  background: "#1E1E28", padding: 20, borderRadius: 16, 
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  display: "flex", flexDirection: "column", gap: 12
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <h3 style={{ margin: "0 0 10px 0", color: "white", fontSize: "1.1rem" }}>{card.storeName}</h3>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <h3 style={{ margin: "0 0 8px 0", color: "white", fontSize: "1.2rem", fontWeight: 700 }}>{card.storeName}</h3>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <span style={{ 
-                          background: "#2A2A35", color: "#A5B4FC", padding: "4px 8px", 
-                          borderRadius: 6, fontSize: "0.8rem", fontFamily: "monospace" 
+                          background: "rgba(99,102,241,0.15)", color: "#A5B4FC", padding: "4px 10px", 
+                          borderRadius: 8, fontSize: "0.8rem", fontFamily: "monospace", border: "1px solid rgba(99,102,241,0.2)"
                         }}>
                           {card.code}
                         </span>
                         <span style={{ 
-                          background: "rgba(16, 185, 129, 0.2)", color: "#10B981", 
-                          padding: "4px 8px", borderRadius: 6, fontSize: "0.8rem", fontWeight: "bold" 
+                          background: "rgba(16, 185, 129, 0.15)", color: "#34D399", 
+                          padding: "4px 10px", borderRadius: 8, fontSize: "0.8rem", fontWeight: "bold", border: "1px solid rgba(16,185,129,0.2)"
                         }}>
                           Aktif
                         </span>
                         <span style={{ 
-                          background: "rgba(245, 158, 11, 0.2)", color: "#F59E0B", 
-                          padding: "4px 8px", borderRadius: 6, fontSize: "0.8rem", fontWeight: "bold" 
+                          background: "rgba(245, 158, 11, 0.2)", color: "#FCD34D", 
+                          padding: "4px 10px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 800, border: "1px solid rgba(245,158,11,0.3)"
                         }}>
-                          👆 {card.tapCount}x
+                          👆 {card.tapCount} Tap
                         </span>
-                      </div>
-                      <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
-                        <a href={url} target="_blank" rel="noreferrer" style={{ 
-                          color: "#A5B4FC", fontSize: "0.85rem", textDecoration: "none", 
-                          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "250px", display: "inline-block"
-                        }}>
-                          🔗 {url}
-                        </a>
                       </div>
                     </div>
                     
                     <div style={{ display: "flex", gap: 8 }}>
                       <button 
                         onClick={() => setEditingCard(card)}
+                        title="Edit"
                         style={{ 
-                          background: "rgba(255,255,255,0.1)", color: "white", border: "none", 
-                          padding: "8px 12px", borderRadius: 6, cursor: "pointer", fontSize: "0.85rem" 
+                          background: "rgba(255,255,255,0.05)", color: "white", border: "1px solid rgba(255,255,255,0.1)", 
+                          width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: "1rem",
+                          display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s"
                         }}
                       >
-                        ✏️ Edit
+                        ✏️
                       </button>
                       <button 
                         onClick={() => handleDelete(card.code)}
+                        title="Hapus"
                         style={{ 
-                          background: "rgba(239, 68, 68, 0.2)", color: "#EF4444", border: "none", 
-                          padding: "8px 12px", borderRadius: 6, cursor: "pointer", fontSize: "0.85rem" 
+                          background: "rgba(239, 68, 68, 0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)", 
+                          width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: "1rem",
+                          display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s"
                         }}
                       >
-                        🗑️ Hapus
+                        🗑️
                       </button>
                     </div>
                   </div>
-                  <div style={{ marginTop: 16, fontSize: "0.75rem", color: "#666" }}>
-                    Dibuat: {formatDate(card.createdAt)}
+                  
+                  <div style={{ background: "rgba(0,0,0,0.2)", padding: "10px 14px", borderRadius: 8 }}>
+                    <a href={url} target="_blank" rel="noreferrer" style={{ 
+                      color: "#A5B4FC", fontSize: "0.85rem", textDecoration: "none", 
+                      wordBreak: "break-all", display: "inline-block"
+                    }}>
+                      🔗 {url}
+                    </a>
+                  </div>
+                  
+                  <div style={{ fontSize: "0.75rem", color: "#666", display: "flex", justifyContent: "space-between" }}>
+                    <span>Dibuat: {formatDate(card.createdAt)}</span>
+                    {card.price && <span>Harga: Rp {card.price.toLocaleString("id-ID")}</span>}
                   </div>
                 </div>
               );
