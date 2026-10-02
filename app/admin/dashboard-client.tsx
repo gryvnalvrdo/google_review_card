@@ -507,143 +507,71 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* ---- CARD LIST ---- */}
-            <div>
-              <div className="card" style={{ padding: "16px 18px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
-                  <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                    Kartu Aktif
-                    <span className="badge badge-purple">{cards.length}</span>
-                  </h2>
-                  <button
-                    onClick={loadCards}
-                    className="btn btn-ghost"
-                    style={{ padding: "5px 12px", fontSize: "0.75rem" }}
-                  >
-                    ↻ Refresh
+            {/* ---- UX DASHBOARD REPLACEMENT ---- */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              {/* QUICK ACTIONS */}
+              <div className="card" style={{ padding: "20px" }}>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>⚡ Quick Actions</h2>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <button onClick={openNewForm} className="btn" style={{ background: "#10B981", color: "white", flex: 1, minWidth: 140 }}>
+                    ➕ Assign Kartu
                   </button>
+                  <a href="/admin/cards" className="btn" style={{ background: "#374151", color: "white", flex: 1, minWidth: 140, textDecoration: "none", textAlign: "center" }}>
+                    📋 Semua Kartu
+                  </a>
                 </div>
+              </div>
 
-                <input
-                  className="input"
-                  placeholder="🔍 Cari nama toko atau kode..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{ marginBottom: 14 }}
-                />
-
-                {filtered.length === 0 ? (
-                  <div style={{
-                    textAlign: "center",
-                    padding: "40px 16px",
-                    color: "var(--text-muted)",
-                    fontSize: "0.875rem",
-                    lineHeight: 1.7,
-                  }}>
-                    {cards.length === 0
-                      ? <>💳<br />Belum ada kartu aktif.<br /><span style={{ fontSize: "0.8rem" }}>Tekan <strong>+</strong> untuk assign kartu pertama.</span></>
-                      : "Tidak ada hasil pencarian."}
-                  </div>
+              {/* LEADERBOARD TOP 5 */}
+              <div className="card" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    🏆 Top 5 Klien Terbaik
+                  </h2>
+                </div>
+                
+                {cards.length === 0 ? (
+                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada kartu aktif.</p>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {filtered.map((c) => {
-                      const cardUrl = `${baseUrl}/c/${c.code}`;
-                      return (
-                        <div key={c.code} className="card-item">
-                          {/* Row 1: Nama + badges */}
-                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-                            <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--text-primary)", lineHeight: 1.3 }}>
-                              {c.storeName}
-                            </div>
-                            <div style={{ display: "flex", gap: 5, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                              <span className="badge badge-green" style={{ fontSize: "0.62rem" }}>Aktif</span>
-                              {(c.tapCount ?? 0) > 0 && (
-                                <span className="badge badge-orange" style={{ fontSize: "0.62rem" }}>
-                                  👆 {c.tapCount}×
-                                </span>
-                              )}
-                            </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {[...cards].sort((a, b) => (b.tapCount || 0) - (a.tapCount || 0)).slice(0, 5).map((c, i) => (
+                      <div key={c.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: i === 0 ? "#F59E0B" : i === 1 ? "#9CA3AF" : i === 2 ? "#D97706" : "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "0.8rem", color: "white" }}>
+                            {i + 1}
                           </div>
-
-                          {/* Row 2: kode + copy URL */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                            <span style={{
-                              fontFamily: "monospace",
-                              fontSize: "0.82rem",
-                              background: "rgba(99,102,241,0.15)",
-                              color: "#A5B4FC",
-                              padding: "2px 9px",
-                              borderRadius: 5,
-                              letterSpacing: "0.04em",
-                            }}>
-                              {c.code}
-                            </span>
-                            <button
-                              className="copy-btn"
-                              onClick={() => copyToClipboard(cardUrl, c.code + "-url")}
-                            >
-                              {copiedCode === c.code + "-url" ? "✅ Disalin!" : "📋 Salin URL"}
-                            </button>
-                          </div>
-
-                          {/* Row 3: Link Google Review */}
-                          <a
-                            href={c.googleReviewUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              fontSize: "0.72rem",
-                              color: "var(--text-muted)",
-                              wordBreak: "break-all",
-                              textDecoration: "none",
-                              display: "block",
-                              lineHeight: 1.5,
-                              marginBottom: 12,
-                              transition: "color 0.2s",
-                            }}
-                            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "#A5B4FC")}
-                            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-muted)")}
-                          >
-                            🔗 {c.googleReviewUrl.length > 60
-                              ? c.googleReviewUrl.slice(0, 60) + "…"
-                              : c.googleReviewUrl}
-                          </a>
-
-                          {/* Row 4: Tanggal + action buttons */}
-                          <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            flexWrap: "wrap",
-                            gap: 8,
-                            paddingTop: 10,
-                            borderTop: "1px solid var(--border)",
-                          }}>
-                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                              {c.updatedAt
-                                ? `📅 ${formatDate(c.updatedAt)}`
-                                : formatDate(c.createdAt)}
-                            </span>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              <button
-                                className="btn btn-ghost"
-                                style={{ padding: "6px 14px", fontSize: "0.75rem", minHeight: 36 }}
-                                onClick={() => openEditForm(c)}
-                              >
-                                ✏️ Edit
-                              </button>
-                              <button
-                                className="btn btn-danger"
-                                style={{ padding: "6px 14px", fontSize: "0.75rem", minHeight: 36 }}
-                                onClick={() => setDeleteConfirm(c.code)}
-                              >
-                                🗑️ Hapus
-                              </button>
-                            </div>
+                          <div>
+                            <div style={{ fontWeight: 600, color: "white", fontSize: "0.95rem" }}>{c.storeName}</div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "monospace" }}>{c.code}</div>
                           </div>
                         </div>
-                      );
-                    })}
+                        <div style={{ background: "rgba(16,185,129,0.15)", color: "#10B981", padding: "4px 10px", borderRadius: 12, fontSize: "0.85rem", fontWeight: 700 }}>
+                          👆 {c.tapCount || 0}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* RECENTLY ADDED */}
+              <div className="card" style={{ padding: "20px" }}>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
+                  🕒 Baru Ditambahkan
+                </h2>
+                {cards.length === 0 ? (
+                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada kartu aktif.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {[...cards].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3).map((c) => (
+                      <div key={c.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", borderLeft: "3px solid #4F46E5", background: "rgba(255,255,255,0.03)", borderRadius: "0 8px 8px 0" }}>
+                        <div>
+                          <div style={{ fontWeight: 600, color: "white", fontSize: "0.9rem" }}>{c.storeName}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{formatDate(c.createdAt)}</div>
+                        </div>
+                        <a href="/admin/cards" style={{ fontSize: "0.8rem", color: "#A5B4FC", textDecoration: "none" }}>Lihat ↗</a>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
