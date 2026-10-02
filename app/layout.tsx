@@ -1,21 +1,15 @@
-export const metadata = {
-  title: "Google Review Card",
-  description: "Sistem redirect kartu NFC/QR ke halaman Google Review toko",
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Google Review Card — Hantic",
+  description: "Sistem redirect kartu NFC/QR ke halaman Google Review toko. Tap kartu → langsung ke halaman review Google.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
-      <body
-        style={{
-          margin: 0,
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          background: "#f7f7f8",
-          color: "#1a1a1a",
-        }}
-      >
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
