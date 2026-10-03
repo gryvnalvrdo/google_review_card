@@ -241,6 +241,35 @@ export default function PrintQRCodes() {
         }
         .ctrl-input:focus { border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
 
+        /* Custom Elegant Number Input */
+        .number-input-wrap {
+          display: flex; align-items: center;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px; overflow: hidden;
+          transition: border-color 0.2s, box-shadow 0.2s;
+          height: 38px;
+        }
+        .number-input-wrap:focus-within {
+          border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
+        .num-btn {
+          background: transparent; border: none;
+          color: rgba(255,255,255,0.5);
+          width: 32px; height: 100%; cursor: pointer;
+          font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+          transition: background 0.15s, color 0.15s;
+        }
+        .num-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+        .ctrl-input.num-no-spin {
+          border: none; background: transparent; width: 46px;
+          text-align: center; padding: 0; box-shadow: none !important;
+          font-weight: 600; font-size: 0.95rem;
+        }
+        .ctrl-input.num-no-spin::-webkit-inner-spin-button,
+        .ctrl-input.num-no-spin::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .ctrl-input.num-no-spin { -moz-appearance: textfield; }
+
         .btn {
           display: inline-flex; align-items: center; gap: 6px;
           border: none; border-radius: 8px; font-family: inherit;
@@ -346,13 +375,24 @@ export default function PrintQRCodes() {
 
           <div className="controls">
             <span className="ctrl-label">Jumlah kartu:</span>
-            <input
-              type="number"
-              className="ctrl-input"
-              value={count}
-              onChange={(e) => setCount(Math.max(1, Math.min(200, Number(e.target.value))))}
-              min={1} max={200}
-            />
+            
+            <div className="number-input-wrap">
+              <button 
+                className="num-btn" 
+                onClick={() => setCount((c) => Math.max(1, c - 1))}
+              >−</button>
+              <input
+                type="number"
+                className="ctrl-input num-no-spin"
+                value={count}
+                onChange={(e) => setCount(Math.max(1, Math.min(200, Number(e.target.value))))}
+                min={1} max={200}
+              />
+              <button 
+                className="num-btn" 
+                onClick={() => setCount((c) => Math.min(200, c + 1))}
+              >+</button>
+            </div>
 
             {/* Badge count real-time */}
             {codes.length > 0 && (
