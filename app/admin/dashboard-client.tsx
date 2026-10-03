@@ -23,6 +23,7 @@ function generateRandomCode(length = 6): string {
 
 export default function AdminDashboard() {
   const [cards, setCards] = useState<CardRecord[]>([]);
+  const [stockCodes, setStockCodes] = useState<string[]>([]);
   const [code, setCode] = useState("");
   const [storeName, setStoreName] = useState("");
   const [googleReviewUrl, setGoogleReviewUrl] = useState("");
@@ -45,6 +46,11 @@ export default function AdminDashboard() {
       const data = await res.json();
       setCards(data.cards ?? []);
     }
+    const stockRes = await fetch("/api/admin/stock");
+    if (stockRes.ok) {
+      const stockData = await stockRes.json();
+      setStockCodes(stockData.codes ?? []);
+    }
   }
 
   useEffect(() => { loadCards(); }, []);
@@ -61,8 +67,9 @@ export default function AdminDashboard() {
     setSavedCardUrl(null); setCopiedNfc(false);
   }
 
-  function openNewForm() {
+  function openNewForm(initialCode = "") {
     resetForm();
+    if (initialCode) setCode(initialCode);
     setShowSheet(true);
   }
 
@@ -486,9 +493,9 @@ export default function AdminDashboard() {
           <div className="stats-grid">
             {[
               { label: "Kartu Aktif", value: cards.length, icon: "💳", color: "#4F46E5" },
+              { label: "Stok Tersedia", value: stockCodes.length, icon: "📦", color: "#06B6D4" },
               { label: "Pendapatan", value: "Rp " + cards.reduce((sum, c) => sum + (c.price ?? 50000), 0).toLocaleString("id-ID"), icon: "💰", color: "#10B981" },
               { label: "Total Tap", value: totalTaps, icon: "👆", color: "#F59E0B" },
-              { label: "Bulan Ini", value: "Rp " + cards.filter(c => new Date(c.createdAt).getMonth() === new Date().getMonth()).reduce((sum, c) => sum + (c.price ?? 50000), 0).toLocaleString("id-ID"), icon: "📅", color: "#8B5CF6" },
             ].map((s) => (
               <div key={s.label} className="card" style={{ padding: "14px 16px" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: 6 }}>{s.icon}</div>
@@ -554,6 +561,36 @@ export default function AdminDashboard() {
                     📋 Buka Halaman Semua Kartu
                   </a>
                 </div>
+              </div>
+
+              {/* INVENTORY STOK KARTU */}
+              <div className="card" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    📦 Inventori Stok Kartu ({stockCodes.length})
+                  </h2>
+                </div>
+                
+                {stockCodes.length === 0 ? (
+                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada stok. Buka menu Cetak QR untuk generate kartu baru.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "250px", overflowY: "auto", paddingRight: 8 }}>
+                    {stockCodes.map((sc) => (
+                      <div key={sc} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div style={{ fontFamily: "monospace", color: "#A5B4FC", fontSize: "0.95rem", letterSpacing: "0.05em" }}>
+                          {sc}
+                        </div>
+                        <button
+                          onClick={() => openNewForm(sc)}
+                          className="btn btn-emerald"
+                          style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: 6 }}
+                        >
+                          Assign →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* LEADERBOARD TOP 5 */}
