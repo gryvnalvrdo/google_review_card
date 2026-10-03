@@ -131,6 +131,27 @@ export default function AdminDashboard() {
     setDeleteConfirm(null);
   }
 
+  async function handleDeleteStock(code: string) {
+    if (!confirm(`Yakin hapus kode stok "${code}"?`)) return;
+    const res = await fetch(`/api/admin/stock/${code}`, { method: "DELETE" });
+    if (res.ok) {
+      setStockCodes((prev) => prev.filter((c) => c !== code));
+    } else {
+      alert("Gagal menghapus kode stok.");
+    }
+  }
+
+  async function handleClearStock() {
+    if (!confirm("⚠️ YAKIN HAPUS SEMUA STOK?\n\nSemua kode stok yang belum di-assign akan dihapus permanen.")) return;
+    const res = await fetch("/api/admin/stock/clear", { method: "DELETE" });
+    if (res.ok) {
+      setStockCodes([]);
+      setStockPage(0);
+    } else {
+      alert("Gagal menghapus semua stok.");
+    }
+  }
+
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     window.location.href = "/admin/login";
@@ -598,10 +619,19 @@ export default function AdminDashboard() {
 
               {/* INVENTORY STOK KARTU */}
               <div className="card" style={{ padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
                   <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
                     📦 Inventori Stok Kartu ({stockCodes.length})
                   </h2>
+                  {stockCodes.length > 0 && (
+                    <button
+                      onClick={handleClearStock}
+                      className="btn btn-ghost"
+                      style={{ padding: "4px 10px", fontSize: "0.75rem", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.2)" }}
+                    >
+                      🗑️ Hapus Semua
+                    </button>
+                  )}
                 </div>
                 
                 {stockCodes.length === 0 ? (
@@ -613,13 +643,23 @@ export default function AdminDashboard() {
                         <div style={{ fontFamily: "monospace", color: "#A5B4FC", fontSize: "0.95rem", letterSpacing: "0.05em" }}>
                           {sc}
                         </div>
-                        <button
-                          onClick={() => openNewForm(sc)}
-                          className="btn btn-emerald"
-                          style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: 6 }}
-                        >
-                          Assign →
-                        </button>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            onClick={() => handleDeleteStock(sc)}
+                            className="btn btn-ghost"
+                            style={{ padding: "4px 8px", fontSize: "0.8rem", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 6 }}
+                            title="Hapus stok ini"
+                          >
+                            🗑️
+                          </button>
+                          <button
+                            onClick={() => openNewForm(sc)}
+                            className="btn btn-emerald"
+                            style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: 6 }}
+                          >
+                            Assign →
+                          </button>
+                        </div>
                       </div>
                     ))}
                     
