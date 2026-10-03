@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
-import { cookies } from "next/headers";
+import { isAdminLoggedIn } from "../../../../../lib/auth";
 
 export async function DELETE(
   request: Request,
   { params }: { params: { code: string } }
 ) {
-  const session = cookies().get("admin_session")?.value;
-  if (session !== "authenticated") {
+  if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
