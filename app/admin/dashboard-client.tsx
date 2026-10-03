@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showAllStock, setShowAllStock] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
@@ -574,8 +575,8 @@ export default function AdminDashboard() {
                 {stockCodes.length === 0 ? (
                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada stok. Buka menu Cetak QR untuk generate kartu baru.</p>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "250px", overflowY: "auto", paddingRight: 8 }}>
-                    {stockCodes.map((sc) => (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {stockCodes.slice(0, showAllStock ? undefined : 5).map((sc) => (
                       <div key={sc} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
                         <div style={{ fontFamily: "monospace", color: "#A5B4FC", fontSize: "0.95rem", letterSpacing: "0.05em" }}>
                           {sc}
@@ -589,6 +590,15 @@ export default function AdminDashboard() {
                         </button>
                       </div>
                     ))}
+                    {stockCodes.length > 5 && (
+                      <button
+                        onClick={() => setShowAllStock(!showAllStock)}
+                        className="btn btn-ghost"
+                        style={{ marginTop: 4, width: "100%", justifyContent: "center", fontSize: "0.8rem", padding: "8px" }}
+                      >
+                        {showAllStock ? "Tutup Sebagian ⌃" : `Lihat Semua (${stockCodes.length}) ⌄`}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
