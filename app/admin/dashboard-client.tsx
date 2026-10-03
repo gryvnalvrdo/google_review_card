@@ -675,7 +675,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Mobile FAB */}
-      <button className="fab" onClick={openNewForm} title="Assign kartu baru">
+      <button className="fab" onClick={() => openNewForm()} title="Assign kartu baru">
         +
       </button>
     </>
