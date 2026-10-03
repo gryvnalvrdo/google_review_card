@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   const [showSheet, setShowSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [stockPage, setStockPage] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
@@ -160,7 +161,8 @@ export default function AdminDashboard() {
     return acc;
   }, {} as Record<string, number>);
   
-  const sortedMonthKeys = Object.keys(monthlyRevenueObj).sort((a, b) => b.localeCompare(a)).slice(0, 5);
+  const allMonthKeys = Object.keys(monthlyRevenueObj).sort((a, b) => b.localeCompare(a));
+  const sortedMonthKeys = selectedMonth ? allMonthKeys.filter(k => k === selectedMonth) : allMonthKeys;
 
   const formatMonthKey = (key: string) => {
     const [y, m] = key.split("-");
@@ -559,7 +561,10 @@ export default function AdminDashboard() {
                 <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>⚡ Quick Actions</h2>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   <a href="/admin/cards" className="btn" style={{ background: "#374151", color: "white", flex: 1, minWidth: 140, textDecoration: "none", textAlign: "center" }}>
-                    📋 Buka Halaman Semua Kartu
+                    🗂️ Manajemen Kartu
+                  </a>
+                  <a href="/admin/print" className="btn" style={{ background: "#374151", color: "white", flex: 1, minWidth: 140, textDecoration: "none", textAlign: "center" }}>
+                    🖨️ Cetak QR
                   </a>
                 </div>
               </div>
@@ -619,43 +624,26 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* LEADERBOARD TOP 5 */}
-              <div className="card" style={{ padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                    🏆 Top 5 Klien Terbaik
-                  </h2>
-                </div>
-                
-                {cards.length === 0 ? (
-                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada kartu aktif.</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {[...cards].sort((a, b) => (b.tapCount || 0) - (a.tapCount || 0)).slice(0, 5).map((c, i) => (
-                      <div key={c.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: i === 0 ? "#F59E0B" : i === 1 ? "#9CA3AF" : i === 2 ? "#D97706" : "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "0.8rem", color: "white" }}>
-                            {i + 1}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 600, color: "white", fontSize: "0.95rem" }}>{c.storeName}</div>
-                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "monospace" }}>{c.code}</div>
-                          </div>
-                        </div>
-                        <div style={{ background: "rgba(16,185,129,0.15)", color: "#10B981", padding: "4px 10px", borderRadius: 12, fontSize: "0.85rem", fontWeight: 700 }}>
-                          👆 {c.tapCount || 0}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* MONTHLY REVENUE */}
               <div className="card" style={{ padding: "20px" }}>
-                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
-                  📊 Pendapatan Bulanan
-                </h2>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    📊 Pendapatan Bulanan
+                  </h2>
+                  {allMonthKeys.length > 1 && (
+                    <select
+                      value={selectedMonth}
+                      onChange={e => setSelectedMonth(e.target.value)}
+                      style={{ padding: "6px 10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#F0F0FF", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", cursor: "pointer" }}
+                    >
+                      <option value="">Semua Bulan</option>
+                      {allMonthKeys.map(k => (
+                        <option key={k} value={k}>{formatMonthKey(k)}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
                 {sortedMonthKeys.length === 0 ? (
                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada data penjualan.</p>
                 ) : (
@@ -670,6 +658,12 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+                    {selectedMonth && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
+                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Total bulan ini</div>
+                        <div style={{ color: "#34D399", fontWeight: 800 }}>Rp {(monthlyRevenueObj[selectedMonth] ?? 0).toLocaleString("id-ID")}</div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
