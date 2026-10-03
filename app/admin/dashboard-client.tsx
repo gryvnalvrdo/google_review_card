@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+
+const QRScanner = dynamic(() => import("./components/QRScanner"), { ssr: false });
 
 type CardRecord = {
   code: string;
@@ -38,6 +41,7 @@ export default function AdminDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [stockPage, setStockPage] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
@@ -192,15 +196,26 @@ export default function AdminDashboard() {
             style={isEditing ? { opacity: 0.55, cursor: "not-allowed", flex: 1 } : { flex: 1 }}
           />
           {!isEditing && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ padding: "0 12px", fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0 }}
-              onClick={() => setCode(generateRandomCode())}
-              title="Generate kode acak"
-            >
-              🎲 Generate
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: "0 12px", fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0 }}
+                onClick={() => setShowScanner(true)}
+                title="Scan QR kartu via kamera"
+              >
+                📷 Scan
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: "0 12px", fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0 }}
+                onClick={() => setCode(generateRandomCode())}
+                title="Generate kode acak"
+              >
+                🎲
+              </button>
+            </>
           )}
         </div>
         {isEditing && (
@@ -372,6 +387,18 @@ export default function AdminDashboard() {
 
   return (
     <>
+      {/* QR Scanner overlay */}
+      {showScanner && (
+        <QRScanner
+          onScan={(scannedCode) => {
+            setCode(scannedCode);
+            setShowScanner(false);
+            setShowSheet(true);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       <div className="gradient-bg">
         <div className="gradient-blob blob-1" />
         <div className="gradient-blob blob-2" />
