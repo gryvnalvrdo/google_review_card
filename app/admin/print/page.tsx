@@ -365,13 +365,27 @@ export default function PrintQRCodes() {
           .dl-hint { display: none !important; }
           .card-thumb { box-shadow: none !important; }
         }
+        @media (max-width: 600px) {
+          .panel { position: relative; padding: 16px; }
+          .controls { gap: 8px; }
+          .btn { padding: 8px 12px; font-size: 0.8rem; justify-content: center; }
+          .btn-indigo, .btn-cyan, .btn-amber, .btn-emerald { flex: 1; min-width: 130px; }
+          .ctrl-label { display: none; }
+          .panel-title { font-size: 0.95rem; }
+          .panel-sub { font-size: 0.65rem; }
+        }
       `}</style>
 
       {/* ── Panel ── */}
       <div className="panel">
         <div className="panel-inner">
-          <div className="panel-title">🎴 Generator Kartu NFC Review</div>
-          <div className="panel-sub">Desain kamu + QR unik tiap kartu — download PNG atau simpan ke inventori stok</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+            <a href="/admin" className="btn btn-ghost" style={{ padding: "6px 10px" }}>← Back</a>
+            <div>
+              <div className="panel-title">🎴 Generator Kartu NFC</div>
+              <div className="panel-sub" style={{ marginBottom: 0 }}>Buat QR unik, download PNG, atau simpan ke stok</div>
+            </div>
+          </div>
 
           <div className="controls">
             <span className="ctrl-label">Jumlah kartu:</span>
@@ -427,7 +441,6 @@ export default function PrintQRCodes() {
               </div>
             )}
 
-            <a href="/admin" className="btn btn-ghost spacer">← Dashboard</a>
           </div>
 
           {/* Save result toast */}
