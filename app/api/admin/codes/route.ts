@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminLoggedIn } from "../../../../lib/auth";
-import { getCard, setCard, listCards } from "../../../../lib/kv";
+import { getCard, setCard, listCards, removeStokCode } from "../../../../lib/kv";
 import { isAllowedReviewUrl } from "../../../../lib/redirect";
 
 const MAX_CODE_LEN = 20;
@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   });
+
+  // Hapus dari stok jika ada (kartu sudah di-assign ke toko)
+  await removeStokCode(code);
 
   return NextResponse.json({ ok: true });
 }
