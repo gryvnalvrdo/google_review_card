@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [showAllStock, setShowAllStock] = useState(false);
+  const [stockPage, setStockPage] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
@@ -576,7 +576,7 @@ export default function AdminDashboard() {
                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada stok. Buka menu Cetak QR untuk generate kartu baru.</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {stockCodes.slice(0, showAllStock ? undefined : 5).map((sc) => (
+                    {stockCodes.slice(stockPage * 5, (stockPage + 1) * 5).map((sc) => (
                       <div key={sc} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
                         <div style={{ fontFamily: "monospace", color: "#A5B4FC", fontSize: "0.95rem", letterSpacing: "0.05em" }}>
                           {sc}
@@ -590,14 +590,30 @@ export default function AdminDashboard() {
                         </button>
                       </div>
                     ))}
+                    
+                    {/* Pagination Controls */}
                     {stockCodes.length > 5 && (
-                      <button
-                        onClick={() => setShowAllStock(!showAllStock)}
-                        className="btn btn-ghost"
-                        style={{ marginTop: 4, width: "100%", justifyContent: "center", fontSize: "0.8rem", padding: "8px" }}
-                      >
-                        {showAllStock ? "Tutup Sebagian ⌃" : `Lihat Semua (${stockCodes.length}) ⌄`}
-                      </button>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, padding: "0 4px" }}>
+                        <button
+                          onClick={() => setStockPage(p => Math.max(0, p - 1))}
+                          disabled={stockPage === 0}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 12px", fontSize: "0.8rem", opacity: stockPage === 0 ? 0.3 : 1 }}
+                        >
+                          ← Prev
+                        </button>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                          Hal {stockPage + 1} dari {Math.ceil(stockCodes.length / 5)}
+                        </div>
+                        <button
+                          onClick={() => setStockPage(p => Math.min(Math.ceil(stockCodes.length / 5) - 1, p + 1))}
+                          disabled={stockPage >= Math.ceil(stockCodes.length / 5) - 1}
+                          className="btn btn-ghost"
+                          style={{ padding: "4px 12px", fontSize: "0.8rem", opacity: stockPage >= Math.ceil(stockCodes.length / 5) - 1 ? 0.3 : 1 }}
+                        >
+                          Next →
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
