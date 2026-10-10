@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { clearStok } from "../../../../../lib/kv";
 import { isAdminLoggedIn } from "../../../../../lib/auth";
 
 export async function DELETE(request: Request) {
@@ -8,7 +8,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    await kv.del("inventory:stock");
+    await clearStok();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to clear stock", error);

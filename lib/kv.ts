@@ -115,6 +115,15 @@ export async function listStokCodes(): Promise<string[]> {
   return Array.from(stokStore);
 }
 
+/** Hapus semua kode stok. */
+export async function clearStok(): Promise<void> {
+  if (hasKv && vercelKv) {
+    await vercelKv.del(STOK_INDEX);
+    return;
+  }
+  stokStore.clear();
+}
+
 /** Jumlah kode stok. */
 export async function getStokCount(): Promise<number> {
   if (hasKv && vercelKv) {

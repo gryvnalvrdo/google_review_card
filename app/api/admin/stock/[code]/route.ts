@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { removeStokCode } from "../../../../../lib/kv";
 import { isAdminLoggedIn } from "../../../../../lib/auth";
 
 export async function DELETE(
@@ -13,7 +13,7 @@ export async function DELETE(
   const { code } = params;
 
   try {
-    await kv.srem("inventory:stock", code);
+    await removeStokCode(code);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete stock code", error);

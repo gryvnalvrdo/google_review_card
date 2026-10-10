@@ -23,6 +23,8 @@ interface CardData {
 
 export default function CardsPage() {
   const [cards, setCards] = useState<CardData[]>([]);
+  const [stockCodes, setStockCodes] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<"aktif" | "stok">("aktif");
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "tap" | "name">("date");
@@ -40,10 +42,17 @@ export default function CardsPage() {
 
   async function fetchCards() {
     try {
-      const res = await fetch("/api/admin/codes");
-      if (res.ok) {
-        const data = await res.json();
+      const [resCodes, resStock] = await Promise.all([
+        fetch("/api/admin/codes"),
+        fetch("/api/admin/stock")
+      ]);
+      if (resCodes.ok) {
+        const data = await resCodes.json();
         setCards(data.cards ?? []);
+      }
+      if (resStock.ok) {
+        const stockData = await resStock.json();
+        setStockCodes(stockData.codes ?? []);
       }
     } catch (e) {
       console.error(e);
@@ -59,6 +68,26 @@ export default function CardsPage() {
     const res = await fetch(`/api/admin/codes/${code}`, { method: "DELETE" });
     if (res.ok) setCards(prev => prev.filter(c => c.code !== code));
     else alert("Gagal menghapus kartu.");
+  }
+
+  async function handleDeleteStock(code: string) {
+    if (!confirm(`Yakin hapus kode stok "${code}"?`)) return;
+    const res = await fetch(`/api/admin/stock/${code}`, { method: "DELETE" });
+    if (res.ok) {
+      setStockCodes((prev) => prev.filter((c) => c !== code));
+    } else {
+      alert("Gagal menghapus kode stok.");
+    }
+  }
+
+  async function handleClearStock() {
+    if (!confirm("⚠️ YAKIN HAPUS SEMUA STOK?\n\nSemua kode stok yang belum di-assign akan dihapus permanen.")) return;
+    const res = await fetch("/api/admin/stock/clear", { method: "DELETE" });
+    if (res.ok) {
+      setStockCodes([]);
+    } else {
+      alert("Gagal menghapus semua stok.");
+    }
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -142,6 +171,10 @@ export default function CardsPage() {
     .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:28px;flex-wrap:wrap;}
     .topbar h1{font-size:1.4rem;font-weight:800;}
     .topbar p{color:#9A9AB0;font-size:0.82rem;margin-top:4px;}
+    .tabs{display:flex;gap:12px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;flex-wrap:wrap;}
+    .tab{padding:8px 16px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;background:transparent;color:#9A9AB0;border:1px solid transparent;transition:all 0.2s;}
+    .tab.act{background:rgba(99,102,241,0.15);color:#A5B4FC;border-color:rgba(99,102,241,0.3);}
+    .tab:hover:not(.act){color:#F0F0FF;background:rgba(255,255,255,0.05);}
     .back{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;color:#C0C0D8;text-decoration:none;font-size:0.82rem;font-weight:500;transition:all 0.2s;white-space:nowrap;}
     .back:hover{background:rgba(255,255,255,0.09);color:#F0F0FF;}
     .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
@@ -152,6 +185,7 @@ export default function CardsPage() {
     .sbx{flex:1;min-width:180px;padding:10px 13px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#F0F0FF;font-size:.875rem;outline:none;font-family:inherit;transition:border-color .2s;}
     .sbx:focus{border-color:rgba(99,102,241,.5);}
     .ssel{padding:10px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#F0F0FF;font-size:.875rem;font-family:inherit;outline:none;cursor:pointer;}
+    .ssel option{background:#111118;color:#F0F0FF;}
     .ci{background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:13px;padding:16px 18px;margin-bottom:10px;transition:border-color .2s;}
     .ci:hover{border-color:rgba(99,102,241,.2);}
     .ch{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
@@ -220,90 +254,147 @@ export default function CardsPage() {
             <a href="/admin" className="back">← Dashboard</a>
           </div>
 
-          <div className="stats">
-            <div className="sc">
-              <div className="sv" style={{ color: "#A5B4FC" }}>{cards.length}</div>
-              <div className="sl">💳 Kartu Aktif</div>
-            </div>
-            <div className="sc">
-              <div className="sv" style={{ color: "#34D399" }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
-              <div className="sl">💰 Total Pendapatan</div>
-            </div>
-            <div className="sc">
-              <div className="sv" style={{ color: "#FCD34D" }}>{totalTaps}</div>
-              <div className="sl">👆 Total Tap</div>
-            </div>
+          <div className="tabs">
+            <button className={`tab ${activeTab === "aktif" ? "act" : ""}`} onClick={() => setActiveTab("aktif")}>
+              💳 Kartu Aktif ({cards.length})
+            </button>
+            <button className={`tab ${activeTab === "stok" ? "act" : ""}`} onClick={() => setActiveTab("stok")}>
+              📦 Stok Belum Assign ({stockCodes.length})
+            </button>
           </div>
 
-          <div className="toolbar">
-            <input
-              type="text"
-              className="sbx"
-              placeholder="🔍 Cari nama toko atau kode..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-            <select className="ssel" value={sortBy} onChange={e => setSortBy(e.target.value as "date" | "tap" | "name")}>
-              <option value="date">Terbaru</option>
-              <option value="tap">Tap Terbanyak</option>
-              <option value="name">Nama A–Z</option>
-            </select>
-          </div>
+          {activeTab === "aktif" ? (
+            <>
+              <div className="stats">
+                <div className="sc">
+                  <div className="sv" style={{ color: "#A5B4FC" }}>{cards.length}</div>
+                  <div className="sl">💳 Kartu Aktif</div>
+                </div>
+                <div className="sc">
+                  <div className="sv" style={{ color: "#34D399" }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
+                  <div className="sl">💰 Total Pendapatan</div>
+                </div>
+                <div className="sc">
+                  <div className="sv" style={{ color: "#FCD34D" }}>{totalTaps}</div>
+                  <div className="sl">👆 Total Tap</div>
+                </div>
+              </div>
 
-          {loading ? (
-            <p style={{ color: "#9A9AB0", textAlign: "center", padding: "40px 0" }}>Memuat data...</p>
-          ) : filtered.length === 0 ? (
-            <p style={{ color: "#5A5A72", textAlign: "center", padding: "40px 0" }}>
-              {searchTerm ? "Tidak ada kartu yang cocok dengan pencarian." : "Belum ada kartu aktif."}
-            </p>
-          ) : (
-            <div>
-              {filtered.map(card => (
-                <div key={card.code} className="ci">
-                  <div className="ch">
-                    <div>
-                      <div className="cn">{card.storeName}</div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                        <span className="bdg bcode">{card.code}</span>
-                        <span className="bdg bact">● Aktif</span>
-                        <span className="bdg btap">👆 {card.tapCount ?? 0} Tap</span>
+              <div className="toolbar">
+                <input
+                  type="text"
+                  className="sbx"
+                  placeholder="🔍 Cari nama toko atau kode..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+                <select className="ssel" value={sortBy} onChange={e => setSortBy(e.target.value as "date" | "tap" | "name")}>
+                  <option value="date">Terbaru</option>
+                  <option value="tap">Tap Terbanyak</option>
+                  <option value="name">Nama A–Z</option>
+                </select>
+              </div>
+
+              {loading ? (
+                <p style={{ color: "#9A9AB0", textAlign: "center", padding: "40px 0" }}>Memuat data...</p>
+              ) : filtered.length === 0 ? (
+                <p style={{ color: "#5A5A72", textAlign: "center", padding: "40px 0" }}>
+                  {searchTerm ? "Tidak ada kartu yang cocok dengan pencarian." : "Belum ada kartu aktif."}
+                </p>
+              ) : (
+                <div>
+                  {filtered.map(card => (
+                    <div key={card.code} className="ci">
+                      <div className="ch">
+                        <div>
+                          <div className="cn">{card.storeName}</div>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                            <span className="bdg bcode">{card.code}</span>
+                            <span className="bdg bact">● Aktif</span>
+                            <span className="bdg btap">👆 {card.tapCount ?? 0} Tap</span>
+                          </div>
+                        </div>
+                        <div className="ca">
+                          <button
+                            className="ib idl"
+                            onClick={() => downloadCard(card)}
+                            disabled={downloadingCode === card.code || !bgImg}
+                            title={!bgImg ? "Template sedang dimuat..." : "Download kartu PNG dengan QR"}
+                          >
+                            {downloadingCode === card.code ? "⏳" : "⬇️"}
+                          </button>
+                          <button className="ib ig" onClick={() => setEditingCard(card)} title="Edit">✏️</button>
+                          <button className="ib idng" onClick={() => handleDelete(card.code)} title="Hapus">🗑️</button>
+                        </div>
+                      </div>
+
+                      <div className="cm">
+                        <div className="mi">
+                          <div className="mlb">Tanggal Assign</div>
+                          <div className="mv">{formatDate(card.createdAt)}</div>
+                        </div>
+                        <div className="mi">
+                          <div className="mlb">Harga Jual</div>
+                          <div className="mv" style={{ color: "#34D399" }}>Rp {(card.price ?? 50000).toLocaleString("id-ID")}</div>
+                        </div>
+                        <div className="mi">
+                          <div className="mlb">Total Tap</div>
+                          <div className="mv" style={{ color: "#FCD34D" }}>{card.tapCount ?? 0}×</div>
+                        </div>
+                      </div>
+
+                      <div className="ur">
+                        🔗 <a href={card.googleReviewUrl} target="_blank" rel="noreferrer">{card.googleReviewUrl}</a>
                       </div>
                     </div>
-                    <div className="ca">
-                      <button
-                        className="ib idl"
-                        onClick={() => downloadCard(card)}
-                        disabled={downloadingCode === card.code || !bgImg}
-                        title={!bgImg ? "Template sedang dimuat..." : "Download kartu PNG dengan QR"}
-                      >
-                        {downloadingCode === card.code ? "⏳" : "⬇️"}
-                      </button>
-                      <button className="ib ig" onClick={() => setEditingCard(card)} title="Edit">✏️</button>
-                      <button className="ib idng" onClick={() => handleDelete(card.code)} title="Hapus">🗑️</button>
-                    </div>
-                  </div>
-
-                  <div className="cm">
-                    <div className="mi">
-                      <div className="mlb">Tanggal Assign</div>
-                      <div className="mv">{formatDate(card.createdAt)}</div>
-                    </div>
-                    <div className="mi">
-                      <div className="mlb">Harga Jual</div>
-                      <div className="mv" style={{ color: "#34D399" }}>Rp {(card.price ?? 50000).toLocaleString("id-ID")}</div>
-                    </div>
-                    <div className="mi">
-                      <div className="mlb">Total Tap</div>
-                      <div className="mv" style={{ color: "#FCD34D" }}>{card.tapCount ?? 0}×</div>
-                    </div>
-                  </div>
-
-                  <div className="ur">
-                    🔗 <a href={card.googleReviewUrl} target="_blank" rel="noreferrer">{card.googleReviewUrl}</a>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
+          ) : (
+            // TAB STOK
+            <>
+              <div className="toolbar" style={{ justifyContent: "space-between" }}>
+                <input
+                  type="text"
+                  className="sbx"
+                  placeholder="🔍 Cari kode stok..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+                {stockCodes.length > 0 && (
+                  <button 
+                    className="btn idng" 
+                    style={{ flex: "none", fontSize: "0.8rem", padding: "8px 12px" }} 
+                    onClick={handleClearStock}
+                  >
+                    🗑️ Hapus Semua
+                  </button>
+                )}
+              </div>
+              
+              {loading ? (
+                <p style={{ color: "#9A9AB0", textAlign: "center", padding: "40px 0" }}>Memuat data...</p>
+              ) : stockCodes.length === 0 ? (
+                <p style={{ color: "#5A5A72", textAlign: "center", padding: "40px 0" }}>Belum ada stok. Buka menu Cetak QR untuk generate kartu baru.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+                  {stockCodes.filter(sc => sc.toLowerCase().includes(searchTerm.toLowerCase())).map(sc => (
+                    <div key={sc} className="ci" style={{ marginBottom: 0, padding: "14px 16px" }}>
+                      <div className="ch" style={{ marginBottom: 0 }}>
+                        <span className="bdg bcode" style={{ fontSize: "1rem", padding: "6px 12px" }}>{sc}</span>
+                      </div>
+                      <div className="ma" style={{ marginTop: 14 }}>
+                        <button className="ib idng" onClick={() => handleDeleteStock(sc)} title="Hapus Stok">🗑️</button>
+                        <a href={`/admin?code=${sc}`} className="btn bp" style={{ textDecoration: "none", padding: "8px" }}>
+                          Assign →
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
