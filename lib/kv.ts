@@ -1,5 +1,23 @@
 import { createClient } from "@vercel/kv";
 
+/** Coba ulang fn maksimal maxAttempts kali. Jika semua gagal, return null (diam-diam). */
+async function retryOrNull<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+  delayMs = 300
+): Promise<T | null> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      return await fn();
+    } catch {
+      if (i < maxAttempts - 1) {
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+      }
+    }
+  }
+  return null; // semua retry gagal → tampil "kartu belum aktif" seperti biasa
+}
+
 export type CardRecord = {
   code: string;
   storeName: string;
@@ -29,7 +47,11 @@ const vercelKv = hasKv ? createClient({ url: kvUrl!, token: kvToken! }) : null;
 
 export async function getCard(code: string): Promise<CardRecord | null> {
   if (hasKv && vercelKv) {
-    const data = await vercelKv.get<CardRecord>(KEY_PREFIX + code);
+    // Retry hingga 3x untuk menangani transient error Vercel KV.
+    // Jika semua gagal, return null → route handler tampil "kartu belum aktif" seperti biasa.
+    const data = await retryOrNull(() =>
+      vercelKv!.get<CardRecord>(KEY_PREFIX + code)
+    );
     return data ?? null;
   }
   return memoryStore.get(code) ?? null;
