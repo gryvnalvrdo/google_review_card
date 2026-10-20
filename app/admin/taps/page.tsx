@@ -83,6 +83,7 @@ export default function TapsPage() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<"harian" | "bulanan" | "tren" | "tidur">("harian");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
+  const [expandedStore, setExpandedStore] = useState<string | null>(null); // "monthKey::storeName"
 
   async function fetchData() {
     setLoading(true);
@@ -104,6 +105,8 @@ export default function TapsPage() {
     if (activeTab === "bulanan" && logs.length > 0) {
       setExpandedMonth(getMonthKey(new Date().toISOString()));
     }
+    // Reset store detail dropdown when switching tabs
+    setExpandedStore(null);
   }, [activeTab, logs]);
 
   // ── Helpers ──────────────────────────────────────────────────────────
@@ -148,7 +151,6 @@ export default function TapsPage() {
   })();
 
   // Stats
-  const uniqueStores = useMemo(() => new Set(logs.map(l => l.storeName)).size, [logs]);
   const thisMonthCount = useMemo(() => logs.filter(l => getMonthKey(l.tappedAt) === thisMonthKey).length, [logs]);
 
   // Tab: Harian
@@ -186,6 +188,20 @@ export default function TapsPage() {
         .sort((a, b) => b.count - a.count);
       return { monthKey, label: formatMonthLabel(monthKey), total: byStore.reduce((s, x) => s + x.count, 0), byStore };
     });
+  }, [logs]);
+
+  // Detail taps per store per month (for dropdown)
+  const tapsByStoreMonth = useMemo(() => {
+    const map = new Map<string, TapLogEntry[]>(); // key: "monthKey::storeName"
+    for (const entry of logs) {
+      const mk = getMonthKey(entry.tappedAt);
+      const key = `${mk}::${entry.storeName}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(entry);
+    }
+    // Sort each list newest first
+    map.forEach((arr) => arr.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime()));
+    return map;
   }, [logs]);
 
   const filteredMonthly = useMemo(() =>
@@ -246,80 +262,124 @@ export default function TapsPage() {
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0A0A0F; color: #F0F0FF; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    .pw { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
-    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
-    .topbar h1 { font-size: 1.4rem; font-weight: 800; }
-    .topbar p { color: #9A9AB0; font-size: 0.82rem; margin-top: 4px; }
-    .back { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 8px; color: #C0C0D8; text-decoration: none; font-size: 0.82rem; font-weight: 500; transition: all 0.2s; white-space: nowrap; }
+
+    /* ── Layout ── */
+    .pw { max-width: 860px; margin: 0 auto; padding: 18px 14px 80px; }
+    .back { display: inline-flex; align-items: center; gap: 5px; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 8px; color: #C0C0D8; text-decoration: none; font-size: 0.78rem; font-weight: 500; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
     .back:hover { background: rgba(255,255,255,0.09); color: #F0F0FF; }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 22px; }
-    .sc { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 14px 16px; }
-    .sv { font-size: 1.4rem; font-weight: 800; margin-bottom: 2px; }
-    .sl { font-size: 0.68rem; color: #5A5A72; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
-    .tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 12px; flex-wrap: wrap; }
-    .tab { padding: 7px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: transparent; color: #9A9AB0; border: 1px solid transparent; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
+
+    /* ── Stats ── */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+    .sc { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 12px 14px; }
+    .sv { font-size: 1.35rem; font-weight: 800; margin-bottom: 3px; line-height: 1; }
+    .sl { font-size: 0.62rem; color: #5A5A72; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; line-height: 1.3; }
+
+    /* ── Tabs: horizontal scroll on mobile ── */
+    .tabs-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 16px; }
+    .tabs-scroll::-webkit-scrollbar { display: none; }
+    .tabs { display: inline-flex; gap: 4px; padding-bottom: 10px; white-space: nowrap; min-width: 100%; }
+    .tab { padding: 7px 13px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; background: transparent; color: #9A9AB0; border: 1px solid transparent; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
     .tab.act { background: rgba(245,158,11,0.12); color: #FCD34D; border-color: rgba(245,158,11,0.3); }
     .tab.act-red { background: rgba(239,68,68,0.1); color: #FCA5A5; border-color: rgba(239,68,68,0.25); }
     .tab:hover:not(.act):not(.act-red) { color: #F0F0FF; background: rgba(255,255,255,0.05); }
-    .toolbar { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
-    .sbx { flex: 1; min-width: 200px; padding: 10px 13px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #F0F0FF; font-size: .875rem; outline: none; font-family: inherit; transition: border-color .2s; }
+
+    /* ── Toolbar ── */
+    .toolbar { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; }
+    .sbx { flex: 1; min-width: 0; padding: 10px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #F0F0FF; font-size: 0.85rem; outline: none; font-family: inherit; transition: border-color .2s; }
     .sbx:focus { border-color: rgba(245,158,11,.5); }
-    .refresh-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; color: #FCD34D; font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
+    .last-refresh { font-size: 0.68rem; color: #5A5A72; white-space: nowrap; flex-shrink: 0; }
+    .refresh-btn { display: inline-flex; align-items: center; gap: 5px; padding: 9px 13px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; color: #FCD34D; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
     .refresh-btn:hover { background: rgba(245,158,11,0.18); }
     .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .last-refresh { font-size: 0.72rem; color: #5A5A72; white-space: nowrap; }
-    /* Harian */
-    .day-header { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #5A5A72; padding: 16px 0 8px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; }
-    .day-group { margin-bottom: 8px; }
-    .tap-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #111118; border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid #F59E0B; border-radius: 0 10px 10px 0; margin-bottom: 6px; transition: border-color 0.2s; }
-    .tap-item:hover { border-color: rgba(245,158,11,0.4); }
-    .tap-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+
+    /* ── Harian ── */
+    .day-header { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #5A5A72; padding: 14px 0 7px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .day-count-badge { background: rgba(245,158,11,0.12); color: #FCD34D; border: 1px solid rgba(245,158,11,0.25); padding: 2px 8px; border-radius: 999px; font-size: 0.65rem; font-weight: 700; }
+    .day-group { margin-bottom: 6px; }
+    .tap-item { display: flex; align-items: center; gap: 10px; padding: 11px 13px; background: #111118; border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid #F59E0B; border-radius: 0 10px 10px 0; margin-bottom: 5px; transition: border-left-color 0.2s; }
+    .tap-item:hover { border-left-color: #FCD34D; }
+    .tap-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
     .tap-info { flex: 1; min-width: 0; }
-    .tap-store { font-size: 0.95rem; font-weight: 700; color: #F0F0FF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tap-time { font-size: 0.75rem; color: #6A6A82; margin-top: 3px; }
-    .tap-badge { font-size: 0.72rem; color: #FCD34D; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); padding: 4px 10px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
-    /* Bulanan */
-    .month-card { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; margin-bottom: 12px; overflow: hidden; transition: border-color 0.2s; }
+    .tap-store { font-size: 0.88rem; font-weight: 700; color: #F0F0FF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tap-time { font-size: 0.7rem; color: #6A6A82; margin-top: 2px; line-height: 1.4; }
+    .tap-badge { font-size: 0.68rem; color: #FCD34D; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+
+    /* ── Bulanan ── */
+    .month-card { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s; }
     .month-card:hover { border-color: rgba(245,158,11,0.2); }
-    .month-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; cursor: pointer; gap: 12px; }
-    .month-title { font-size: 1rem; font-weight: 700; color: #F0F0FF; }
-    .month-sub { font-size: 0.72rem; color: #5A5A72; margin-top: 2px; }
-    .month-total { font-size: 1.1rem; font-weight: 800; color: #FCD34D; }
-    .chevron { font-size: 0.8rem; color: #5A5A72; transition: transform 0.2s; display: inline-block; }
+    .month-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; gap: 10px; user-select: none; }
+    .month-title { font-size: 0.95rem; font-weight: 700; color: #F0F0FF; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .bulan-ini-badge { font-size: 0.62rem; background: rgba(245,158,11,0.15); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); border-radius: 999px; padding: 2px 7px; font-weight: 600; flex-shrink: 0; }
+    .month-sub { font-size: 0.68rem; color: #5A5A72; margin-top: 3px; }
+    .month-total { font-size: 1.05rem; font-weight: 800; color: #FCD34D; white-space: nowrap; }
+    .chevron { font-size: 0.75rem; color: #5A5A72; transition: transform 0.2s; display: inline-block; flex-shrink: 0; }
     .chevron.open { transform: rotate(180deg); }
-    .month-body { padding: 0 20px 16px; border-top: 1px solid rgba(255,255,255,0.05); }
-    .store-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .store-row:last-child { border-bottom: none; }
-    .store-rank { font-size: 0.72rem; font-weight: 700; color: #5A5A72; width: 22px; text-align: center; flex-shrink: 0; }
-    .store-name { flex: 1; font-size: 0.88rem; font-weight: 600; color: #E0E0F0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .store-bar-wrap { width: 100px; flex-shrink: 0; }
-    .store-bar-bg { background: rgba(255,255,255,0.05); border-radius: 999px; height: 5px; overflow: hidden; }
-    .store-bar-fill { background: linear-gradient(90deg, #F59E0B, #FCD34D); border-radius: 999px; height: 5px; transition: width 0.4s ease; }
-    .store-count { font-size: 0.82rem; font-weight: 700; color: #FCD34D; width: 28px; text-align: right; flex-shrink: 0; }
-    .delta-pos { font-size: 0.7rem; color: #34D399; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 1px 6px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
-    .delta-neg { font-size: 0.7rem; color: #FCA5A5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 1px 6px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
-    .delta-zero { font-size: 0.7rem; color: #5A5A72; padding: 1px 6px; flex-shrink: 0; }
-    /* Chart */
-    .chart-card { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
-    .chart-title { font-size: 0.9rem; font-weight: 700; color: #F0F0FF; margin-bottom: 4px; }
-    .chart-sub { font-size: 0.75rem; color: #5A5A72; margin-bottom: 16px; }
-    .insight-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .insight-pill { padding: 8px 14px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; }
-    /* Kartu Tidur */
-    .sleep-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #111118; border: 1px solid rgba(239,68,68,0.15); border-left: 3px solid #EF4444; border-radius: 0 10px 10px 0; margin-bottom: 6px; }
-    .sleep-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
-    .sleep-name { font-size: 0.92rem; font-weight: 700; color: #F0F0FF; }
-    .sleep-sub { font-size: 0.72rem; color: #6A6A82; margin-top: 2px; }
-    .badge-sleep { font-size: 0.7rem; color: #FCA5A5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
-    /* Empty */
-    .empty { text-align: center; padding: 60px 20px; color: #5A5A72; }
-    .empty-icon { font-size: 3rem; margin-bottom: 16px; }
-    @media (max-width: 600px) { .stats { grid-template-columns: repeat(3, 1fr); } .sv { font-size: 1.1rem; } .store-bar-wrap { width: 60px; } }
+    .month-body { padding: 0 16px 14px; border-top: 1px solid rgba(255,255,255,0.05); }
+
+    /* ── Store row ── */
+    .store-row { display: flex; align-items: center; gap: 8px; padding: 9px 6px; margin: 0 -6px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; border-radius: 6px; transition: background 0.15s; user-select: none; }
+    .store-row:last-of-type { border-bottom: none; }
+    .store-row:hover { background: rgba(255,255,255,0.04); }
+    .store-rank { font-size: 0.7rem; font-weight: 700; color: #5A5A72; width: 20px; text-align: center; flex-shrink: 0; }
+    .store-name { flex: 1; font-size: 0.85rem; font-weight: 600; color: #E0E0F0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .store-bar-wrap { width: 80px; flex-shrink: 0; }
+    .store-bar-bg { background: rgba(255,255,255,0.05); border-radius: 999px; height: 4px; overflow: hidden; }
+    .store-bar-fill { background: linear-gradient(90deg, #F59E0B, #FCD34D); border-radius: 999px; height: 4px; transition: width 0.4s ease; }
+    .store-count { font-size: 0.8rem; font-weight: 700; color: #FCD34D; width: 26px; text-align: right; flex-shrink: 0; }
+    .delta-pos { font-size: 0.65rem; color: #34D399; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 1px 5px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
+    .delta-neg { font-size: 0.65rem; color: #FCA5A5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 1px 5px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
+    .delta-zero { font-size: 0.65rem; color: #5A5A72; padding: 1px 5px; flex-shrink: 0; }
+    .store-chevron { font-size: 0.68rem; flex-shrink: 0; transition: transform 0.2s; display: inline-block; }
+
+    /* ── Store detail dropdown ── */
+    .store-detail { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.15); border-radius: 10px; margin: 2px 0 10px; padding: 10px 12px; animation: fadeIn 0.18s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .detail-header { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #F59E0B; margin-bottom: 8px; }
+    /* Grid layout: num | info | ago — stacks cleanly on narrow screens */
+    .detail-tap-item { display: grid; grid-template-columns: 20px 1fr auto; align-items: start; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 6px; }
+    .detail-tap-item:last-child { border-bottom: none; }
+    .detail-tap-num { font-size: 0.68rem; color: #5A5A72; font-weight: 700; padding-top: 1px; }
+    .detail-tap-info { min-width: 0; }
+    .detail-tap-date { font-size: 0.78rem; color: #C0C0D8; font-weight: 500; }
+    .detail-tap-time { font-size: 0.72rem; color: #FCD34D; font-weight: 600; margin-top: 2px; }
+    .detail-tap-ago { font-size: 0.65rem; color: #5A5A72; white-space: nowrap; padding-top: 2px; text-align: right; }
+
+    /* ── Charts ── */
+    .chart-card { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+    .chart-title { font-size: 0.88rem; font-weight: 700; color: #F0F0FF; margin-bottom: 3px; }
+    .chart-sub { font-size: 0.72rem; color: #5A5A72; margin-bottom: 14px; }
+    .insight-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .insight-pill { padding: 7px 12px; border-radius: 9px; font-size: 0.78rem; font-weight: 600; }
+
+    /* ── Kartu Tidur ── */
+    .sleep-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #111118; border: 1px solid rgba(239,68,68,0.15); border-left: 3px solid #EF4444; border-radius: 0 10px 10px 0; margin-bottom: 5px; }
+    .sleep-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+    .sleep-name { font-size: 0.88rem; font-weight: 700; color: #F0F0FF; }
+    .sleep-sub { font-size: 0.68rem; color: #6A6A82; margin-top: 2px; }
+    .badge-sleep { font-size: 0.68rem; color: #FCA5A5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+
+    /* ── Misc ── */
+    .empty { text-align: center; padding: 50px 20px; color: #5A5A72; }
+    .empty-icon { font-size: 2.8rem; margin-bottom: 14px; }
+    .sep { text-align: center; font-size: 0.72rem; color: #5A5A72; margin-top: 24px; line-height: 1.6; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .store-bar-wrap { width: 54px; }
+      .insight-pill { font-size: 0.74rem; padding: 6px 10px; }
+    }
+    @media (max-width: 420px) {
+      .sv { font-size: 1.1rem; }
+      .sl { font-size: 0.58rem; }
+      .last-refresh { display: none; }
+      .store-bar-wrap { display: none; }
+      .detail-tap-date { font-size: 0.72rem; }
+    }
   `;
 
   const Separator = () => (
-    <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#5A5A72", marginTop: 24 }}>
-      Data dari {logs.length} tap tersimpan · tracking mulai aktif sejak fitur ini di-deploy
+    <p className="sep">
+      Data dari {logs.length} tap tersimpan · tracking aktif sejak fitur ini di-deploy
     </p>
   );
 
@@ -329,16 +389,16 @@ export default function TapsPage() {
       <div style={{ background: "#0A0A0F", minHeight: "100vh" }}>
         <div className="pw">
 
-          {/* Header */}
-          <div className="topbar">
+          {/* ── Header ── */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18 }}>
             <div>
-              <h1>📲 Riwayat Tap</h1>
-              <p>Pantau aktivitas tap kartu NFC/QR — harian, bulanan, dan analitik.</p>
+              <h1 style={{ fontSize: "1.25rem", fontWeight: 800, lineHeight: 1.2 }}>📲 Riwayat Tap</h1>
+              <p style={{ color: "#9A9AB0", fontSize: "0.75rem", marginTop: 3 }}>Pantau aktivitas tap kartu NFC/QR — harian, bulanan, analitik.</p>
             </div>
             <a href="/admin" className="back">← Dashboard</a>
           </div>
 
-          {/* Stats */}
+          {/* ── Stats ── */}
           <div className="stats">
             <div className="sc">
               <div className="sv" style={{ color: "#FCD34D" }}>{logs.length}</div>
@@ -356,26 +416,28 @@ export default function TapsPage() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="tabs">
-            <button className={`tab ${activeTab === "harian" ? "act" : ""}`} onClick={() => setActiveTab("harian")}>
-              📋 Riwayat Harian
-            </button>
-            <button className={`tab ${activeTab === "bulanan" ? "act" : ""}`} onClick={() => setActiveTab("bulanan")}>
-              📊 Per Bulan
-            </button>
-            <button className={`tab ${activeTab === "tren" ? "act" : ""}`} onClick={() => setActiveTab("tren")}>
-              📈 Tren & Jam Ramai
-            </button>
-            <button
-              className={`tab ${activeTab === "tidur" ? "act-red" : ""}`}
-              onClick={() => setActiveTab("tidur")}
-            >
-              ⚠️ Kartu Tidur {sleepingCards.length > 0 && `(${sleepingCards.length})`}
-            </button>
+          {/* ── Tabs: scrollable on mobile ── */}
+          <div className="tabs-scroll">
+            <div className="tabs">
+              <button className={`tab ${activeTab === "harian" ? "act" : ""}`} onClick={() => setActiveTab("harian")}>
+                📋 Harian
+              </button>
+              <button className={`tab ${activeTab === "bulanan" ? "act" : ""}`} onClick={() => setActiveTab("bulanan")}>
+                📊 Per Bulan
+              </button>
+              <button className={`tab ${activeTab === "tren" ? "act" : ""}`} onClick={() => setActiveTab("tren")}>
+                📈 Tren &amp; Jam Ramai
+              </button>
+              <button
+                className={`tab ${activeTab === "tidur" ? "act-red" : ""}`}
+                onClick={() => setActiveTab("tidur")}
+              >
+                ⚠️ Kartu Tidur{sleepingCards.length > 0 ? ` (${sleepingCards.length})` : ""}
+              </button>
+            </div>
           </div>
 
-          {/* Toolbar */}
+          {/* ── Toolbar ── */}
           <div className="toolbar">
             <input
               type="text"
@@ -385,10 +447,10 @@ export default function TapsPage() {
               onChange={e => setSearch(e.target.value)}
             />
             <span className="last-refresh">
-              Diperbarui {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+              {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
             </span>
             <button className="refresh-btn" onClick={fetchData} disabled={loading}>
-              {loading ? "⏳ Memuat..." : "🔄 Refresh"}
+              {loading ? "⏳" : "🔄"} Refresh
             </button>
           </div>
 
@@ -441,19 +503,15 @@ export default function TapsPage() {
                   const max = Math.max(...mg.byStore.map(s => s.count), 1);
                   return (
                     <div key={mg.monthKey} className="month-card" style={isThisMonth ? { borderColor: "rgba(245,158,11,0.35)" } : {}}>
-                      <div className="month-header" onClick={() => setExpandedMonth(isOpen ? null : mg.monthKey)}>
+                      <div className="month-header" onClick={() => { setExpandedMonth(isOpen ? null : mg.monthKey); setExpandedStore(null); }}>
                         <div>
                           <div className="month-title">
-                            {isThisMonth && (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(245,158,11,0.15)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 999, padding: "2px 8px", marginRight: 8, fontWeight: 600 }}>
-                                Bulan Ini
-                              </span>
-                            )}
+                            {isThisMonth && <span className="bulan-ini-badge">Bulan Ini</span>}
                             {mg.label}
                           </div>
-                          <div className="month-sub">{mg.byStore.length} cafe · {mg.total} tap total</div>
+                          <div className="month-sub">{mg.byStore.length} cafe · {mg.total} tap</div>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div className="month-total">{mg.total}×</div>
                           <span className={`chevron ${isOpen ? "open" : ""}`}>▼</span>
                         </div>
@@ -464,21 +522,49 @@ export default function TapsPage() {
                           <div style={{ paddingTop: 12 }}>
                             {mg.byStore.map((s, idx) => {
                               const delta = s.lastMonthCount > 0 ? s.count - s.lastMonthCount : null;
+                              const storeKey = `${mg.monthKey}::${s.storeName}`;
+                              const isStoreOpen = expandedStore === storeKey;
+                              const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
                               return (
-                                <div key={s.storeName} className="store-row">
-                                  <div className="store-rank">#{idx + 1}</div>
-                                  <div className="store-name">{s.storeName}</div>
-                                  <div className="store-bar-wrap">
-                                    <div className="store-bar-bg">
-                                      <div className="store-bar-fill" style={{ width: `${(s.count / max) * 100}%` }} />
+                                <div key={s.storeName}>
+                                  <div
+                                    className="store-row"
+                                    onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
+                                    title={isStoreOpen ? "Tutup detail" : "Lihat detail tap"}
+                                  >
+                                    <div className="store-rank">#{idx + 1}</div>
+                                    <div className="store-name">{s.storeName}</div>
+                                    <div className="store-bar-wrap">
+                                      <div className="store-bar-bg">
+                                        <div className="store-bar-fill" style={{ width: `${(s.count / max) * 100}%` }} />
+                                      </div>
                                     </div>
+                                    <div className="store-count">{s.count}×</div>
+                                    {isThisMonth && (
+                                      delta === null ? <span className="delta-zero">baru</span>
+                                      : delta > 0 ? <span className="delta-pos">+{delta}</span>
+                                      : delta < 0 ? <span className="delta-neg">{delta}</span>
+                                      : <span className="delta-zero">±0</span>
+                                    )}
+                                    <span style={{ fontSize: "0.7rem", color: isStoreOpen ? "#FCD34D" : "#5A5A72", marginLeft: 4, transition: "transform 0.2s", display: "inline-block", transform: isStoreOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
                                   </div>
-                                  <div className="store-count">{s.count}×</div>
-                                  {isThisMonth && (
-                                    delta === null ? <span className="delta-zero">baru</span>
-                                    : delta > 0 ? <span className="delta-pos">+{delta}</span>
-                                    : delta < 0 ? <span className="delta-neg">{delta}</span>
-                                    : <span className="delta-zero">±0</span>
+                                  {isStoreOpen && (
+                                    <div className="store-detail">
+                                      <div className="detail-title">📋 Riwayat {storeTaps.length} tap — {s.storeName}</div>
+                                      {storeTaps.map((tap, ti) => {
+                                        const d = new Date(tap.tappedAt);
+                                        const dateStr = d.toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+                                        const timeStr = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                                        return (
+                                          <div key={`${tap.tappedAt}-${ti}`} className="detail-tap-item">
+                                            <span className="detail-tap-num">{ti + 1}.</span>
+                                            <span className="detail-tap-date">{dateStr}</span>
+                                            <span className="detail-tap-time">{timeStr}</span>
+                                            <span className="detail-tap-ago">{timeAgo(tap.tappedAt)}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   )}
                                 </div>
                               );
