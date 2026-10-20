@@ -790,13 +790,22 @@ export default function AdminDashboard() {
                   <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
                     📲 Riwayat Tap Terbaru
                   </h2>
-                  <button
-                    onClick={loadTapLogs}
-                    className="btn btn-ghost"
-                    style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                  >
-                    🔄 Refresh
-                  </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      onClick={loadTapLogs}
+                      className="btn btn-ghost"
+                      style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                    >
+                      🔄 Refresh
+                    </button>
+                    <a
+                      href="/admin/taps"
+                      className="btn btn-ghost"
+                      style={{ padding: "4px 10px", fontSize: "0.75rem", textDecoration: "none", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.08)" }}
+                    >
+                      Lihat Semua →
+                    </a>
+                  </div>
                 </div>
                 {tapLogs.length === 0 ? (
                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada tap tercatat. Tap pada kartu akan muncul di sini.</p>
