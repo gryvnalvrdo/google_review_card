@@ -821,9 +821,7 @@ export default function AdminDashboard() {
                           <div style={{ fontWeight: 600, color: "#F0F0FF", fontSize: "0.88rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {log.storeName}
                           </div>
-                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{log.code}</span>
-                            <span>·</span>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
                             <span>{new Date(log.tappedAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                           </div>
                         </div>
