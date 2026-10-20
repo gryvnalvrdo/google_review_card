@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
-
-const QRScanner = dynamic(() => import("./components/QRScanner"), { ssr: false });
 
 type CardRecord = {
   code: string;
@@ -20,15 +17,6 @@ type TapLogEntry = {
   storeName: string;
   tappedAt: string;
 };
-
-function generateRandomCode(length = 6): string {
-  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-  let out = "";
-  const arr = new Uint8Array(length);
-  crypto.getRandomValues(arr);
-  for (let i = 0; i < length; i++) out += chars[arr[i] % chars.length];
-  return out;
-}
 
 export default function AdminDashboard() {
   const [cards, setCards] = useState<CardRecord[]>([]);
@@ -47,7 +35,6 @@ export default function AdminDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [stockPage, setStockPage] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [showScanner, setShowScanner] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
@@ -229,43 +216,19 @@ export default function AdminDashboard() {
     <form onSubmit={handleSubmit}>
       <div className="form-group">
         <label className="label" htmlFor="card-code">Kode Kartu (NFC/QR)</label>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            id="card-code"
-            className="input"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="cth: a8f3k2"
-            maxLength={20}
-            required
-            autoCapitalize="none"
-            autoCorrect="off"
-            readOnly={isEditing}
-            style={isEditing ? { opacity: 0.55, cursor: "not-allowed", flex: 1 } : { flex: 1 }}
-          />
-          {!isEditing && (
-            <>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                style={{ padding: "0 12px", fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0 }}
-                onClick={() => setShowScanner(true)}
-                title="Scan QR kartu via kamera"
-              >
-                📷 Scan
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                style={{ padding: "0 12px", fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0 }}
-                onClick={() => setCode(generateRandomCode())}
-                title="Generate kode acak"
-              >
-                🎲
-              </button>
-            </>
-          )}
-        </div>
+        <input
+          id="card-code"
+          className="input"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="cth: a8f3k2"
+          maxLength={20}
+          required
+          autoCapitalize="none"
+          autoCorrect="off"
+          readOnly={isEditing}
+          style={isEditing ? { opacity: 0.55, cursor: "not-allowed" } : {}}
+        />
         {isEditing && (
           <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
             Kode tidak bisa diubah saat edit.
@@ -298,18 +261,7 @@ export default function AdminDashboard() {
             🔍 Cari Place ID ↗
           </a>
         </label>
-        <div style={{
-          background: "rgba(99,102,241,0.08)",
-          border: "1px solid rgba(99,102,241,0.2)",
-          borderRadius: 8,
-          padding: "10px 12px",
-          marginBottom: 8,
-          fontSize: "0.75rem",
-          color: "var(--text-secondary)",
-          lineHeight: 1.6,
-        }}>
-          <strong style={{ color: "#A5B4FC" }}>💡 Cara cepat:</strong> Buka Place ID Finder (link biru di atas) → Cari toko → Copy ID yang berawalan <strong>ChIJ...</strong> lalu paste di bawah.
-        </div>
+
         <input
           id="place-id"
           className="input"
@@ -435,18 +387,6 @@ export default function AdminDashboard() {
 
   return (
     <>
-      {/* QR Scanner overlay */}
-      {showScanner && (
-        <QRScanner
-          onScan={(scannedCode) => {
-            setCode(scannedCode);
-            setShowScanner(false);
-            setShowSheet(true);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
-
       <div className="gradient-bg">
         <div className="gradient-blob blob-1" />
         <div className="gradient-blob blob-2" />
