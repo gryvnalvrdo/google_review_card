@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 
 const QRScanner = dynamic(() => import("./components/QRScanner"), { ssr: false });
@@ -13,6 +13,12 @@ type CardRecord = {
   updatedAt?: string;
   tapCount?: number;
   price?: number;
+};
+
+type TapLogEntry = {
+  code: string;
+  storeName: string;
+  tappedAt: string;
 };
 
 function generateRandomCode(length = 6): string {
@@ -45,6 +51,7 @@ export default function AdminDashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
+  const [tapLogs, setTapLogs] = useState<TapLogEntry[]>([]);
 
   async function loadCards() {
     const res = await fetch("/api/admin/codes");
@@ -59,7 +66,15 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => { loadCards(); }, []);
+  const loadTapLogs = useCallback(async () => {
+    const res = await fetch("/api/admin/taps?limit=20");
+    if (res.ok) {
+      const data = await res.json();
+      setTapLogs(data.logs ?? []);
+    }
+  }, []);
+
+  useEffect(() => { loadCards(); loadTapLogs(); }, [loadTapLogs]);
 
   // Lock body scroll when sheet open
   useEffect(() => {
@@ -169,6 +184,18 @@ export default function AdminDashboard() {
     return new Date(iso).toLocaleDateString("id-ID", {
       day: "numeric", month: "short", year: "numeric",
     });
+  }
+
+  function timeAgo(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Baru saja";
+    if (mins < 60) return `${mins} menit lalu`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} jam lalu`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days} hari lalu`;
+    return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
   }
 
   const filtered = cards.filter(
@@ -751,6 +778,67 @@ export default function AdminDashboard() {
                           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{formatDate(c.createdAt)}</div>
                         </div>
                         <a href="/admin/cards" style={{ fontSize: "0.8rem", color: "#A5B4FC", textDecoration: "none" }}>Lihat ↗</a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* TAP LOG */}
+              <div className="card" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    📲 Riwayat Tap Terbaru
+                  </h2>
+                  <button
+                    onClick={loadTapLogs}
+                    className="btn btn-ghost"
+                    style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                  >
+                    🔄 Refresh
+                  </button>
+                </div>
+                {tapLogs.length === 0 ? (
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada tap tercatat. Tap pada kartu akan muncul di sini.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {tapLogs.map((log, i) => (
+                      <div
+                        key={`${log.code}-${log.tappedAt}-${i}`}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "10px 12px",
+                          background: "rgba(255,255,255,0.03)",
+                          borderLeft: "3px solid #F59E0B",
+                          borderRadius: "0 8px 8px 0",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, color: "#F0F0FF", fontSize: "0.88rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {log.storeName}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{log.code}</span>
+                            <span>·</span>
+                            <span>{new Date(log.tappedAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: "0.72rem",
+                          color: "#FCD34D",
+                          background: "rgba(245,158,11,0.1)",
+                          border: "1px solid rgba(245,158,11,0.2)",
+                          padding: "3px 8px",
+                          borderRadius: 999,
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                        }}>
+                          {timeAgo(log.tappedAt)}
+                        </span>
                       </div>
                     ))}
                   </div>

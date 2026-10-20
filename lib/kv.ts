@@ -1,5 +1,11 @@
 import { createClient } from "@vercel/kv";
 
+export type TapLogEntry = {
+  code: string;
+  storeName: string;
+  tappedAt: string; // ISO timestamp
+};
+
 /** Coba ulang fn maksimal maxAttempts kali. Jika semua gagal, return null (diam-diam). */
 async function retryOrNull<T>(
   fn: () => Promise<T>,
@@ -31,6 +37,8 @@ const KEY_PREFIX   = "card:";
 const TAP_PREFIX   = "tap:";
 const INDEX_KEY    = "card:_index";
 const STOK_INDEX   = "stok:_index";   // set kode yang sudah dicetak tapi belum di-assign
+const TAP_LOG_KEY  = "tap_log";        // list riwayat tap (JSON string), newest first
+const TAP_LOG_MAX  = 200;              // maksimal entri yang disimpan
 
 // Mengambil env vars standar atau nama hasil auto-generate Vercel Integration
 const kvUrl = process.env.KV_REST_API_URL || process.env.KV_REST_API_URL_KV_REST_API_URL;
@@ -41,6 +49,7 @@ const kvToken = process.env.KV_REST_API_TOKEN || process.env.KV_REST_API_URL_KV_
 const memoryStore = new Map<string, CardRecord>();
 const tapStore    = new Map<string, number>();
 const stokStore   = new Set<string>();          // in-memory stok fallback
+const tapLogStore: TapLogEntry[] = [];          // in-memory tap log fallback
 
 const hasKv = Boolean(kvUrl && kvToken);
 const vercelKv = hasKv ? createClient({ url: kvUrl!, token: kvToken! }) : null;
@@ -153,4 +162,34 @@ export async function getStokCount(): Promise<number> {
     return n ?? 0;
   }
   return stokStore.size;
+}
+
+// ── TAP LOG FUNCTIONS ───────────────────────────────────────────────
+
+/** Catat satu tap event ke log. Simpan maks TAP_LOG_MAX entri terbaru. */
+export async function addTapLog(entry: TapLogEntry): Promise<void> {
+  if (hasKv && vercelKv) {
+    // LPUSH = push ke head list (newest first), lalu trim ke TAP_LOG_MAX
+    await vercelKv.lpush(TAP_LOG_KEY, JSON.stringify(entry));
+    await vercelKv.ltrim(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1);
+    return;
+  }
+  tapLogStore.unshift(entry);
+  if (tapLogStore.length > TAP_LOG_MAX) tapLogStore.splice(TAP_LOG_MAX);
+}
+
+/** Ambil N entri tap terbaru. */
+export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
+  if (hasKv && vercelKv) {
+    const raw = await vercelKv.lrange<string>(TAP_LOG_KEY, 0, limit - 1);
+    if (!raw) return [];
+    return raw.map((item) => {
+      if (typeof item === "string") {
+        try { return JSON.parse(item) as TapLogEntry; } catch { return null; }
+      }
+      // @vercel/kv kadang auto-parse JSON — handle both
+      return item as unknown as TapLogEntry;
+    }).filter((e): e is TapLogEntry => e !== null);
+  }
+  return tapLogStore.slice(0, limit);
 }

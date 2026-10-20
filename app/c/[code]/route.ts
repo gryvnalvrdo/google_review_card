@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCard, incrementTapCount } from "../../../lib/kv";
+import { getCard, incrementTapCount, addTapLog } from "../../../lib/kv";
 import { isAllowedReviewUrl } from "../../../lib/redirect";
 
 export async function GET(
@@ -93,6 +93,7 @@ export async function GET(
 
   // Hitung tap secara async — jangan delay redirect
   incrementTapCount(params.code);
+  addTapLog({ code: card.code, storeName: card.storeName, tappedAt: new Date().toISOString() });
 
   return NextResponse.redirect(card.googleReviewUrl, { status: 302 });
 }
