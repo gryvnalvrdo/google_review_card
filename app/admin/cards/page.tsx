@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 
+const QR_EXPORT_SIZE = 1000; // ukuran QR PNG yang di-download (px)
+
 const CARD_W  = 638;
 const CARD_H  = 1004;
 const QR_SIZE = 280;
@@ -30,10 +32,14 @@ export default function CardsPage() {
   const [sortBy, setSortBy] = useState<"date" | "tap" | "name">("date");
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [downloadingCode, setDownloadingCode] = useState<string | null>(null);
+  const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
   const [bgImg, setBgImg] = useState<HTMLImageElement | null>(null);
   const qrRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
+  const qrOnlyRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
+  const [baseUrl, setBaseUrl] = useState("");
 
   useEffect(() => {
+    setBaseUrl(window.location.origin);
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = "/Beri Kami Ulasan.png";
@@ -146,6 +152,36 @@ export default function CardsPage() {
     setDownloadingCode(null);
   }
 
+  async function downloadQrOnly(card: CardData) {
+    setDownloadingQrCode(card.code);
+    await new Promise(r => setTimeout(r, 300));
+    const qrCanvas = qrOnlyRefs.current[card.code];
+    if (!qrCanvas) {
+      alert("QR belum siap, coba lagi sebentar.");
+      setDownloadingQrCode(null);
+      return;
+    }
+    // Buat canvas baru dengan padding putih supaya lebih rapi saat dicetak
+    const PAD = 40;
+    const out = document.createElement("canvas");
+    out.width = QR_EXPORT_SIZE + PAD * 2;
+    out.height = QR_EXPORT_SIZE + PAD * 2;
+    const ctx = out.getContext("2d")!;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(qrCanvas, PAD, PAD, QR_EXPORT_SIZE, QR_EXPORT_SIZE);
+    out.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `QR_${card.storeName.replace(/\s+/g, "_")}_${card.code}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+    setDownloadingQrCode(null);
+  }
+
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
@@ -224,6 +260,9 @@ export default function CardsPage() {
     .bgh{background:transparent;color:#9A9AB0;border:1px solid rgba(255,255,255,.09);}
     .bgh:hover{background:rgba(255,255,255,.05);color:#F0F0FF;}
     .qrh{position:fixed;left:-9999px;top:-9999px;pointer-events:none;}
+    .idqr{background:rgba(16,185,129,.1);color:#34D399;border:1px solid rgba(16,185,129,.25);}
+    .idqr:hover:not(:disabled){background:rgba(16,185,129,.2);}
+    .idqr:disabled{opacity:.4;cursor:not-allowed;}
     @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
   `;
 
@@ -232,12 +271,24 @@ export default function CardsPage() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       <div className="qrh" aria-hidden="true">
+        {/* QR untuk download kartu penuh (pakai googleReviewUrl) */}
         {cards.map(card => (
           <QRCodeCanvas
-            key={card.code}
+            key={`full-${card.code}`}
             value={card.googleReviewUrl}
             size={QR_SIZE}
             ref={(el: HTMLCanvasElement | null) => { qrRefs.current[card.code] = el; }}
+            level="H"
+            includeMargin={false}
+          />
+        ))}
+        {/* QR untuk download QR saja — pakai URL /c/{code} sesuai kartu fisik */}
+        {baseUrl && cards.map(card => (
+          <QRCodeCanvas
+            key={`only-${card.code}`}
+            value={`${baseUrl}/c/${card.code}`}
+            size={QR_EXPORT_SIZE}
+            ref={(el: HTMLCanvasElement | null) => { qrOnlyRefs.current[card.code] = el; }}
             level="H"
             includeMargin={false}
           />
@@ -316,10 +367,18 @@ export default function CardsPage() {
                         </div>
                         <div className="ca">
                           <button
+                            className="ib idqr"
+                            onClick={() => downloadQrOnly(card)}
+                            disabled={downloadingQrCode === card.code || !baseUrl}
+                            title="Download QR saja (resolusi tinggi, sesuai kartu fisik) — untuk dicetak besar"
+                          >
+                            {downloadingQrCode === card.code ? "⏳" : "📷"}
+                          </button>
+                          <button
                             className="ib idl"
                             onClick={() => downloadCard(card)}
                             disabled={downloadingCode === card.code || !bgImg}
-                            title={!bgImg ? "Template sedang dimuat..." : "Download kartu PNG dengan QR"}
+                            title={!bgImg ? "Template sedang dimuat..." : "Download kartu PNG lengkap dengan desain"}
                           >
                             {downloadingCode === card.code ? "⏳" : "⬇️"}
                           </button>
