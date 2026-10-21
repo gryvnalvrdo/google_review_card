@@ -73,9 +73,63 @@ function BarChart({
   );
 }
 
+// ── TapItem — shared item row ──────────────────────────────────────────
+function TapItem({ log, accentColor = "#34D399", timeAgo, formatFull }: {
+  log: TapLogEntry;
+  accentColor?: string;
+  timeAgo: (iso: string) => string;
+  formatFull: (iso: string) => string;
+}) {
+  // generate a stable hue from storeName for the icon gradient
+  const hue = log.storeName.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "11px 14px",
+      background: "#111118",
+      border: "1px solid rgba(255,255,255,0.06)",
+      borderLeft: `3px solid ${accentColor}`,
+      borderRadius: "0 10px 10px 0",
+      marginBottom: 5,
+      transition: "border-left-color 0.2s",
+    }}>
+      {/* Ikon kotak gradien */}
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: `linear-gradient(135deg, hsl(${hue},60%,28%), hsl(${(hue+40)%360},55%,42%))`,
+        border: `1px solid hsl(${hue},50%,35%)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "1rem",
+      }}>📲</div>
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {log.storeName}
+        </div>
+        <div style={{ fontSize: "0.72rem", color: "#6A6A82", marginTop: 2 }}>
+          {formatFull(log.tappedAt)}
+        </div>
+      </div>
+
+      {/* Badge waktu */}
+      <span style={{
+        fontSize: "0.72rem", fontWeight: 600,
+        color: accentColor,
+        background: `${accentColor}18`,
+        border: `1px solid ${accentColor}40`,
+        padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0,
+      }}>
+        {timeAgo(log.tappedAt)}
+      </span>
+    </div>
+  );
+}
+
 // ── Collapsible period section ─────────────────────────────────────────
 function PeriodSection({
   title,
+  dot,
   entries,
   defaultOpen = false,
   accentColor = "#F59E0B",
@@ -83,6 +137,7 @@ function PeriodSection({
   timeAgo,
 }: {
   title: string;
+  dot?: string;
   entries: TapLogEntry[];
   defaultOpen?: boolean;
   accentColor?: string;
@@ -92,78 +147,60 @@ function PeriodSection({
   const [open, setOpen] = useState(defaultOpen);
   if (entries.length === 0) return null;
 
-  // group by day within this period
-  type DayGroup = { dayKey: string; label: string; entries: TapLogEntry[] };
-  const groups: DayGroup[] = [];
-  for (const entry of entries) {
-    const dk = new Date(entry.tappedAt).toDateString();
-    const last = groups[groups.length - 1];
-    const d = new Date(entry.tappedAt);
-    const today = new Date();
-    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
-    let label: string;
-    if (d.toDateString() === today.toDateString()) label = "Hari Ini";
-    else if (d.toDateString() === yesterday.toDateString()) label = "Kemarin";
-    else label = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-    if (!last || last.dayKey !== dk) groups.push({ dayKey: dk, label, entries: [entry] });
-    else last.entries.push(entry);
-  }
-
   return (
-    <div style={{ marginBottom: 8 }}>
+    <div style={{ marginBottom: 6 }}>
+      {/* ── Header bar — mirip gambar 2 ── */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
           width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "11px 14px", background: "#111118", border: `1px solid rgba(255,255,255,0.07)`,
-          borderLeft: `3px solid ${accentColor}`, borderRadius: "0 10px 10px 0",
-          cursor: "pointer", color: "#F0F0FF", fontFamily: "inherit", transition: "background 0.15s",
+          padding: "10px 16px",
+          background: "#0E0E16",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderLeft: `3px solid ${accentColor}`,
+          borderRadius: open ? "0 10px 0 0" : "0 10px 10px 0",
+          cursor: "pointer", color: "#F0F0FF", fontFamily: "inherit",
+          transition: "background 0.15s",
         }}
       >
-        <span style={{ fontSize: "0.82rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
-          {title}
+        {/* Kiri: dot + label */}
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
-            background: `rgba(245,158,11,0.12)`, color: "#FCD34D",
-            border: "1px solid rgba(245,158,11,0.25)", padding: "2px 8px",
-            borderRadius: 999, fontSize: "0.65rem", fontWeight: 700,
-          }}>
-            {entries.length} tap
+            width: 8, height: 8, borderRadius: "50%",
+            background: accentColor, flexShrink: 0, boxShadow: `0 0 6px ${accentColor}80`,
+          }} />
+          <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", color: "#C0C0D8" }}>
+            {title}
           </span>
         </span>
-        <span style={{
-          fontSize: "0.7rem", color: "#5A5A72",
-          transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", display: "inline-block",
-        }}>▼</span>
+
+        {/* Kanan: badge count + chevron */}
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{
+            fontSize: "0.68rem", fontWeight: 800,
+            color: accentColor,
+            background: `${accentColor}18`,
+            border: `1px solid ${accentColor}40`,
+            padding: "3px 10px", borderRadius: 999,
+          }}>
+            {entries.length} TAP
+          </span>
+          <span style={{
+            fontSize: "0.65rem", color: "#5A5A72",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.25s", display: "inline-block",
+          }}>▼</span>
+        </span>
       </button>
 
+      {/* ── Items ── */}
       {open && (
-        <div style={{ marginTop: 4 }}>
-          {groups.map((group) => (
-            <div key={group.dayKey} style={{ marginBottom: 6 }}>
-              <div style={{
-                fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase",
-                letterSpacing: "0.07em", color: "#5A5A72", padding: "10px 0 5px",
-                borderBottom: "1px solid rgba(255,255,255,0.05)", marginBottom: 6,
-                display: "flex", justifyContent: "space-between",
-              }}>
-                <span>{group.label}</span>
-                <span style={{
-                  background: "rgba(245,158,11,0.1)", color: "#FCD34D",
-                  border: "1px solid rgba(245,158,11,0.2)", padding: "1px 7px",
-                  borderRadius: 999, fontSize: "0.63rem",
-                }}>{group.entries.length} tap</span>
-              </div>
-              {group.entries.map((log, i) => (
-                <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-item">
-                  <div className="tap-icon">📲</div>
-                  <div className="tap-info">
-                    <div className="tap-store">{log.storeName}</div>
-                    <div className="tap-time">{formatFull(log.tappedAt)}</div>
-                  </div>
-                  <span className="tap-badge">{timeAgo(log.tappedAt)}</span>
-                </div>
-              ))}
-            </div>
+        <div style={{
+          border: "1px solid rgba(255,255,255,0.06)", borderTop: "none",
+          borderRadius: "0 0 10px 10px", overflow: "hidden",
+        }}>
+          {entries.map((log, i) => (
+            <TapItem key={`${log.code}-${log.tappedAt}-${i}`} log={log} accentColor={accentColor} timeAgo={timeAgo} formatFull={formatFull} />
           ))}
         </div>
       )}
@@ -577,44 +614,18 @@ export default function TapsPage() {
                   </div>
                 ) : (
                   <div>
-                    {/* ── Hari Ini (selalu tampil terbuka) ── */}
-                    {hariianPeriods.today.length > 0 ? (
-                      <div style={{ marginBottom: 16 }}>
-                        <div className="today-header">
-                          <span>☀️ Hari Ini</span>
-                          <span style={{
-                            background: "rgba(52,211,153,0.12)", color: "#34D399",
-                            border: "1px solid rgba(52,211,153,0.25)", padding: "2px 9px",
-                            borderRadius: 999, fontSize: "0.65rem", fontWeight: 700,
-                          }}>{hariianPeriods.today.length} tap</span>
-                        </div>
-                        {hariianPeriods.today.map((log, i) => (
-                          <div key={`today-${log.code}-${log.tappedAt}-${i}`} className="tap-item" style={{ borderLeftColor: "#34D399" }}>
-                            <div className="tap-icon" style={{ background: "rgba(52,211,153,0.1)", borderColor: "rgba(52,211,153,0.2)" }}>📲</div>
-                            <div className="tap-info">
-                              <div className="tap-store">{log.storeName}</div>
-                              <div className="tap-time">{formatFull(log.tappedAt)}</div>
-                            </div>
-                            <span className="tap-badge" style={{ color: "#34D399", background: "rgba(52,211,153,0.1)", borderColor: "rgba(52,211,153,0.2)" }}>
-                              {timeAgo(log.tappedAt)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{
-                        padding: "18px 16px", marginBottom: 16,
-                        background: "rgba(52,211,153,0.04)", border: "1px solid rgba(52,211,153,0.15)",
-                        borderRadius: 10, color: "#5A5A72", fontSize: "0.82rem", textAlign: "center",
-                      }}>
-                        ☀️ Belum ada tap hari ini
-                      </div>
-                    )}
-
-                    {/* ── Periode sebelumnya — masing-masing collapsible ── */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {/* ── Semua periode sebagai collapsible dropdown — Hari Ini default open ── */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                       <PeriodSection
-                        title="📅 Kemarin"
+                        title="Hari Ini"
+                        entries={hariianPeriods.today}
+                        defaultOpen={true}
+                        accentColor="#34D399"
+                        formatFull={formatFull}
+                        timeAgo={timeAgo}
+                      />
+                      <PeriodSection
+                        title="Kemarin"
                         entries={hariianPeriods.yest}
                         defaultOpen={false}
                         accentColor="#F59E0B"
@@ -622,7 +633,7 @@ export default function TapsPage() {
                         timeAgo={timeAgo}
                       />
                       <PeriodSection
-                        title="📆 7 Hari Terakhir"
+                        title="7 Hari Terakhir"
                         entries={hariianPeriods.last7}
                         defaultOpen={false}
                         accentColor="#8B5CF6"
@@ -630,7 +641,7 @@ export default function TapsPage() {
                         timeAgo={timeAgo}
                       />
                       <PeriodSection
-                        title="🗓️ Bulan Ini (lebih dari 7 hari lalu)"
+                        title="Bulan Ini"
                         entries={hariianPeriods.thisMonth}
                         defaultOpen={false}
                         accentColor="#3B82F6"
@@ -638,7 +649,7 @@ export default function TapsPage() {
                         timeAgo={timeAgo}
                       />
                       <PeriodSection
-                        title="🗃️ Lebih Lama"
+                        title="Lebih Lama"
                         entries={hariianPeriods.older}
                         defaultOpen={false}
                         accentColor="#6B7280"
@@ -646,6 +657,19 @@ export default function TapsPage() {
                         timeAgo={timeAgo}
                       />
                     </div>
+
+                    {/* placeholder kalau hari ini kosong & semua periode ada isi */}
+                    {hariianPeriods.today.length === 0 && filtered.length > 0 && (
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        padding: "12px 16px", marginBottom: 6,
+                        background: "rgba(52,211,153,0.03)", border: "1px dashed rgba(52,211,153,0.18)",
+                        borderRadius: 10, color: "#5A5A72", fontSize: "0.8rem",
+                      }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34D399", opacity: 0.4, flexShrink: 0 }} />
+                        Belum ada tap hari ini
+                      </div>
+                    )}
 
                     <Separator />
                   </div>
