@@ -39,7 +39,6 @@ function BarChart({
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
-      {/* Grid lines */}
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <line
           key={f}
@@ -74,6 +73,104 @@ function BarChart({
   );
 }
 
+// ── Collapsible period section ─────────────────────────────────────────
+function PeriodSection({
+  title,
+  entries,
+  defaultOpen = false,
+  accentColor = "#F59E0B",
+  formatFull,
+  timeAgo,
+}: {
+  title: string;
+  entries: TapLogEntry[];
+  defaultOpen?: boolean;
+  accentColor?: string;
+  formatFull: (iso: string) => string;
+  timeAgo: (iso: string) => string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  if (entries.length === 0) return null;
+
+  // group by day within this period
+  type DayGroup = { dayKey: string; label: string; entries: TapLogEntry[] };
+  const groups: DayGroup[] = [];
+  for (const entry of entries) {
+    const dk = new Date(entry.tappedAt).toDateString();
+    const last = groups[groups.length - 1];
+    const d = new Date(entry.tappedAt);
+    const today = new Date();
+    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+    let label: string;
+    if (d.toDateString() === today.toDateString()) label = "Hari Ini";
+    else if (d.toDateString() === yesterday.toDateString()) label = "Kemarin";
+    else label = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    if (!last || last.dayKey !== dk) groups.push({ dayKey: dk, label, entries: [entry] });
+    else last.entries.push(entry);
+  }
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "11px 14px", background: "#111118", border: `1px solid rgba(255,255,255,0.07)`,
+          borderLeft: `3px solid ${accentColor}`, borderRadius: "0 10px 10px 0",
+          cursor: "pointer", color: "#F0F0FF", fontFamily: "inherit", transition: "background 0.15s",
+        }}
+      >
+        <span style={{ fontSize: "0.82rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+          {title}
+          <span style={{
+            background: `rgba(245,158,11,0.12)`, color: "#FCD34D",
+            border: "1px solid rgba(245,158,11,0.25)", padding: "2px 8px",
+            borderRadius: 999, fontSize: "0.65rem", fontWeight: 700,
+          }}>
+            {entries.length} tap
+          </span>
+        </span>
+        <span style={{
+          fontSize: "0.7rem", color: "#5A5A72",
+          transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", display: "inline-block",
+        }}>▼</span>
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 4 }}>
+          {groups.map((group) => (
+            <div key={group.dayKey} style={{ marginBottom: 6 }}>
+              <div style={{
+                fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase",
+                letterSpacing: "0.07em", color: "#5A5A72", padding: "10px 0 5px",
+                borderBottom: "1px solid rgba(255,255,255,0.05)", marginBottom: 6,
+                display: "flex", justifyContent: "space-between",
+              }}>
+                <span>{group.label}</span>
+                <span style={{
+                  background: "rgba(245,158,11,0.1)", color: "#FCD34D",
+                  border: "1px solid rgba(245,158,11,0.2)", padding: "1px 7px",
+                  borderRadius: 999, fontSize: "0.63rem",
+                }}>{group.entries.length} tap</span>
+              </div>
+              {group.entries.map((log, i) => (
+                <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-item">
+                  <div className="tap-icon">📲</div>
+                  <div className="tap-info">
+                    <div className="tap-store">{log.storeName}</div>
+                    <div className="tap-time">{formatFull(log.tappedAt)}</div>
+                  </div>
+                  <span className="tap-badge">{timeAgo(log.tappedAt)}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────
 export default function TapsPage() {
   const [logs, setLogs] = useState<TapLogEntry[]>([]);
@@ -83,7 +180,7 @@ export default function TapsPage() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<"harian" | "bulanan" | "tren" | "tidur">("harian");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
-  const [expandedStore, setExpandedStore] = useState<string | null>(null); // "monthKey::storeName"
+  const [expandedStore, setExpandedStore] = useState<string | null>(null);
 
   async function fetchData() {
     setLoading(true);
@@ -105,7 +202,6 @@ export default function TapsPage() {
     if (activeTab === "bulanan" && logs.length > 0) {
       setExpandedMonth(getMonthKey(new Date().toISOString()));
     }
-    // Reset store detail dropdown when switching tabs
     setExpandedStore(null);
   }, [activeTab, logs]);
 
@@ -134,14 +230,6 @@ export default function TapsPage() {
       weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
     });
   }
-  function formatDayHeader(iso: string) {
-    const d = new Date(iso);
-    const today = new Date();
-    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
-    if (d.toDateString() === today.toDateString()) return "Hari Ini";
-    if (d.toDateString() === yesterday.toDateString()) return "Kemarin";
-    return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  }
 
   // ── Derived data ──────────────────────────────────────────────────────
   const thisMonthKey = getMonthKey(new Date().toISOString());
@@ -151,23 +239,42 @@ export default function TapsPage() {
   })();
 
   // Stats
+  const todayCount = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return logs.filter(l => new Date(l.tappedAt).toDateString() === todayStr).length;
+  }, [logs]);
   const thisMonthCount = useMemo(() => logs.filter(l => getMonthKey(l.tappedAt) === thisMonthKey).length, [logs]);
 
-  // Tab: Harian
+  // ── Harian: split by period ──────────────────────────────────────────
   const filtered = useMemo(() => logs.filter(l => l.storeName.toLowerCase().includes(search.toLowerCase())), [logs, search]);
-  type DayGroup = { dayKey: string; label: string; entries: TapLogEntry[] };
-  const grouped = useMemo(() => {
-    const groups: DayGroup[] = [];
+
+  const hariianPeriods = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+    const cutoff7 = new Date(now); cutoff7.setDate(now.getDate() - 7); cutoff7.setHours(0, 0, 0, 0);
+    const cutoffMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const today: TapLogEntry[] = [];
+    const yest: TapLogEntry[] = [];
+    const last7: TapLogEntry[] = [];   // 2–7 days ago (excluding yesterday)
+    const thisMonth: TapLogEntry[] = []; // this month but older than 7 days
+    const older: TapLogEntry[] = [];
+
     for (const entry of filtered) {
-      const dayKey = new Date(entry.tappedAt).toDateString();
-      const last = groups[groups.length - 1];
-      if (!last || last.dayKey !== dayKey) groups.push({ dayKey, label: formatDayHeader(entry.tappedAt), entries: [entry] });
-      else last.entries.push(entry);
+      const d = new Date(entry.tappedAt);
+      const ds = d.toDateString();
+      if (ds === todayStr) { today.push(entry); continue; }
+      if (ds === yesterdayStr) { yest.push(entry); continue; }
+      if (d >= cutoff7) { last7.push(entry); continue; }
+      if (d >= cutoffMonth) { thisMonth.push(entry); continue; }
+      older.push(entry);
     }
-    return groups;
+    return { today, yest, last7, thisMonth, older };
   }, [filtered]);
 
-  // Tab: Bulanan
+  // ── Tab: Bulanan ──────────────────────────────────────────────────────
   type MonthGroup = { monthKey: string; label: string; total: number; byStore: { storeName: string; count: number; lastMonthCount: number }[] };
   const monthlyGroups = useMemo((): MonthGroup[] => {
     const map = new Map<string, Map<string, number>>();
@@ -190,16 +297,14 @@ export default function TapsPage() {
     });
   }, [logs]);
 
-  // Detail taps per store per month (for dropdown)
   const tapsByStoreMonth = useMemo(() => {
-    const map = new Map<string, TapLogEntry[]>(); // key: "monthKey::storeName"
+    const map = new Map<string, TapLogEntry[]>();
     for (const entry of logs) {
       const mk = getMonthKey(entry.tappedAt);
       const key = `${mk}::${entry.storeName}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(entry);
     }
-    // Sort each list newest first
     map.forEach((arr) => arr.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime()));
     return map;
   }, [logs]);
@@ -213,7 +318,7 @@ export default function TapsPage() {
     [monthlyGroups, search]
   );
 
-  // Tab: Tren — last 30 days
+  // ── Tab: Tren ────────────────────────────────────────────────────────
   const trendData = useMemo(() => {
     const days: { label: string; value: number }[] = [];
     for (let i = 29; i >= 0; i--) {
@@ -226,7 +331,6 @@ export default function TapsPage() {
     return days;
   }, [logs]);
 
-  // Tab: Tren — peak hours
   const hourData = useMemo(() => {
     const counts = Array(24).fill(0);
     logs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
@@ -247,7 +351,7 @@ export default function TapsPage() {
     return { hour: h, count: max, label: `${String(h).padStart(2, "0")}.00–${String(h + 1).padStart(2, "0")}.00` };
   }, [logs]);
 
-  // Tab: Kartu Tidur — cards not in tap log
+  // ── Tab: Kartu Tidur ─────────────────────────────────────────────────
   const tappedCodes = useMemo(() => new Set(logs.map(l => l.code)), [logs]);
   const sleepingCards = useMemo(() =>
     cards.filter(c => !tappedCodes.has(c.code) && c.storeName.toLowerCase().includes(search.toLowerCase())),
@@ -269,12 +373,12 @@ export default function TapsPage() {
     .back:hover { background: rgba(255,255,255,0.09); color: #F0F0FF; }
 
     /* ── Stats ── */
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
     .sc { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 12px 14px; }
     .sv { font-size: 1.35rem; font-weight: 800; margin-bottom: 3px; line-height: 1; }
     .sl { font-size: 0.62rem; color: #5A5A72; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; line-height: 1.3; }
 
-    /* ── Tabs: horizontal scroll on mobile ── */
+    /* ── Tabs ── */
     .tabs-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 16px; }
     .tabs-scroll::-webkit-scrollbar { display: none; }
     .tabs { display: inline-flex; gap: 4px; padding-bottom: 10px; white-space: nowrap; min-width: 100%; }
@@ -292,10 +396,7 @@ export default function TapsPage() {
     .refresh-btn:hover { background: rgba(245,158,11,0.18); }
     .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* ── Harian ── */
-    .day-header { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #5A5A72; padding: 14px 0 7px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .day-count-badge { background: rgba(245,158,11,0.12); color: #FCD34D; border: 1px solid rgba(245,158,11,0.25); padding: 2px 8px; border-radius: 999px; font-size: 0.65rem; font-weight: 700; }
-    .day-group { margin-bottom: 6px; }
+    /* ── Tap item ── */
     .tap-item { display: flex; align-items: center; gap: 10px; padding: 11px 13px; background: #111118; border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid #F59E0B; border-radius: 0 10px 10px 0; margin-bottom: 5px; transition: border-left-color 0.2s; }
     .tap-item:hover { border-left-color: #FCD34D; }
     .tap-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
@@ -335,7 +436,6 @@ export default function TapsPage() {
     .store-detail { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.15); border-radius: 10px; margin: 2px 0 10px; padding: 10px 12px; animation: fadeIn 0.18s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     .detail-header { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #F59E0B; margin-bottom: 8px; }
-    /* Grid layout: num | info | ago — stacks cleanly on narrow screens */
     .detail-tap-item { display: grid; grid-template-columns: 20px 1fr auto; align-items: start; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 6px; }
     .detail-tap-item:last-child { border-bottom: none; }
     .detail-tap-num { font-size: 0.68rem; color: #5A5A72; font-weight: 700; padding-top: 1px; }
@@ -358,13 +458,17 @@ export default function TapsPage() {
     .sleep-sub { font-size: 0.68rem; color: #6A6A82; margin-top: 2px; }
     .badge-sleep { font-size: 0.68rem; color: #FCA5A5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
 
+    /* ── Today section ── */
+    .today-header { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #5A5A72; padding: 6px 0 8px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
     /* ── Misc ── */
     .empty { text-align: center; padding: 50px 20px; color: #5A5A72; }
     .empty-icon { font-size: 2.8rem; margin-bottom: 14px; }
     .sep { text-align: center; font-size: 0.72rem; color: #5A5A72; margin-top: 24px; line-height: 1.6; }
 
     /* ── Responsive ── */
-    @media (max-width: 600px) {
+    @media (max-width: 700px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
       .store-bar-wrap { width: 54px; }
       .insight-pill { font-size: 0.74rem; padding: 6px 10px; }
     }
@@ -398,25 +502,29 @@ export default function TapsPage() {
             <a href="/admin" className="back">← Dashboard</a>
           </div>
 
-          {/* ── Stats ── */}
+          {/* ── Stats (4 kartu) ── */}
           <div className="stats">
             <div className="sc">
-              <div className="sv" style={{ color: "#FCD34D" }}>{logs.length}</div>
-              <div className="sl">📲 Total Tap</div>
+              <div className="sv" style={{ color: "#34D399" }}>{todayCount}</div>
+              <div className="sl">☀️ Hari Ini</div>
             </div>
             <div className="sc">
-              <div className="sv" style={{ color: "#34D399" }}>{thisMonthCount}</div>
+              <div className="sv" style={{ color: "#FCD34D" }}>{thisMonthCount}</div>
               <div className="sl">📅 Bulan Ini</div>
             </div>
             <div className="sc">
-              <div className="sv" style={{ color: sleepingCards.length > 0 ? "#FCA5A5" : "#A5B4FC" }}>
+              <div className="sv" style={{ color: "#A5B4FC" }}>{logs.length}</div>
+              <div className="sl">📲 Total Tap</div>
+            </div>
+            <div className="sc">
+              <div className="sv" style={{ color: sleepingCards.length > 0 ? "#FCA5A5" : "#6EE7B7" }}>
                 {sleepingCards.length}
               </div>
               <div className="sl">😴 Kartu Tidur</div>
             </div>
           </div>
 
-          {/* ── Tabs: scrollable on mobile ── */}
+          {/* ── Tabs ── */}
           <div className="tabs-scroll">
             <div className="tabs">
               <button className={`tab ${activeTab === "harian" ? "act" : ""}`} onClick={() => setActiveTab("harian")}>
@@ -456,35 +564,92 @@ export default function TapsPage() {
 
           {/* ═══ TAB: HARIAN ═══ */}
           {activeTab === "harian" && (
-            loading ? <div className="empty"><div className="empty-icon">⏳</div><p>Memuat...</p></div>
-            : filtered.length === 0 ? (
-              <div className="empty">
-                <div className="empty-icon">{search ? "🔍" : "📲"}</div>
-                <p style={{ fontWeight: 600, color: "#9A9AB0", marginBottom: 8 }}>
-                  {search ? "Tidak ada hasil." : "Belum ada tap tercatat."}
-                </p>
-                <p style={{ fontSize: "0.82rem" }}>{search ? "Coba kata kunci lain." : "Tap pada kartu NFC/QR akan muncul di sini."}</p>
-              </div>
-            ) : (
-              <div>
-                {grouped.map((group) => (
-                  <div key={group.dayKey} className="day-group">
-                    <div className="day-header">{group.label} · {group.entries.length} tap</div>
-                    {group.entries.map((log, i) => (
-                      <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-item">
-                        <div className="tap-icon">📲</div>
-                        <div className="tap-info">
-                          <div className="tap-store">{log.storeName}</div>
-                          <div className="tap-time">{formatFull(log.tappedAt)}</div>
-                        </div>
-                        <span className="tap-badge">{timeAgo(log.tappedAt)}</span>
-                      </div>
-                    ))}
+            loading
+              ? <div className="empty"><div className="empty-icon">⏳</div><p>Memuat...</p></div>
+              : filtered.length === 0
+                ? (
+                  <div className="empty">
+                    <div className="empty-icon">{search ? "🔍" : "📲"}</div>
+                    <p style={{ fontWeight: 600, color: "#9A9AB0", marginBottom: 8 }}>
+                      {search ? "Tidak ada hasil." : "Belum ada tap tercatat."}
+                    </p>
+                    <p style={{ fontSize: "0.82rem" }}>{search ? "Coba kata kunci lain." : "Tap pada kartu NFC/QR akan muncul di sini."}</p>
                   </div>
-                ))}
-                <Separator />
-              </div>
-            )
+                ) : (
+                  <div>
+                    {/* ── Hari Ini (selalu tampil terbuka) ── */}
+                    {hariianPeriods.today.length > 0 ? (
+                      <div style={{ marginBottom: 16 }}>
+                        <div className="today-header">
+                          <span>☀️ Hari Ini</span>
+                          <span style={{
+                            background: "rgba(52,211,153,0.12)", color: "#34D399",
+                            border: "1px solid rgba(52,211,153,0.25)", padding: "2px 9px",
+                            borderRadius: 999, fontSize: "0.65rem", fontWeight: 700,
+                          }}>{hariianPeriods.today.length} tap</span>
+                        </div>
+                        {hariianPeriods.today.map((log, i) => (
+                          <div key={`today-${log.code}-${log.tappedAt}-${i}`} className="tap-item" style={{ borderLeftColor: "#34D399" }}>
+                            <div className="tap-icon" style={{ background: "rgba(52,211,153,0.1)", borderColor: "rgba(52,211,153,0.2)" }}>📲</div>
+                            <div className="tap-info">
+                              <div className="tap-store">{log.storeName}</div>
+                              <div className="tap-time">{formatFull(log.tappedAt)}</div>
+                            </div>
+                            <span className="tap-badge" style={{ color: "#34D399", background: "rgba(52,211,153,0.1)", borderColor: "rgba(52,211,153,0.2)" }}>
+                              {timeAgo(log.tappedAt)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{
+                        padding: "18px 16px", marginBottom: 16,
+                        background: "rgba(52,211,153,0.04)", border: "1px solid rgba(52,211,153,0.15)",
+                        borderRadius: 10, color: "#5A5A72", fontSize: "0.82rem", textAlign: "center",
+                      }}>
+                        ☀️ Belum ada tap hari ini
+                      </div>
+                    )}
+
+                    {/* ── Periode sebelumnya — masing-masing collapsible ── */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <PeriodSection
+                        title="📅 Kemarin"
+                        entries={hariianPeriods.yest}
+                        defaultOpen={false}
+                        accentColor="#F59E0B"
+                        formatFull={formatFull}
+                        timeAgo={timeAgo}
+                      />
+                      <PeriodSection
+                        title="📆 7 Hari Terakhir"
+                        entries={hariianPeriods.last7}
+                        defaultOpen={false}
+                        accentColor="#8B5CF6"
+                        formatFull={formatFull}
+                        timeAgo={timeAgo}
+                      />
+                      <PeriodSection
+                        title="🗓️ Bulan Ini (lebih dari 7 hari lalu)"
+                        entries={hariianPeriods.thisMonth}
+                        defaultOpen={false}
+                        accentColor="#3B82F6"
+                        formatFull={formatFull}
+                        timeAgo={timeAgo}
+                      />
+                      <PeriodSection
+                        title="🗃️ Lebih Lama"
+                        entries={hariianPeriods.older}
+                        defaultOpen={false}
+                        accentColor="#6B7280"
+                        formatFull={formatFull}
+                        timeAgo={timeAgo}
+                      />
+                    </div>
+
+                    <Separator />
+                  </div>
+                )
           )}
 
           {/* ═══ TAB: BULANAN ═══ */}
@@ -596,7 +761,6 @@ export default function TapsPage() {
               </div>
             ) : (
               <>
-                {/* Daily Trend */}
                 <div className="chart-card">
                   <div className="chart-title">📈 Tren Tap 30 Hari Terakhir</div>
                   <div className="chart-sub">Jumlah tap per hari. Label muncul setiap 7 hari.</div>
@@ -604,7 +768,7 @@ export default function TapsPage() {
                     <div className="insight-pill" style={{ background: "rgba(245,158,11,0.1)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.2)" }}>
                       Total: {trendData.reduce((s, d) => s + d.value, 0)} tap
                     </div>
-                    <div className="insight-pill" style={{ background: "rgba(16,185,129,0.08)", color: "#34D399", border: "1px solid rgba(16,185,129,0.2)" }}>
+                    <div className="insight-pill" style={{ background: "rgba(52,211,153,0.08)", color: "#34D399", border: "1px solid rgba(52,211,153,0.2)" }}>
                       Hari ini: {trendData[trendData.length - 1].value} tap
                     </div>
                     <div className="insight-pill" style={{ background: "rgba(99,102,241,0.08)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.2)" }}>
@@ -614,13 +778,12 @@ export default function TapsPage() {
                   <BarChart data={trendData} color="#F59E0B" labelEvery={7} showValue={false} />
                 </div>
 
-                {/* Peak Hours */}
                 <div className="chart-card">
                   <div className="chart-title">🕐 Jam Paling Ramai</div>
                   <div className="chart-sub">Distribusi tap berdasarkan jam dalam sehari (semua waktu).</div>
                   {peakHour && (
                     <div className="insight-row">
-                      <div className="insight-pill" style={{ background: "rgba(16,185,129,0.08)", color: "#34D399", border: "1px solid rgba(16,185,129,0.2)" }}>
+                      <div className="insight-pill" style={{ background: "rgba(52,211,153,0.08)", color: "#34D399", border: "1px solid rgba(52,211,153,0.2)" }}>
                         🏆 Puncak: {peakHour.label} ({peakHour.count} tap)
                       </div>
                       <div className="insight-pill" style={{ background: "rgba(245,158,11,0.08)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.2)" }}>
@@ -650,7 +813,6 @@ export default function TapsPage() {
             loading ? <div className="empty"><div className="empty-icon">⏳</div><p>Memuat...</p></div>
             : (
               <>
-                {/* Summary */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                   <div className="sc" style={{ borderColor: "rgba(239,68,68,0.2)" }}>
                     <div className="sv" style={{ color: "#FCA5A5" }}>{sleepingCards.length}</div>
