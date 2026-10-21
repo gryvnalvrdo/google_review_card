@@ -798,7 +798,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {tapLogs.map((log, i) => (
+                    {tapLogs.slice(0, 5).map((log, i) => (
                       <div
                         key={`${log.code}-${log.tappedAt}-${i}`}
                         style={{
@@ -841,6 +841,21 @@ export default function AdminDashboard() {
                         </span>
                       </div>
                     ))}
+                    {tapLogs.length > 5 && (
+                      <a
+                        href="/admin/taps"
+                        style={{
+                          display: "block", textAlign: "center",
+                          fontSize: "0.78rem", color: "#34D399",
+                          background: "rgba(52,211,153,0.05)",
+                          border: "1px solid rgba(52,211,153,0.2)",
+                          padding: "8px", borderRadius: 8,
+                          textDecoration: "none",
+                        }}
+                      >
+                        + {tapLogs.length - 5} tap baru lainnya → Lihat Semua
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
