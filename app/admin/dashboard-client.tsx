@@ -39,6 +39,10 @@ export default function AdminDashboard() {
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
   const [tapLogs, setTapLogs] = useState<TapLogEntry[]>([]);
+  const [lastVisitedAt, setLastVisitedAt] = useState<string | null>(null);
+  const [newTapCount, setNewTapCount] = useState(0);
+
+  const LS_KEY = "admin_dashboard_last_visited";
 
   async function loadCards() {
     const res = await fetch("/api/admin/codes");
@@ -54,11 +58,26 @@ export default function AdminDashboard() {
   }
 
   const loadTapLogs = useCallback(async () => {
-    const res = await fetch("/api/admin/taps?limit=20");
+    // Baca timestamp kunjungan terakhir SEBELUM update
+    const prevVisit = localStorage.getItem(LS_KEY);
+    setLastVisitedAt(prevVisit);
+
+    const res = await fetch("/api/admin/taps?limit=50");
     if (res.ok) {
       const data = await res.json();
-      setTapLogs(data.logs ?? []);
+      const all: TapLogEntry[] = data.logs ?? [];
+
+      // Filter: hanya yang sesudah kunjungan terakhir
+      const unseen = prevVisit
+        ? all.filter(l => new Date(l.tappedAt) > new Date(prevVisit))
+        : all;
+
+      setTapLogs(unseen);
+      setNewTapCount(unseen.length);
     }
+
+    // Update timestamp kunjungan sekarang
+    localStorage.setItem(LS_KEY, new Date().toISOString());
   }, []);
 
   useEffect(() => { loadCards(); loadTapLogs(); }, [loadTapLogs]);
@@ -727,8 +746,16 @@ export default function AdminDashboard() {
               {/* TAP LOG */}
               <div className="card" style={{ padding: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                    📲 Riwayat Tap Terbaru
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    📲 Tap Baru
+                    {newTapCount > 0 && (
+                      <span style={{
+                        fontSize: "0.65rem", fontWeight: 700,
+                        background: "rgba(52,211,153,0.15)", color: "#34D399",
+                        border: "1px solid rgba(52,211,153,0.3)",
+                        padding: "2px 8px", borderRadius: 999,
+                      }}>{newTapCount} baru</span>
+                    )}
                   </h2>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
@@ -748,7 +775,27 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 {tapLogs.length === 0 ? (
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada tap tercatat. Tap pada kartu akan muncul di sini.</p>
+                  <div style={{ textAlign: "center", padding: "20px 0" }}>
+                    <div style={{ fontSize: "1.8rem", marginBottom: 8, opacity: 0.4 }}>✅</div>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600, marginBottom: 4 }}>
+                      Tidak ada tap baru
+                    </p>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginBottom: 12 }}>
+                      {lastVisitedAt
+                        ? `Sejak kunjungan terakhir ${new Date(lastVisitedAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                        : "Belum ada tap tercatat."}
+                    </p>
+                    <a
+                      href="/admin/taps"
+                      style={{
+                        fontSize: "0.78rem", color: "#FCD34D",
+                        background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
+                        padding: "6px 14px", borderRadius: 8, textDecoration: "none", display: "inline-block",
+                      }}
+                    >
+                      Lihat Semua Riwayat →
+                    </a>
+                  </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {tapLogs.map((log, i) => (
@@ -759,15 +806,21 @@ export default function AdminDashboard() {
                           justifyContent: "space-between",
                           alignItems: "center",
                           padding: "10px 12px",
-                          background: "rgba(255,255,255,0.03)",
-                          borderLeft: "3px solid #F59E0B",
+                          background: "rgba(52,211,153,0.04)",
+                          borderLeft: "3px solid #34D399",
                           borderRadius: "0 8px 8px 0",
                           gap: 8,
                           flexWrap: "wrap",
                         }}
                       >
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: "#F0F0FF", fontSize: "0.88rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          <div style={{ fontWeight: 600, color: "#F0F0FF", fontSize: "0.88rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{
+                              fontSize: "0.58rem", fontWeight: 700,
+                              background: "rgba(52,211,153,0.15)", color: "#34D399",
+                              border: "1px solid rgba(52,211,153,0.3)",
+                              padding: "1px 5px", borderRadius: 999, flexShrink: 0,
+                            }}>BARU</span>
                             {log.storeName}
                           </div>
                           <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
@@ -776,9 +829,9 @@ export default function AdminDashboard() {
                         </div>
                         <span style={{
                           fontSize: "0.72rem",
-                          color: "#FCD34D",
-                          background: "rgba(245,158,11,0.1)",
-                          border: "1px solid rgba(245,158,11,0.2)",
+                          color: "#34D399",
+                          background: "rgba(52,211,153,0.1)",
+                          border: "1px solid rgba(52,211,153,0.2)",
                           padding: "3px 8px",
                           borderRadius: 999,
                           whiteSpace: "nowrap",
