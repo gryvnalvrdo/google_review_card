@@ -721,28 +721,6 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* RECENTLY ADDED */}
-              <div className="card" style={{ padding: "20px" }}>
-                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
-                  🕒 Baru Ditambahkan
-                </h2>
-                {cards.length === 0 ? (
-                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada kartu aktif.</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {[...cards].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3).map((c) => (
-                      <div key={c.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", borderLeft: "3px solid #4F46E5", background: "rgba(255,255,255,0.03)", borderRadius: "0 8px 8px 0" }}>
-                        <div>
-                          <div style={{ fontWeight: 600, color: "white", fontSize: "0.9rem" }}>{c.storeName}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{formatDate(c.createdAt)}</div>
-                        </div>
-                        <a href="/admin/cards" style={{ fontSize: "0.8rem", color: "#A5B4FC", textDecoration: "none" }}>Lihat ↗</a>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* TAP LOG */}
               <div className="card" style={{ padding: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
