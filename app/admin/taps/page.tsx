@@ -477,7 +477,6 @@ function CafeBreakdownCard({
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {visibleStores.map((store, i) => {
           const relativePercent = Math.round((store.count / max) * 100);
-          const reviewUrl = cardUrlMap.get(store.code) || (store.storeName ? getPublicGoogleReviewUrl("", store.storeName) : "");
 
           return (
             <div key={store.storeName} className="cafe-breakdown-item">
@@ -498,17 +497,6 @@ function CafeBreakdownCard({
                   <span className="cafe-tap-count">
                     {store.count} tap
                   </span>
-                  {reviewUrl && (
-                    <a
-                      href={reviewUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="cafe-review-link"
-                      title="Buka menu ulasan toko ini"
-                    >
-                      <span>⭐</span> ↗
-                    </a>
-                  )}
                 </div>
               </div>
 
@@ -731,7 +719,6 @@ function HourlyCafeBreakdownCard({
           {visibleStores.map((store, i) => {
             const percentOfHour = totalHourTaps > 0 ? Math.round((store.count / totalHourTaps) * 100) : 0;
             const relativePercent = Math.round((store.count / max) * 100);
-            const reviewUrl = cardUrlMap.get(store.code) || (store.storeName ? getPublicGoogleReviewUrl("", store.storeName) : "");
 
             return (
               <div
@@ -795,30 +782,6 @@ function HourlyCafeBreakdownCard({
                         ({percentOfHour}%)
                       </span>
                     </div>
-                    {reviewUrl && (
-                      <a
-                        href={reviewUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="cafe-review-link"
-                        title={`Buka menu ulasan ${store.storeName}`}
-                        style={{
-                          fontSize: "0.68rem",
-                          fontWeight: 700,
-                          color: "#FCD34D",
-                          background: "rgba(245, 158, 11, 0.1)",
-                          border: "1px solid rgba(245, 158, 11, 0.28)",
-                          padding: "3px 6px",
-                          borderRadius: 5,
-                          textDecoration: "none",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          lineHeight: 1,
-                        }}
-                      >
-                        ⭐↗
-                      </a>
-                    )}
                   </div>
                 </div>
 
@@ -880,79 +843,7 @@ function getStoreInitials(name?: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-// ── TapItem — shared item row ──────────────────────────────────────────
-function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull }: {
-  log: TapLogEntry;
-  reviewUrl?: string;
-  accentColor?: string;
-  timeAgo: (iso: string) => string;
-  formatFull: (iso: string) => string;
-}) {
-  const d = new Date(log.tappedAt);
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const timeStr = `${hours}:${minutes}`;
-  const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 
-  return (
-    <div
-      className="tap-item-row"
-      style={{ borderLeftColor: accentColor }}
-    >
-      {/* Kolom Kiri: Jam Tap Box */}
-      <div
-        className="tap-item-time"
-        title={formatFull(log.tappedAt)}
-      >
-        <span className="tap-item-clock">{timeStr}</span>
-        <span className="tap-item-date">{dateStr}</span>
-      </div>
-
-      {/* Kolom Kanan: Body Toko & Action */}
-      <div className="tap-item-body">
-        {/* Info Toko Utama: Nama Toko Penuh */}
-        <div className="tap-item-main-info">
-          <div className="tap-item-store-name" title={log.storeName}>
-            {log.storeName}
-          </div>
-
-          {/* Desktop Only Meta: Tampil di bawah nama toko saat desktop */}
-          <div className="tap-item-meta desktop-only-meta">
-            <span className="tap-item-code">{log.code}</span>
-            <span className="tap-item-dot">·</span>
-            <span className="tap-item-ago">
-              <span style={{ opacity: 0.8 }}>🕒</span> {timeAgo(log.tappedAt)}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Wrap: Di mobile baris kedua (kiri: meta, kanan: tombol ulasan) */}
-        <div className="tap-item-actions-wrap">
-          {/* Mobile Only Meta: Sejajar dengan tombol ulasan di mobile */}
-          <div className="tap-item-meta mobile-only-meta">
-            <span className="tap-item-code">{log.code}</span>
-            <span className="tap-item-ago">
-              <span style={{ opacity: 0.8 }}>🕒</span> {timeAgo(log.tappedAt)}
-            </span>
-          </div>
-
-          {reviewUrl && (
-            <a
-              href={reviewUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="tap-item-review-btn"
-              title="Buka menu ulasan Google publik toko ini"
-            >
-              <span>⭐</span>
-              <span>Menu Ulasan ↗</span>
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 
@@ -968,7 +859,7 @@ export default function TapsPage() {
   const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
-  const showReviewBtn = (dailyMode === "today" || dailyMode === "last7" || dailyMode === "last30") && !customDate;
+  const showReviewBtn = dailyMode === "today" && !customDate;
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
@@ -1361,7 +1252,6 @@ export default function TapsPage() {
     storeName: string;
     code: string;
     count: number;
-    reviewUrl?: string;
     pct: number;
   };
 
@@ -1386,7 +1276,6 @@ export default function TapsPage() {
         storeName,
         code: info.code,
         count: info.count,
-        reviewUrl: cardUrlMap.get(info.code) || (storeName ? getPublicGoogleReviewUrl("", storeName) : ""),
         pct: total > 0 ? Math.round((info.count / total) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count || a.storeName.localeCompare(b.storeName));
@@ -1493,7 +1382,7 @@ export default function TapsPage() {
     }
     text += `──────────────────────────\n`;
     text += `📈 *Total Tap Pelanggan:* ${totalFilteredCount} kali\n`;
-    text += `⭐ *Estimasi Ulasan Baru:* ~${estimatedReviews} ulasan bintang 5\n`;
+    text += `• *Estimasi Ulasan Baru:* ~${estimatedReviews} ulasan\n`;
     text += `🔥 *Jam Paling Ramai:* ${busiestDaypart.name} (${busiestDaypart.pct}% volume trafik)\n`;
     text += `🏪 *Tingkat Keaktifan Cabang:* ${activeStoresCount} dari ${availableStores.length} cabang aktif (${activeStoreRatio}%)\n\n`;
 
@@ -2905,8 +2794,7 @@ export default function TapsPage() {
                                     className="tap-review-btn"
                                     title={`Buka menu ulasan Google publik ${resolvedStoreName}`}
                                   >
-                                    <span className="tap-review-star">⭐</span>
-                                    <span className="tap-review-text desktop-only">Ulasan ↗</span>
+                                    <span className="tap-review-text">Ulasan ↗</span>
                                   </a>
                                 )}
                               </div>
@@ -3202,7 +3090,6 @@ export default function TapsPage() {
                           className={`month-quick-pill ${selectedMonthKey === thisMonthKey ? "active" : ""}`}
                           title="Tampilkan leaderboard bulan berjalan saat ini"
                         >
-                          <span>🌟</span>
                           <span>Bulan Ini</span>
                         </button>
 
@@ -3248,7 +3135,7 @@ export default function TapsPage() {
                                   value={m.monthKey}
                                   style={{ background: "#181824", color: isCurrent ? "#FCD34D" : "#F0F0FF", fontWeight: 600 }}
                                 >
-                                  {isCurrent ? `🌟 ${m.label} (Bulan Ini)` : m.label} · {m.total} Tap
+                                  {isCurrent ? `${m.label} (Bulan Ini)` : m.label} · {m.total} Tap
                                 </option>
                               );
                             })}
@@ -4478,15 +4365,10 @@ export default function TapsPage() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {sleepingCards.map((card) => {
-                      const reviewUrl = card.googleReviewUrl ? getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName) : "";
-                      const targetUrl = reviewUrl || `/c/${card.code}`;
                       return (
                         <div
                           key={card.code}
                           className="card toko-tidur-card"
-                          onClick={() => {
-                            window.open(targetUrl, "_blank");
-                          }}
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
@@ -4494,11 +4376,8 @@ export default function TapsPage() {
                             padding: "14px 16px",
                             borderLeft: "4px solid #EF4444",
                             gap: 12,
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
                             background: "rgba(239,68,68,0.03)",
                           }}
-                          title="Klik kartu ini untuk membuka menu ulasan Google / tes link"
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
                             <div style={{
@@ -4543,23 +4422,6 @@ export default function TapsPage() {
                             >
                               Tes Link ↗
                             </a>
-                            {reviewUrl && (
-                              <a
-                                href={reviewUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  padding: "5px 9px", fontSize: "0.72rem",
-                                  color: "#FCD34D", textDecoration: "none", fontWeight: 700,
-                                  background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
-                                  borderRadius: 7, display: "inline-flex", alignItems: "center", gap: 4,
-                                  whiteSpace: "nowrap",
-                                }}
-                                title="Buka menu ulasan Google publik toko ini"
-                              >
-                                ⭐ Menu Ulasan ↗
-                              </a>
-                            )}
                           </div>
                         </div>
                       );

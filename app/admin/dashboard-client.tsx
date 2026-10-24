@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import AdminNav from "./components/AdminNav";
 import QRScanner from "./components/QRScanner";
-import { getPublicGoogleReviewUrl } from "../../lib/redirect";
 
 type CardRecord = {
   code: string;
@@ -223,8 +222,6 @@ export default function AdminDashboard() {
   // Active cards and calculations
   const totalTaps = useMemo(() => cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0), [cards]);
   const totalRevenue = useMemo(() => cards.reduce((sum, c) => sum + (c.price ?? 50000), 0), [cards]);
-  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "", c.storeName)])), [cards]);
-
 
 
   // ── Form content (shared between desktop sidebar & mobile sheet) ──
@@ -614,7 +611,6 @@ export default function AdminDashboard() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {tapLogs.slice(0, 6).map((log, i) => {
-                      const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
                       return (
                         <div
                           key={`${log.code}-${log.tappedAt}-${i}`}
@@ -642,29 +638,6 @@ export default function AdminDashboard() {
                           </div>
 
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: "auto" }}>
-                            {reviewUrl && (
-                              <a
-                                href={reviewUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  color: "#34D399",
-                                  background: "rgba(16,185,129,0.08)",
-                                  border: "1px solid rgba(16,185,129,0.25)",
-                                  padding: "4px 9px",
-                                  borderRadius: 8,
-                                  textDecoration: "none",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                }}
-                                title="Buka menu ulasan toko ini di Google Maps"
-                              >
-                                ⭐ Menu Ulasan ↗
-                              </a>
-                            )}
                             <span style={{
                               fontSize: "0.7rem", fontWeight: 700, color: "#34D399",
                               background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)",
