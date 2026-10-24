@@ -1525,6 +1525,14 @@ html, body {
   border-radius: 999px;
 }
 
+.desktop-only {
+  display: inline-flex !important;
+}
+
+.mobile-only {
+  display: none !important;
+}
+
 .tap-row-native {
   padding: 12px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
@@ -1703,9 +1711,13 @@ html, body {
     padding: 6px !important;
     margin-bottom: 14px !important;
   }
-  .main-view-switcher > button#tab-btn-laporan {
-    grid-column: span 2 !important; /* Laporan Eksekutif jadi banner lebar */
+  .desktop-only {
+    display: none !important;
   }
+  .mobile-only {
+    display: inline-flex !important;
+  }
+
   .main-view-btn {
     width: 100% !important;
     flex: none !important;
@@ -1742,17 +1754,92 @@ html, body {
     max-width: 100%;
   }
 
-  /* Sama Rata Tap Rows: Left Store Info, Right Aligned Time-Ago & Action */
+  /* Mobile-Optimized Tap Card (Clean, Non-Cramped 2-Row Feed) */
   .tap-row-native {
-    padding: 10px 12px !important;
-    gap: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 12px 14px !important;
+    gap: 8px !important;
+    background: rgba(255, 255, 255, 0.015) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
   }
+
+  .tap-row-left {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    min-width: 0 !important;
+  }
+
+  .tap-store-info {
+    width: 100% !important;
+  }
+
+  .tap-store-header-mobile {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
   .tap-store-name {
-    font-size: 0.84rem;
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+    color: #F8FAFC !important;
+    white-space: normal !important;
+    line-height: 1.35 !important;
+    flex: 1 !important;
   }
+
+  .tap-time-mobile {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    flex-shrink: 0 !important;
+    font-size: 0.72rem !important;
+  }
+
+  .tap-mobile-clock {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
+    font-weight: 700 !important;
+    color: #CBD5E1 !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .tap-mobile-ago {
+    color: #64748B !important;
+    font-weight: 600 !important;
+  }
+
+  .tap-row-right {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding-top: 8px !important;
+    border-top: 1px dashed rgba(255, 255, 255, 0.06) !important;
+    gap: 8px !important;
+  }
+
+  .tap-meta-mobile {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 0.74rem !important;
+    color: #64748B !important;
+  }
+
   .tap-review-btn {
-    padding: 5px 8px;
-    font-size: 0.72rem;
+    padding: 6px 14px !important;
+    font-size: 0.76rem !important;
+    min-height: 32px !important;
+    border-radius: 8px !important;
   }
 }
 

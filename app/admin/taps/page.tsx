@@ -644,7 +644,7 @@ export default function TapsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState<"laporan" | "harian" | "bulanan" | "tren" | "tidur">("laporan");
+  const [activeTab, setActiveTab] = useState<"tren" | "harian" | "bulanan" | "tidur">("tren");
   const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
@@ -2099,14 +2099,6 @@ export default function TapsPage() {
               <span>🏆</span> Leaderboard Toko
             </button>
             <button
-              id="tab-btn-laporan"
-              type="button"
-              onClick={() => setActiveTab("laporan")}
-              className={`main-view-btn ${activeTab === "laporan" ? "active" : ""}`}
-            >
-              <span>💼</span> Laporan Eksekutif
-            </button>
-            <button
               id="tab-btn-tidur"
               type="button"
               onClick={() => setActiveTab("tidur")}
@@ -2317,8 +2309,8 @@ export default function TapsPage() {
               )}
             </div>
 
-            {/* Sisi Kanan / Row Bawah: Period Selector Pills & Date Picker Row (Tampil di Tab Laporan & Riwayat) */}
-            {(activeTab === "laporan" || activeTab === "harian") && (
+            {/* Sisi Kanan / Row Bawah: Period Selector Pills & Date Picker Row (Tampil di Tab Riwayat) */}
+            {activeTab === "harian" && (
               <div className="toolbar-right-group">
                 <div className="clean-period-row" style={{ marginBottom: 0 }}>
                   <button
@@ -2380,374 +2372,6 @@ export default function TapsPage() {
             )}
           </div>
 
-          {/* ═════════ TAB 0: LAPORAN EKSEKUTIF & PRESENTASI KLIEN ═════════ */}
-          {activeTab === "laporan" && (
-            loading ? (
-              <div style={{ textAlign: "center", padding: "60px 0" }}>
-                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
-                <p style={{ color: "var(--text-muted)" }}>Menyusun laporan analitik eksekutif...</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>💼</div>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Belum Ada Data untuk Laporan</h3>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                  {search ? `Tidak ditemukan data untuk filter "${search}".` : "Belum ada aktivitas tap kartu ulasan yang tercatat."}
-                </p>
-              </div>
-            ) : (
-              <div className="executive-deck-container">
-                {/* 1. Executive Briefing Header */}
-                <div className="executive-header-card">
-                  <div className="executive-header-left">
-                    <div className="executive-header-title">
-                      <span>💼</span> Laporan Analitik Eksekutif &amp; Presentasi Klien
-                    </div>
-                    <div className="executive-header-sub">
-                      Ringkasan performa ulasan Google terkurasi — dirancang untuk bahan evaluasi mingguan dan meeting bersama pemilik toko / klien.
-                    </div>
-                  </div>
-
-                  <div className="executive-actions">
-                    <button
-                      type="button"
-                      onClick={copyClientReport}
-                      className="executive-btn-primary"
-                      title="Salin rekap analitik ke format pesan WhatsApp profesional"
-                    >
-                      <span>📋</span>
-                      <span>{copySuccessToast ? "✅ Tersalin ke WhatsApp!" : "Salin Format WhatsApp"}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handlePrintReport}
-                      className="executive-btn-secondary"
-                      title="Cetak atau simpan sebagai dokumen PDF"
-                    >
-                      <span>🖨️</span>
-                      <span>Cetak / PDF</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Toast Feedback */}
-                {copySuccessToast && (
-                  <div style={{
-                    padding: "10px 16px",
-                    background: "rgba(16, 185, 129, 0.15)",
-                    border: "1px solid rgba(16, 185, 129, 0.4)",
-                    borderRadius: 10,
-                    color: "#34D399",
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    animation: "fadeIn 0.2s ease",
-                  }}>
-                    <span>✅</span> Format pesan WhatsApp resmi berhasil disalin! Anda dapat langsung mem-paste (Ctrl+V) ke chat pemilik cafe atau group manajemen.
-                  </div>
-                )}
-
-                {/* 2. 4-KPI Executive Grid (Makro Metrik Bisnis) */}
-                <div className="executive-kpi-grid">
-                  {/* KPI 1: Total Interaksi Pelanggan */}
-                  <div className="executive-kpi-card">
-                    <div className="executive-kpi-top">
-                      <div className="executive-kpi-icon" style={{ background: "rgba(99,102,241,0.12)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.25)" }}>
-                        📲
-                      </div>
-                      <span className={`executive-kpi-trend ${wowGrowth >= 0 ? "trend-up" : "trend-down"}`}>
-                        {wowGrowth >= 0 ? `▲ +${wowGrowth}%` : `▼ ${wowGrowth}%`} vs lalu
-                      </span>
-                    </div>
-                    <div>
-                      <div className="executive-kpi-value">{totalFilteredCount}</div>
-                      <div className="executive-kpi-label">Total Tap Pelanggan</div>
-                    </div>
-                    <div className="executive-kpi-context">
-                      {dailyMode === "today" ? `${todayCount} tap tercatat hari ini` : `Akumulasi tap pada periode terpilih`}
-                    </div>
-                  </div>
-
-                  {/* KPI 2: Estimasi Ulasan Baru Terkonversi */}
-                  <div className="executive-kpi-card">
-                    <div className="executive-kpi-top">
-                      <div className="executive-kpi-icon" style={{ background: "rgba(245,158,11,0.12)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}>
-                        ⭐
-                      </div>
-                      <span className="executive-kpi-trend trend-up">
-                        ~35% Konversi
-                      </span>
-                    </div>
-                    <div>
-                      <div className="executive-kpi-value" style={{ color: "#FCD34D" }}>~{estimatedReviews}</div>
-                      <div className="executive-kpi-label">Ulasan Bintang 5 Proyeksi</div>
-                    </div>
-                    <div className="executive-kpi-context">
-                      Estimasi ulasan Google Maps baru berdasarkan benchmark ritel
-                    </div>
-                  </div>
-
-                  {/* KPI 3: Jam Emas Kunjungan */}
-                  <div className="executive-kpi-card">
-                    <div className="executive-kpi-top">
-                      <div className="executive-kpi-icon" style={{ background: "rgba(16,185,129,0.12)", color: "#34D399", border: "1px solid rgba(16,185,129,0.25)" }}>
-                        ⏱️
-                      </div>
-                      <span className="executive-kpi-trend trend-up">
-                        {busiestDaypart.name.split(" ")[0]} ({busiestDaypart.pct}%)
-                      </span>
-                    </div>
-                    <div>
-                      <div className="executive-kpi-value" style={{ fontSize: "1.45rem", color: "#34D399" }}>
-                        {busiestDaypart.time}
-                      </div>
-                      <div className="executive-kpi-label">Jam Emas Permintaan Ulasan</div>
-                    </div>
-                    <div className="executive-kpi-context">
-                      Waktu paling efektif bagi kasir mengingatkan ulasan
-                    </div>
-                  </div>
-
-                  {/* KPI 4: Rasio Keaktifan Toko */}
-                  <div className="executive-kpi-card">
-                    <div className="executive-kpi-top">
-                      <div className="executive-kpi-icon" style={{ background: "rgba(236,72,153,0.12)", color: "#F472B6", border: "1px solid rgba(236,72,153,0.25)" }}>
-                        🏪
-                      </div>
-                      <span className={`executive-kpi-trend ${activeStoreRatio >= 80 ? "trend-up" : "trend-neutral"}`}>
-                        {activeStoreRatio}% Aktif
-                      </span>
-                    </div>
-                    <div>
-                      <div className="executive-kpi-value" style={{ color: "#F472B6" }}>
-                        {activeStoresCount} <span style={{ fontSize: "1rem", color: "#94A3B8", fontWeight: 600 }}>/ {availableStores.length}</span>
-                      </div>
-                      <div className="executive-kpi-label">Cabang Toko Beroperasi</div>
-                    </div>
-                    <div className="executive-kpi-context">
-                      Cabang yang aktif menyerap ulasan pelanggan
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Strategic Analyst Insights (Storytelling untuk Klien) */}
-                <div className="executive-story-box">
-                  <div className="executive-story-header">
-                    <div className="executive-story-title">
-                      <span>💡</span> Analisis &amp; Rekomendasi Strategis untuk Klien
-                    </div>
-                    <span className="executive-story-badge">Rekomendasi Konsultan Data</span>
-                  </div>
-
-                  <div className="executive-pillars-grid">
-                    {/* Pilar 1: Jam Emas */}
-                    <div className="executive-pillar-card">
-                      <div className="executive-pillar-top">
-                        <span style={{ fontSize: "1.2rem" }}>🎯</span>
-                        <span className="executive-pillar-tag" style={{ color: "#38BDF8" }}>Timing Operasional</span>
-                      </div>
-                      <div className="executive-pillar-headline">
-                        Fokuskan Kasir pada {busiestDaypart.time}
-                      </div>
-                      <div className="executive-pillar-desc">
-                        Sebanyak <strong>{busiestDaypart.pct}%</strong> dari seluruh interaksi kartu terjadi pada rentang {busiestDaypart.name.toLowerCase()}. Momen ini adalah waktu emas di mana antrian sedang ramai dan pelanggan paling reseptif memberi bintang 5.
-                      </div>
-                    </div>
-
-                    {/* Pilar 2: Benchmark Cabang Terbaik */}
-                    <div className="executive-pillar-card">
-                      <div className="executive-pillar-top">
-                        <span style={{ fontSize: "1.2rem" }}>🥇</span>
-                        <span className="executive-pillar-tag" style={{ color: "#FCD34D" }}>Benchmark Cabang</span>
-                      </div>
-                      <div className="executive-pillar-headline">
-                        {topStore ? `${topStore.storeName} (${topStore.pct}%)` : "Semua Cabang Berimbang"}
-                      </div>
-                      <div className="executive-pillar-desc">
-                        {topStore ? (
-                          <>
-                            Cabang <strong>{topStore.storeName}</strong> memimpin dengan <strong>{topStore.count} tap</strong>. Prosedur penempatan kartu dan interaksi kasir di cabang ini dapat dijadikan standar SOP bagi cabang lainnya.
-                          </>
-                        ) : (
-                          "Belum ada data pembanding antar cabang."
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Pilar 3: Area Tindakan Perbaikan */}
-                    <div className="executive-pillar-card">
-                      <div className="executive-pillar-top">
-                        <span style={{ fontSize: "1.2rem" }}>🛠️</span>
-                        <span className="executive-pillar-tag" style={{ color: "#F87171" }}>Tindakan Prioritas</span>
-                      </div>
-                      <div className="executive-pillar-headline">
-                        {needsAttentionStore && needsAttentionStore.count === 0
-                          ? `Aktifkan ${needsAttentionStore.storeName}`
-                          : "Pertahankan Konsistensi Kasir"}
-                      </div>
-                      <div className="executive-pillar-desc">
-                        {needsAttentionStore && needsAttentionStore.count === 0 ? (
-                          <>
-                            Cabang <strong>{needsAttentionStore.storeName}</strong> belum mencatat tap pada periode ini. Disarankan melakukan audit fisik: pastikan kartu ulasan ditaruh tepat di samping mesin kasir atau QRIS pembayaran.
-                          </>
-                        ) : (
-                          "Seluruh cabang berhasil mencatat interaksi tap secara merata. Pertahankan rotasi display kartu agar selalu terlihat jelas oleh pengunjung."
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Pola Waktu Kedatangan Pelanggan (Dayparting Quadrants) */}
-                <div className="dayparting-container">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-                    <div>
-                      <h4 style={{ fontSize: "0.98rem", fontWeight: 800, color: "#F8FAFC", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                        <span>⏱️</span> Pola Waktu Kedatangan Pelanggan (Dayparting Segments)
-                      </h4>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "4px 0 0" }}>
-                        Distribusi interaksi pelanggan berdasarkan 4 segmen waktu operasional harian.
-                      </p>
-                    </div>
-                    <span style={{ fontSize: "0.72rem", color: "#A5B4FC", fontWeight: 700 }}>
-                      Total Volume: {totalFilteredCount} tap
-                    </span>
-                  </div>
-
-                  <div className="dayparting-grid">
-                    {daypartingBreakdown.map(dp => (
-                      <div key={dp.id} className="dayparting-card">
-                        <div className="dayparting-top">
-                          <span className="dayparting-name">
-                            <span>{dp.icon}</span> {dp.name}
-                          </span>
-                          <span className="dayparting-time">{dp.time}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                          <span className="dayparting-val">{dp.count} <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600 }}>tap</span></span>
-                          <span style={{ fontSize: "0.85rem", fontWeight: 800, color: dp.color }}>{dp.pct}%</span>
-                        </div>
-                        <div className="dayparting-bar-track">
-                          <div
-                            className="dayparting-bar-fill"
-                            style={{ width: `${dp.pct}%`, background: dp.color }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 5. Pangsa Pasar & Kontribusi Antar Cabang (Market Share Breakdown) */}
-                {cafeBreakdownList.length > 0 && (
-                  <div className="cafe-scorecard-box">
-                    <div className="cafe-scorecard-header">
-                      <div className="cafe-scorecard-title">
-                        <span>📊</span>
-                        <span>Pangsa Pasar &amp; Kontribusi Ulasan Antar Cabang</span>
-                      </div>
-                      <span className="cafe-scorecard-meta">
-                        {activePeriodInfo.entries.length} TOTAL TAP
-                      </span>
-                    </div>
-
-                    {/* Stacked Rainbow Distribution Bar */}
-                    <div style={{ padding: "0 16px 12px" }}>
-                      <div className="cafe-stacked-bar">
-                        {cafeBreakdownList.map((c, i) => {
-                          const colors = ["#6366F1", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#38BDF8"];
-                          const barColor = colors[i % colors.length];
-                          if (c.pct === 0) return null;
-                          return (
-                            <div
-                              key={c.storeName}
-                              style={{
-                                width: `${c.pct}%`,
-                                background: barColor,
-                                height: "100%",
-                                transition: "all 0.3s ease",
-                              }}
-                              title={`${c.storeName}: ${c.count} tap (${c.pct}%)`}
-                            />
-                          );
-                        })}
-                      </div>
-
-                      <div className="cafe-stacked-legend">
-                        {cafeBreakdownList.map((c, i) => {
-                          const colors = ["#6366F1", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#38BDF8"];
-                          const dotColor = colors[i % colors.length];
-                          return (
-                            <div key={c.storeName} className="cafe-legend-item">
-                              <span className="cafe-legend-dot" style={{ background: dotColor }} />
-                              <span className="cafe-legend-name">{c.storeName}</span>
-                              <span className="cafe-legend-pct">{c.pct}%</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* List Toko dengan Actionable Link */}
-                    <div className="cafe-scorecard-grid">
-                      {cafeBreakdownList.map((c, idx) => {
-                        const isSelected = selectedStoreFilters.includes(c.storeName);
-                        const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
-
-                        return (
-                          <div
-                            key={c.storeName}
-                            onClick={() => toggleStoreFilter(c.storeName)}
-                            className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
-                            title={`Klik untuk memfilter analitik khusus ${c.storeName}`}
-                          >
-                            <div className="cafe-scorecard-left">
-                              <span className="cafe-rank-badge">{rankBadge}</span>
-                              <div className="cafe-name-wrap">
-                                <div className="cafe-name-text">
-                                  <span>{c.storeName}</span>
-                                  {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
-                                </div>
-                                <div className="cafe-sub-text">
-                                  <span className="cafe-code-pill">{c.code}</span>
-                                  {c.count > 0 && <span>· {c.pct}% Pangsa Pasar</span>}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="cafe-scorecard-right">
-                              <div className="cafe-count-wrap">
-                                <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
-                                  {c.count}
-                                </span>
-                                <span className="cafe-count-unit">tap</span>
-                              </div>
-
-                              {c.reviewUrl && (
-                                <a
-                                  href={c.reviewUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="cafe-review-quick-btn"
-                                  title="Buka menu ulasan Google publik toko ini"
-                                >
-                                  ⭐
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          )}
 
           {/* ═════════ TAB 1: RIWAYAT TAP (CLEAN NATIVE 2-COLUMN WORKSPACE) ═════════ */}
           {activeTab === "harian" && (
@@ -2811,12 +2435,18 @@ export default function TapsPage() {
                           return (
                             <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-row-native">
                               <div className="tap-row-left">
-                                <div className="tap-time-pill" title={formatFull(log.tappedAt)}>
+                                <div className="tap-time-pill desktop-only" title={formatFull(log.tappedAt)}>
                                   {timeStr}
                                 </div>
                                 <div className="tap-store-info">
-                                  <div className="tap-store-name">{log.storeName}</div>
-                                  <div className="tap-store-sub">
+                                  <div className="tap-store-header-mobile">
+                                    <div className="tap-store-name">{log.storeName}</div>
+                                    <div className="tap-time-mobile mobile-only">
+                                      <span className="tap-mobile-clock">{timeStr}</span>
+                                      <span className="tap-mobile-ago">{timeAgo(log.tappedAt)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="tap-store-sub desktop-only">
                                     <span className="tap-code-badge">{log.code}</span>
                                     <span>·</span>
                                     <span className="tap-date-label">{dateStr}</span>
@@ -2825,7 +2455,12 @@ export default function TapsPage() {
                               </div>
 
                               <div className="tap-row-right">
-                                <span className="tap-time-ago-badge" title={formatFull(log.tappedAt)}>
+                                <div className="tap-meta-mobile mobile-only">
+                                  <span className="tap-code-badge">{log.code}</span>
+                                  <span>·</span>
+                                  <span className="tap-date-label">{dateStr}</span>
+                                </div>
+                                <span className="tap-time-ago-badge desktop-only" title={formatFull(log.tappedAt)}>
                                   {timeAgo(log.tappedAt)}
                                 </span>
                                 {reviewUrl && (
@@ -2851,7 +2486,93 @@ export default function TapsPage() {
 
                 {/* ── KOLOM SAMPING: SCORECARD CAFE & INSIGHT WIDGETS (Sticky di Desktop) ── */}
                 <div className="dashboard-grid-sidebar">
-                  {/* 1. Scorecard Total Tap per Cafe */}
+                  {/* 1. Jam Kunjungan Tersibuk Widget (Foto 4 Bagian Atas) */}
+                  <div className="peak-insight-box">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>⏱️</span> Jam Kunjungan Tersibuk
+                      </span>
+                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
+                        {dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari" : dailyMode === "last30" ? "30 Hari" : "Periode Aktif"}
+                      </span>
+                    </div>
+
+                    {(() => {
+                      const counts = Array(24).fill(0);
+                      activePeriodInfo.entries.forEach(l => {
+                        const h = new Date(l.tappedAt).getHours();
+                        if (h >= 0 && h < 24) counts[h]++;
+                      });
+                      const max = Math.max(...counts);
+                      if (max === 0) {
+                        return (
+                          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
+                            Belum ada riwayat tap yang tercatat pada rentang waktu ini.
+                          </p>
+                        );
+                      }
+                      const h = counts.indexOf(max);
+                      const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
+
+                      return (
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10, marginBottom: 10 }}>
+                            <div style={{ fontSize: "1.3rem" }}>🔥</div>
+                            <div>
+                              <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
+                              <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
+                            </div>
+                          </div>
+                          <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.45 }}>
+                            💡 <strong>Rekomendasi Operasional:</strong> Jam-jam di atas adalah momen terbaik bagi staf / barista untuk mengingatkan pelanggan memberikan ulasan Google Bintang 5.
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 2. Ringkasan Status Outlet & Kartu (Foto 4 Bagian Bawah) */}
+                  <div className="peak-insight-box">
+                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>📊</span> Status Operasional Kartu
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Toko Aktif</div>
+                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", marginTop: 2 }}>{availableStores.length}</div>
+                      </div>
+                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Kartu Aktif</div>
+                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34D399", marginTop: 2 }}>{cards.length - sleepingCards.length}</div>
+                      </div>
+                    </div>
+                    {sleepingCards.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("tidur")}
+                        style={{
+                          width: "100%",
+                          marginTop: 10,
+                          padding: "7px 10px",
+                          background: "rgba(239, 68, 68, 0.1)",
+                          border: "1px solid rgba(239, 68, 68, 0.25)",
+                          borderRadius: 8,
+                          color: "#FCA5A5",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>😴</span> {sleepingCards.length} Kartu Belum Ada Tap ↗
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 3. Scorecard Total Tap per Cafe (Foto 3 di Bawah) */}
                   {cafeBreakdownList.length > 0 && (
                     <div className="cafe-scorecard-box">
                       <div className="cafe-scorecard-header">
@@ -2945,92 +2666,6 @@ export default function TapsPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* 2. Jam Kunjungan Tersibuk Widget */}
-                  <div className="peak-insight-box">
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
-                        <span>⏱️</span> Jam Kunjungan Tersibuk
-                      </span>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
-                        {dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari" : dailyMode === "last30" ? "30 Hari" : "Periode Aktif"}
-                      </span>
-                    </div>
-
-                    {(() => {
-                      const counts = Array(24).fill(0);
-                      activePeriodInfo.entries.forEach(l => {
-                        const h = new Date(l.tappedAt).getHours();
-                        if (h >= 0 && h < 24) counts[h]++;
-                      });
-                      const max = Math.max(...counts);
-                      if (max === 0) {
-                        return (
-                          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
-                            Belum ada riwayat tap yang tercatat pada rentang waktu ini.
-                          </p>
-                        );
-                      }
-                      const h = counts.indexOf(max);
-                      const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
-
-                      return (
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10, marginBottom: 10 }}>
-                            <div style={{ fontSize: "1.3rem" }}>🔥</div>
-                            <div>
-                              <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
-                              <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
-                            </div>
-                          </div>
-                          <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.45 }}>
-                            💡 <strong>Rekomendasi Operasional:</strong> Jam-jam di atas adalah momen terbaik bagi staf / barista untuk mengingatkan pelanggan memberikan ulasan Google Bintang 5.
-                          </p>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* 3. Ringkasan Status Outlet & Kartu */}
-                  <div className="peak-insight-box">
-                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>📊</span> Status Operasional Kartu
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Toko Aktif</div>
-                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", marginTop: 2 }}>{availableStores.length}</div>
-                      </div>
-                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Kartu Aktif</div>
-                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34D399", marginTop: 2 }}>{cards.length - sleepingCards.length}</div>
-                      </div>
-                    </div>
-                    {sleepingCards.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("tidur")}
-                        style={{
-                          width: "100%",
-                          marginTop: 10,
-                          padding: "7px 10px",
-                          background: "rgba(239, 68, 68, 0.1)",
-                          border: "1px solid rgba(239, 68, 68, 0.25)",
-                          borderRadius: 8,
-                          color: "#FCA5A5",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span>😴</span> {sleepingCards.length} Kartu Belum Ada Tap ↗
-                      </button>
-                    )}
-                  </div>
                 </div>
               </div>
             )
