@@ -1017,9 +1017,36 @@ export default function TapsPage() {
       const key = `${mk}::${entry.storeName}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(entry);
+
+      const allKey = `all::${entry.storeName}`;
+      if (!map.has(allKey)) map.set(allKey, []);
+      map.get(allKey)!.push(entry);
     }
     map.forEach((arr) => arr.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime()));
     return map;
+  }, [validLogs]);
+
+  const allTimeGroup = useMemo((): MonthGroup => {
+    const map = new Map<string, { count: number; code: string }>();
+    for (const entry of validLogs) {
+      const current = map.get(entry.storeName) || { count: 0, code: entry.code };
+      map.set(entry.storeName, { count: current.count + 1, code: entry.code });
+    }
+    const byStore = Array.from(map.entries())
+      .map(([storeName, info]) => ({
+        storeName,
+        code: info.code,
+        count: info.count,
+        lastMonthCount: 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      monthKey: "all",
+      label: "Sepanjang Masa (All-Time)",
+      total: byStore.reduce((s, x) => s + x.count, 0),
+      byStore,
+    };
   }, [validLogs]);
 
   const filteredMonthly = useMemo(() =>
@@ -1072,12 +1099,23 @@ export default function TapsPage() {
   }, [monthlyGroups, thisMonthKey]);
 
   const selectedMonthGroup = useMemo(() => {
+    if (selectedMonthKey === "all") {
+      const matchingStores = allTimeGroup.byStore.filter(s =>
+        s.storeName.toLowerCase().includes(search.toLowerCase()) ||
+        s.code.toLowerCase().includes(search.toLowerCase())
+      );
+      return {
+        ...allTimeGroup,
+        byStore: matchingStores,
+        total: matchingStores.reduce((s, x) => s + x.count, 0),
+      };
+    }
     return (
       filteredMonthly.find(mg => mg.monthKey === selectedMonthKey) ||
       monthlyGroups.find(mg => mg.monthKey === selectedMonthKey) ||
       null
     );
-  }, [filteredMonthly, monthlyGroups, selectedMonthKey]);
+  }, [selectedMonthKey, allTimeGroup, filteredMonthly, monthlyGroups, search]);
 
   const isCurrentSelected = selectedMonthKey === thisMonthKey;
 
@@ -1921,6 +1959,18 @@ export default function TapsPage() {
                           boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
                         }}
                       >
+                        <optgroup
+                          label="── Akumulasi Global ──"
+                          style={{ background: "#111118", color: "#FCD34D", fontWeight: 800 }}
+                        >
+                          <option
+                            value="all"
+                            style={{ background: "#181824", color: "#FCD34D", fontWeight: 700 }}
+                          >
+                            🌐 Sepanjang Masa (All-Time) · {validLogs.length} Tap
+                          </option>
+                        </optgroup>
+
                         {monthsByYear.map(({ year, months }) => (
                           <optgroup
                             key={year}
@@ -1957,7 +2007,7 @@ export default function TapsPage() {
                       </span>
                     </div>
 
-                    {/* Tombol Cepat: Kembali ke Bulan Ini (muncul saat sedang memilih bulan arsip masa lalu) */}
+                    {/* Tombol Cepat: Kembali ke Bulan Ini (muncul saat sedang memilih bulan arsip masa lalu atau all-time) */}
                     {selectedMonthKey !== thisMonthKey && (
                       <button
                         type="button"
@@ -1983,7 +2033,20 @@ export default function TapsPage() {
 
                   {/* Status / Badge Periode Terpilih */}
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {isCurrentSelected ? (
+                    {selectedMonthKey === "all" ? (
+                      <span
+                        className="badge"
+                        style={{
+                          background: "rgba(16, 185, 129, 0.15)",
+                          color: "#34D399",
+                          border: "1px solid rgba(16, 185, 129, 0.35)",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        🌐 Rekap All-Time
+                      </span>
+                    ) : isCurrentSelected ? (
                       <span
                         className="badge"
                         style={{
@@ -2044,7 +2107,16 @@ export default function TapsPage() {
                             <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#F0F0FF" }}>
                               🏆 Rekap {mg.label}
                             </span>
-                            {isThisMonth && (
+                            {selectedMonthKey === "all" ? (
+                              <span style={{
+                                fontSize: "0.65rem", fontWeight: 800,
+                                background: "rgba(16,185,129,0.18)", color: "#34D399",
+                                border: "1px solid rgba(16,185,129,0.4)",
+                                padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
+                              }}>
+                                All-Time
+                              </span>
+                            ) : isThisMonth ? (
                               <span style={{
                                 fontSize: "0.65rem", fontWeight: 800,
                                 background: "rgba(245,158,11,0.18)", color: "#FCD34D",
@@ -2052,6 +2124,15 @@ export default function TapsPage() {
                                 padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
                               }}>
                                 Bulan Berjalan
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: "0.65rem", fontWeight: 800,
+                                background: "rgba(99,102,241,0.18)", color: "#A5B4FC",
+                                border: "1px solid rgba(99,102,241,0.4)",
+                                padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
+                              }}>
+                                Arsip Historis
                               </span>
                             )}
                           </div>
@@ -2125,7 +2206,11 @@ export default function TapsPage() {
                                       {s.count}×
                                     </span>
 
-                                    {isThisMonth ? (
+                                    {selectedMonthKey === "all" ? (
+                                      <span style={{ fontSize: "0.65rem", color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999, fontWeight: 700 }}>
+                                        all-time
+                                      </span>
+                                    ) : isThisMonth ? (
                                       delta === null ? (
                                         <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
                                           baru
@@ -2203,8 +2288,29 @@ export default function TapsPage() {
                                   border: "1px solid rgba(255,255,255,0.06)",
                                   borderRadius: 10,
                                 }}>
-                                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8 }}>
-                                    📋 Riwayat {storeTaps.length} Tap — {s.storeName}
+                                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                                    <span>📋 Riwayat {storeTaps.length} Tap — {s.storeName} ({selectedMonthKey === "all" ? "Sepanjang Masa" : mg.label})</span>
+                                    {selectedMonthKey !== "all" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedMonth("all")}
+                                        style={{
+                                          background: "rgba(255,255,255,0.06)",
+                                          border: "1px solid rgba(255,255,255,0.12)",
+                                          color: "#CBD5E1",
+                                          borderRadius: 6,
+                                          padding: "2px 8px",
+                                          fontSize: "0.68rem",
+                                          cursor: "pointer",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                        }}
+                                        title="Buka rekap seluruh riwayat tap toko ini sejak hari pertama"
+                                      >
+                                        <span>🌐</span> Lihat Histori All-Time
+                                      </button>
+                                    )}
                                   </div>
 
                                   <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 240, overflowY: "auto" }}>
