@@ -560,6 +560,16 @@ function CafeBreakdownCard({
   );
 }
 
+// ── Cafe Monogram Initials Helper ────────────────────────────────────
+function getStoreInitials(name?: string): string {
+  if (!name || !name.trim()) return "☕";
+  const cleaned = name.trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "☕";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
 // ── TapItem — shared item row ──────────────────────────────────────────
 function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull }: {
   log: TapLogEntry;
@@ -2433,38 +2443,38 @@ export default function TapsPage() {
                           const d = new Date(log.tappedAt);
                           const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
                           const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+                          const initials = getStoreInitials(log.storeName);
 
                           return (
                             <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-row-native">
-                              <div className="tap-row-left">
-                                <div className="tap-time-pill desktop-only" title={formatFull(log.tappedAt)}>
-                                  {timeStr}
+                              {/* Kolom Kiri / Utama: Avatar Toko Minimalis + Info Toko */}
+                              <div className="tap-row-main">
+                                <div className="tap-store-avatar" title={log.storeName}>
+                                  <span>{initials}</span>
                                 </div>
                                 <div className="tap-store-info">
-                                  <div className="tap-store-header-mobile">
-                                    <div className="tap-store-name">{log.storeName}</div>
-                                    <div className="tap-time-mobile mobile-only">
-                                      <span className="tap-mobile-clock">{timeStr}</span>
-                                      <span className="tap-mobile-ago">{timeAgo(log.tappedAt)}</span>
-                                    </div>
-                                  </div>
+                                  <div className="tap-store-name" title={log.storeName}>{log.storeName}</div>
                                   <div className="tap-store-sub desktop-only">
-                                    <span className="tap-code-badge">{log.code}</span>
-                                    <span>·</span>
-                                    <span className="tap-date-label">{dateStr}</span>
+                                    <span className="tap-code-tag">{log.code}</span>
+                                    <span className="tap-meta-dot">·</span>
+                                    <span className="tap-date-text">{dateStr}</span>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="tap-row-right">
-                                <div className="tap-meta-mobile mobile-only">
-                                  <span className="tap-code-badge">{log.code}</span>
-                                  <span>·</span>
-                                  <span className="tap-date-label">{dateStr}</span>
+                              {/* Kolom Kanan / Samping: Meta Mobile, Timestamp Tenang Terpadu, Sleek Review Button */}
+                              <div className="tap-row-side">
+                                <div className="tap-store-sub mobile-only">
+                                  <span className="tap-code-tag">{log.code}</span>
+                                  <span className="tap-meta-dot">·</span>
+                                  <span className="tap-date-text">{dateStr}</span>
                                 </div>
-                                <span className="tap-time-ago-badge desktop-only" title={formatFull(log.tappedAt)}>
-                                  {timeAgo(log.tappedAt)}
-                                </span>
+
+                                <div className="tap-time-stack" title={formatFull(log.tappedAt)}>
+                                  <span className="tap-time-exact">{timeStr}</span>
+                                  <span className="tap-time-ago">{timeAgo(log.tappedAt)}</span>
+                                </div>
+
                                 {reviewUrl && (
                                   <a
                                     href={reviewUrl}
@@ -2473,7 +2483,7 @@ export default function TapsPage() {
                                     className="tap-review-btn"
                                     title="Buka menu ulasan Google publik toko ini"
                                   >
-                                    <span>⭐</span>
+                                    <span className="tap-review-star">⭐</span>
                                     <span className="tap-review-text">Ulasan ↗</span>
                                   </a>
                                 )}
