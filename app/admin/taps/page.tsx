@@ -935,6 +935,7 @@ export default function TapsPage() {
   const [showAllSidebarStores, setShowAllSidebarStores] = useState(false);
   const [tapDisplayLimit, setTapDisplayLimit] = useState(25);
   const lastKnownTapRef = useRef<string | null>(null);
+  const datePickerRef = useRef<HTMLInputElement>(null);
 
   async function fetchData(isBackground = false) {
     if (!isBackground) setLoading(true);
@@ -2425,6 +2426,18 @@ export default function TapsPage() {
                 <div className="custom-date-trigger-wrap" style={{ position: "relative", flexShrink: 0 }}>
                   <button
                     type="button"
+                    onClick={() => {
+                      if (!datePickerRef.current) return;
+                      try {
+                        if (typeof datePickerRef.current.showPicker === "function") {
+                          datePickerRef.current.showPicker();
+                          return;
+                        }
+                      } catch {}
+                      try {
+                        datePickerRef.current.focus();
+                      } catch {}
+                    }}
                     className="custom-date-trigger-btn"
                     style={{
                       height: 42,
@@ -2454,8 +2467,9 @@ export default function TapsPage() {
                     )}
                   </button>
 
-                  {/* Invisible native date input on top so clicking anywhere on the button opens calendar */}
+                  {/* Native date input overlay with showPicker click handler */}
                   <input
+                    ref={datePickerRef}
                     type="date"
                     value={customDate}
                     min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
@@ -2464,6 +2478,14 @@ export default function TapsPage() {
                       setCustomDate(e.target.value);
                       if (e.target.value) setDailyMode("custom");
                     }}
+                    onClick={(e) => {
+                      try {
+                        if (typeof e.currentTarget.showPicker === "function") {
+                          e.currentTarget.showPicker();
+                        }
+                      } catch {}
+                    }}
+                    className="custom-date-native-input"
                     style={{
                       position: "absolute",
                       inset: 0,
@@ -2471,7 +2493,7 @@ export default function TapsPage() {
                       width: "100%",
                       height: "100%",
                       cursor: "pointer",
-                      zIndex: 1,
+                      zIndex: 2,
                     }}
                     title="Klik untuk memilih tanggal"
                   />
@@ -2482,6 +2504,7 @@ export default function TapsPage() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        e.preventDefault();
                         setCustomDate("");
                         setDailyMode("today");
                       }}
