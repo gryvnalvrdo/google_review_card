@@ -96,7 +96,7 @@ function BarChart({
     <div style={{ width: "100%", overflowX: "auto" }}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        style={{ width: "100%", minWidth: 460, height: "auto", display: "block" }}
+        style={{ width: "100%", minWidth: data.length <= 8 ? "100%" : 460, height: "auto", display: "block" }}
         role="img"
         aria-label="Grafik Batang"
       >
@@ -292,6 +292,129 @@ function BarChart({
   );
 }
 
+// ── CafeBreakdownCard — Ranking kontribusi toko/cafe ───────────────────
+function CafeBreakdownCard({
+  title,
+  subtitle,
+  logs,
+  cardUrlMap,
+}: {
+  title: string;
+  subtitle: string;
+  logs: TapLogEntry[];
+  cardUrlMap: Map<string, string>;
+}) {
+  const countsByStore = useMemo(() => {
+    const map = new Map<string, { count: number; code: string; storeName: string }>();
+    for (const log of logs) {
+      const name = log.storeName || "Toko Tanpa Nama";
+      const existing = map.get(name);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(name, { count: 1, code: log.code, storeName: name });
+      }
+    }
+    const arr = Array.from(map.values());
+    arr.sort((a, b) => b.count - a.count);
+    return arr;
+  }, [logs]);
+
+  const total = logs.length;
+  const max = countsByStore.length > 0 ? countsByStore[0].count : 1;
+
+  if (countsByStore.length === 0) {
+    return null;
+  }
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const barGradients = [
+    "linear-gradient(90deg, #F59E0B, #FCD34D)", // gold
+    "linear-gradient(90deg, #6366F1, #818CF8)", // indigo
+    "linear-gradient(90deg, #10B981, #34D399)", // emerald
+    "linear-gradient(90deg, #EC4899, #F472B6)", // pink
+    "linear-gradient(90deg, #8B5CF6, #A78BFA)", // purple
+  ];
+
+  return (
+    <div className="cafe-breakdown-card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <h4 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#F0F0FF", display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
+            <span>☕</span> {title}
+          </h4>
+          <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 2, marginBottom: 0 }}>
+            {subtitle}
+          </p>
+        </div>
+        <span className="badge badge-indigo" style={{ fontSize: "0.74rem", fontWeight: 700 }}>
+          {countsByStore.length} Toko · {total} Tap
+        </span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {countsByStore.map((store, i) => {
+          const percentOfTotal = total > 0 ? Math.round((store.count / total) * 100) : 0;
+          const relativePercent = Math.round((store.count / max) * 100);
+          const reviewUrl = cardUrlMap.get(store.code) || (store.storeName ? getPublicGoogleReviewUrl("", store.storeName) : "");
+          const gradient = barGradients[i % barGradients.length];
+
+          return (
+            <div key={store.storeName} className="cafe-breakdown-item">
+              <div className="cafe-breakdown-row1">
+                <div className="cafe-breakdown-info">
+                  <span className="cafe-rank-badge">
+                    {i < 3 ? medals[i] : `#${i + 1}`}
+                  </span>
+                  <span className="cafe-store-name">
+                    {store.storeName}
+                  </span>
+                  <span className="cafe-code-badge">
+                    {store.code}
+                  </span>
+                </div>
+
+                <div className="cafe-breakdown-stats">
+                  <span className="cafe-tap-count">
+                    {store.count} tap
+                  </span>
+                  <span className="cafe-percent">
+                    ({percentOfTotal}%)
+                  </span>
+                  {reviewUrl && (
+                    <a
+                      href={reviewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="cafe-review-link"
+                      title="Buka menu ulasan toko ini"
+                    >
+                      <span>⭐</span> ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ background: "rgba(255,255,255,0.06)", height: 6, borderRadius: 999, overflow: "hidden" }}>
+                <div
+                  style={{
+                    width: `${relativePercent}%`,
+                    height: "100%",
+                    background: gradient,
+                    borderRadius: 999,
+                    transition: "width 0.3s ease",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── TapItem — shared item row ──────────────────────────────────────────
 function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull }: {
   log: TapLogEntry;
@@ -384,7 +507,8 @@ export default function TapsPage() {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
   const [trendRange, setTrendRange] = useState<7 | 30>(7);
-  const [trenView, setTrenView] = useState<"jam" | "harian">("jam");
+  const [trenView, setTrenView] = useState<"jam" | "harian" | "mingguan">("jam");
+  const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
   const lastKnownTapRef = useRef<string | null>(null);
 
@@ -449,6 +573,34 @@ export default function TapsPage() {
 
 
   // ── Helpers ──────────────────────────────────────────────────────────
+  function getWeekNumber(d: Date): number {
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+
+  function getWeekRange(date: Date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const startStr = monday.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const endStr = sunday.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+
+    const weekKey = `${monday.getFullYear()}-W${String(getWeekNumber(monday)).padStart(2, "0")}`;
+    const label = `${startStr} - ${endStr}`;
+
+    return { start: monday, end: sunday, label, weekKey };
+  }
   function getMonthKey(iso: string) {
     const d = new Date(iso);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -927,6 +1079,140 @@ export default function TapsPage() {
 
   // ── Tab: Kartu Tidur (Belum Pernah Tap) ──────────────────────────────
   const tappedCodes = useMemo(() => new Set(validLogs.map(l => l.code)), [validLogs]);
+
+  // ── Tren Mingguan (8 Minggu Terakhir) & Drilldown ─────────────────────
+  const weeklyTrendData = useMemo(() => {
+    const weeks: {
+      weekKey: string;
+      label: string;
+      subLabel: string;
+      start: Date;
+      end: Date;
+      count: number;
+      prevCount?: number;
+      wowGrowth?: number | null;
+      logs: TapLogEntry[];
+    }[] = [];
+
+    const now = new Date();
+    const currentWeekInfo = getWeekRange(now);
+
+    for (let i = 7; i >= 0; i--) {
+      const refDate = new Date(currentWeekInfo.start);
+      refDate.setDate(refDate.getDate() - (i * 7));
+      const wInfo = getWeekRange(refDate);
+
+      const wLogs = validLogs.filter(l => {
+        const t = new Date(l.tappedAt).getTime();
+        return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
+      });
+
+      weeks.push({
+        weekKey: wInfo.weekKey,
+        label: wInfo.label,
+        subLabel: `Mgg ${getWeekNumber(wInfo.start)}`,
+        start: wInfo.start,
+        end: wInfo.end,
+        count: wLogs.length,
+        logs: wLogs,
+      });
+    }
+
+    for (let i = 0; i < weeks.length; i++) {
+      if (i > 0) {
+        weeks[i].prevCount = weeks[i - 1].count;
+        if (weeks[i - 1].count > 0) {
+          weeks[i].wowGrowth = Math.round(((weeks[i].count - weeks[i - 1].count) / weeks[i - 1].count) * 100);
+        } else if (weeks[i].count > 0) {
+          weeks[i].wowGrowth = 100;
+        } else {
+          weeks[i].wowGrowth = 0;
+        }
+      }
+    }
+
+    return weeks;
+  }, [validLogs]);
+
+  const selectedWeekObj = useMemo(() => {
+    if (!selectedWeekKey) return null;
+    return weeklyTrendData.find(w => w.weekKey === selectedWeekKey) || null;
+  }, [selectedWeekKey, weeklyTrendData]);
+
+  const weekDailyData = useMemo(() => {
+    if (!selectedWeekObj) return [];
+    const days: {
+      label: string;
+      subLabel: string;
+      dateKey: string;
+      date: Date;
+      value: number;
+      logs: TapLogEntry[];
+      highlight?: boolean;
+      tooltip?: string;
+    }[] = [];
+
+    const dayNames = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+    const maxVal = Math.max(...dayNames.map((_, i) => {
+      const d = new Date(selectedWeekObj.start);
+      d.setDate(d.getDate() + i);
+      const dateKey = toDateInputValue(d);
+      return selectedWeekObj.logs.filter(l => toDateInputValue(new Date(l.tappedAt)) === dateKey).length;
+    }), 0);
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(selectedWeekObj.start);
+      d.setDate(d.getDate() + i);
+      const dateKey = toDateInputValue(d);
+      const dLogs = selectedWeekObj.logs.filter(l => toDateInputValue(new Date(l.tappedAt)) === dateKey);
+
+      days.push({
+        label: dayNames[i],
+        subLabel: `${d.getDate()}/${d.getMonth() + 1}`,
+        dateKey,
+        date: d,
+        value: dLogs.length,
+        logs: dLogs,
+        highlight: dLogs.length === maxVal && maxVal > 0,
+        tooltip: `${dayNames[i]}, ${d.getDate()}/${d.getMonth() + 1}: ${dLogs.length} tap`,
+      });
+    }
+
+    return days;
+  }, [selectedWeekObj]);
+
+  const weeklyChartData = useMemo(() => {
+    const maxV = Math.max(...weeklyTrendData.map(w => w.count), 0);
+    return weeklyTrendData.map(w => {
+      const isSelected = selectedWeekKey === w.weekKey;
+      return {
+        label: w.subLabel,
+        subLabel: w.label,
+        value: w.count,
+        weekKey: w.weekKey,
+        highlight: isSelected || (w.count === maxV && maxV > 0),
+        tooltip: `${w.subLabel} (${w.label}): ${w.count} tap${w.wowGrowth !== undefined && w.wowGrowth !== null ? ` (${w.wowGrowth >= 0 ? `+${w.wowGrowth}%` : `${w.wowGrowth}%`} vs mgg lalu)` : ""}`,
+      };
+    });
+  }, [weeklyTrendData, selectedWeekKey]);
+
+  const eightWeeksLogs = useMemo(() => {
+    if (weeklyTrendData.length === 0) return [];
+    const earliest = weeklyTrendData[0].start.getTime();
+    const latest = weeklyTrendData[weeklyTrendData.length - 1].end.getTime();
+    return validLogs.filter(l => {
+      const t = new Date(l.tappedAt).getTime();
+      return t >= earliest && t <= latest;
+    });
+  }, [validLogs, weeklyTrendData]);
+
+  const trendRangeLogs = useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - trendRange);
+    cutoff.setHours(0, 0, 0, 0);
+    return validLogs.filter(l => new Date(l.tappedAt) >= cutoff);
+  }, [validLogs, trendRange]);
   const sleepingCards = useMemo(() =>
     cards.filter(c => !tappedCodes.has(c.code) && (
       c.storeName.toLowerCase().includes(search.toLowerCase()) ||
@@ -1303,7 +1589,7 @@ export default function TapsPage() {
             ) : (
               <div>
                 {/* Selector Pemilih Bulan */}
-                <div style={{
+                <div className="month-selector-bar" style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   gap: 12, marginBottom: 18, flexWrap: "wrap",
                   background: "#111118", padding: "12px 16px",
@@ -1650,7 +1936,7 @@ export default function TapsPage() {
               </div>
             ) : (
               <div className="card" style={{ padding: "20px" }}>
-                {/* ── Tampilan 1: Mode Drill-Down Tanggal Spesifik ── */}
+                {/* ── Tampilan 1: Mode Drill-Down Tanggal Spesifik (Level 3) ── */}
                 {selectedDrilldownDate ? (
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
@@ -1660,7 +1946,7 @@ export default function TapsPage() {
                             type="button"
                             onClick={() => setSelectedDrilldownDate(null)}
                             style={{
-                              padding: "5px 12px",
+                              padding: "6px 12px",
                               fontSize: "0.78rem",
                               fontWeight: 700,
                               borderRadius: 8,
@@ -1675,15 +1961,33 @@ export default function TapsPage() {
                             }}
                           >
                             <span>←</span>
-                            <span>Kembali ke Tren Harian</span>
+                            <span>{selectedWeekObj ? `Kembali ke ${selectedWeekObj.subLabel}` : "Kembali ke Tren Harian"}</span>
                           </button>
-                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>• Rincian Jam Spesifik</span>
+                          {selectedWeekObj && (
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedDrilldownDate(null); setSelectedWeekKey(null); }}
+                              style={{
+                                padding: "6px 10px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                borderRadius: 8,
+                                background: "rgba(255, 255, 255, 0.04)",
+                                color: "var(--text-muted)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <span>🏠 Semua Minggu</span>
+                            </button>
+                          )}
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>• Rincian Jam &amp; Cafe</span>
                         </div>
                         <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F0F0FF" }}>
                           🔍 Distribusi Jam Masuk: {formatDateIndo(selectedDrilldownDate)}
                         </h3>
                         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                          Rincian jam kedatangan pelanggan khusus pada hari {formatDateIndo(selectedDrilldownDate)}.
+                          Rincian jam kedatangan pelanggan dan cafe yang ditap khusus pada hari {formatDateIndo(selectedDrilldownDate)}.
                         </p>
                       </div>
 
@@ -1725,16 +2029,28 @@ export default function TapsPage() {
                         ℹ️ Tidak ada riwayat tap yang tercatat pada {formatDateIndo(selectedDrilldownDate)}.
                       </div>
                     )}
+
+                    {/* Breakdown Cafe pada Tanggal Ini */}
+                    <CafeBreakdownCard
+                      title={`Outlet yang Ditap pada ${formatDateIndo(selectedDrilldownDate)}`}
+                      subtitle="Daftar toko/cafe yang menerima tap pelanggan pada tanggal ini."
+                      logs={drilldownLogs}
+                      cardUrlMap={cardUrlMap}
+                    />
                   </div>
                 ) : (
                   <div>
-                    {/* ── Header Card dengan Mode Switcher Terpadu ── */}
+                    {/* ── Header Card dengan Mode Switcher Terpadu (Jam, Harian, Mingguan) ── */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
                       <div>
                         <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F0F0FF" }}>
                           {trenView === "jam"
                             ? `⏱️ Distribusi Jam Masuk ${hourPeriod === "today" ? "(Hari Ini)" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}`
-                            : `📈 Tren Aktivitas Harian (${trendRange} Hari Terakhir)`}
+                            : trenView === "harian"
+                            ? `📅 Tren Aktivitas Harian (${trendRange} Hari Terakhir)`
+                            : selectedWeekObj
+                            ? `📅 Rincian 7 Hari: ${selectedWeekObj.subLabel} (${selectedWeekObj.label})`
+                            : "📊 Tren Aktivitas Mingguan (8 Minggu Terakhir)"}
                         </h3>
                         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
                           {trenView === "jam"
@@ -1745,18 +2061,22 @@ export default function TapsPage() {
                                 : hourPeriod === "last30"
                                 ? "Analisis jam sibuk pelanggan men-tap kartu dalam 1 bulan terakhir."
                                 : "Analisis jam sibuk pelanggan men-tap kartu dari seluruh riwayat tap yang tercatat.")
-                            : "Jumlah tap per hari pada semua kartu aktif. Klik pada salah satu batang tanggal untuk membedah jam sibuknya."}
+                            : trenView === "harian"
+                            ? "Jumlah tap per hari pada semua kartu aktif. Klik pada salah satu batang tanggal untuk membedah jam sibuk & cafe teraktif."
+                            : selectedWeekObj
+                            ? `Performa 7 hari (Senin s/d Minggu) pada ${selectedWeekObj.subLabel}. Klik salah satu batang hari untuk melihat sebaran jam & cafe.`
+                            : "Akumulasi tap per minggu kalender (Senin - Minggu). Klik salah satu batang minggu untuk membedah 7 hari di dalamnya."}
                         </p>
                       </div>
 
-                      {/* Mode Switcher: Distribusi Jam Masuk vs Tren Harian */}
-                      <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 4, borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
+                      {/* Mode Switcher: 3 Tombol (Jam Masuk vs Tren Harian vs Tren Mingguan) */}
+                      <div className="chart-mode-switcher">
                         <button
                           type="button"
-                          onClick={() => setTrenView("jam")}
+                          onClick={() => { setTrenView("jam"); setSelectedDrilldownDate(null); setSelectedWeekKey(null); }}
                           style={{
-                            padding: "6px 14px",
-                            fontSize: "0.78rem",
+                            padding: "6px 12px",
+                            fontSize: "0.76rem",
                             fontWeight: 700,
                             borderRadius: 8,
                             background: trenView === "jam" ? "#6366F1" : "transparent",
@@ -1765,20 +2085,20 @@ export default function TapsPage() {
                             cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
-                            gap: 6,
+                            gap: 5,
                             transition: "all 0.15s ease",
                             boxShadow: trenView === "jam" ? "0 2px 8px rgba(99,102,241,0.35)" : "none",
                           }}
                         >
                           <span>⏱️</span>
-                          <span>Distribusi Jam Masuk</span>
+                          <span>Jam Sibuk</span>
                         </button>
                         <button
                           type="button"
-                          onClick={() => setTrenView("harian")}
+                          onClick={() => { setTrenView("harian"); setSelectedDrilldownDate(null); setSelectedWeekKey(null); }}
                           style={{
-                            padding: "6px 14px",
-                            fontSize: "0.78rem",
+                            padding: "6px 12px",
+                            fontSize: "0.76rem",
                             fontWeight: 700,
                             borderRadius: 8,
                             background: trenView === "harian" ? "#F59E0B" : "transparent",
@@ -1787,13 +2107,35 @@ export default function TapsPage() {
                             cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
-                            gap: 6,
+                            gap: 5,
                             transition: "all 0.15s ease",
                             boxShadow: trenView === "harian" ? "0 2px 8px rgba(245,158,11,0.35)" : "none",
                           }}
                         >
                           <span>📅</span>
-                          <span>Tren Harian ({trendRange} Hari)</span>
+                          <span>Harian</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setTrenView("mingguan"); setSelectedDrilldownDate(null); }}
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "0.76rem",
+                            fontWeight: 700,
+                            borderRadius: 8,
+                            background: trenView === "mingguan" ? "#8B5CF6" : "transparent",
+                            color: trenView === "mingguan" ? "#FFF" : "var(--text-muted)",
+                            border: "none",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 5,
+                            transition: "all 0.15s ease",
+                            boxShadow: trenView === "mingguan" ? "0 2px 8px rgba(139,92,246,0.35)" : "none",
+                          }}
+                        >
+                          <span>📊</span>
+                          <span>Mingguan</span>
                         </button>
                       </div>
                     </div>
@@ -1820,7 +2162,7 @@ export default function TapsPage() {
                         </div>
 
                         {/* Filter Periode & Ringkasan Jam Puncak per Periode */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: 16 }}>
+                        <div className="hour-period-grid">
                           {(
                             [
                               { id: "today", icon: "☀️", label: "Hari Ini" },
@@ -1901,6 +2243,14 @@ export default function TapsPage() {
                             ℹ️ Belum ada tap yang masuk pada periode ini. Jika ada pelanggan men-tap kartu, tap baru akan otomatis terhitung via live auto-refresh.
                           </div>
                         )}
+
+                        {/* Breakdown Cafe Periode Jam Ini */}
+                        <CafeBreakdownCard
+                          title={`Peringkat Cafe Teraktif (${hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"})`}
+                          subtitle="Outlet yang menerima tap pelanggan pada rentang waktu terpilih."
+                          logs={hourFilteredLogs}
+                          cardUrlMap={cardUrlMap}
+                        />
                       </div>
                     )}
 
@@ -1978,7 +2328,7 @@ export default function TapsPage() {
                             color: "#7DD3FC",
                           }}>
                             <span>👆</span>
-                            <span><strong>Klik salah satu batang tanggal</strong> untuk membedah jam ramainya</span>
+                            <span><strong>Klik batang tanggal</strong> untuk membedah jam ramainya &amp; cafe</span>
                           </div>
                         </div>
 
@@ -1994,6 +2344,147 @@ export default function TapsPage() {
                             }
                           }}
                         />
+
+                        {/* Breakdown Cafe Periode Harian Ini */}
+                        <CafeBreakdownCard
+                          title={`Peringkat Cafe Teraktif (${trendRange} Hari Terakhir)`}
+                          subtitle={`Akumulasi kontribusi tap per cafe selama rentang ${trendRange} hari ini.`}
+                          logs={trendRangeLogs}
+                          cardUrlMap={cardUrlMap}
+                        />
+                      </div>
+                    )}
+
+                    {/* ── View 3: Tren Mingguan & Drilldown 7 Hari (Level 1 & Level 2) ── */}
+                    {trenView === "mingguan" && (
+                      <div>
+                        {selectedWeekObj ? (
+                          /* Level 2: Detail 7 Hari di Minggu Terpilih */
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedWeekKey(null)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    borderRadius: 8,
+                                    background: "rgba(255, 255, 255, 0.08)",
+                                    color: "#FFF",
+                                    border: "1px solid rgba(255, 255, 255, 0.18)",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                  }}
+                                >
+                                  <span>←</span>
+                                  <span>Kembali ke Semua Minggu</span>
+                                </button>
+                                <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
+                                  Total: {selectedWeekObj.count} tap
+                                </span>
+                                {selectedWeekObj.wowGrowth !== undefined && selectedWeekObj.wowGrowth !== null && (
+                                  <span className="badge" style={{
+                                    background: selectedWeekObj.wowGrowth >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                                    color: selectedWeekObj.wowGrowth >= 0 ? "#34D399" : "#FCA5A5",
+                                    border: `1px solid ${selectedWeekObj.wowGrowth >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
+                                  }}>
+                                    {selectedWeekObj.wowGrowth >= 0 ? `+${selectedWeekObj.wowGrowth}% ↗ vs Mgg Lalu` : `${selectedWeekObj.wowGrowth}% ↘ vs Mgg Lalu`}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "4px 10px",
+                                background: "rgba(56, 189, 248, 0.08)",
+                                border: "1px dashed rgba(56, 189, 248, 0.3)",
+                                borderRadius: 8,
+                                fontSize: "0.72rem",
+                                color: "#7DD3FC",
+                              }}>
+                                <span>👆</span>
+                                <span><strong>Klik salah satu hari</strong> untuk membedah jam 24-jam</span>
+                              </div>
+                            </div>
+
+                            <BarChart
+                              data={weekDailyData}
+                              color="#38BDF8"
+                              yAxisUnit="Tap"
+                              xAxisTitle="Hari"
+                              showValue={true}
+                              onBarClick={(_idx, item: any) => {
+                                if (item.dateKey) {
+                                  setSelectedDrilldownDate(item.dateKey);
+                                }
+                              }}
+                            />
+
+                            {/* Breakdown Cafe Minggu Ini */}
+                            <CafeBreakdownCard
+                              title={`Cafe Teraktif pada ${selectedWeekObj.subLabel} (${selectedWeekObj.label})`}
+                              subtitle="Outlet yang menyumbang tap terbanyak dalam minggu terpilih ini."
+                              logs={selectedWeekObj.logs}
+                              cardUrlMap={cardUrlMap}
+                            />
+                          </div>
+                        ) : (
+                          /* Level 1: Grafik Batang 8 Minggu Kalender */
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
+                              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
+                                  Total 8 Minggu: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
+                                </span>
+                                <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
+                                  Rata-rata: ~{Math.round(weeklyTrendData.reduce((s, w) => s + w.count, 0) / 8)} tap/mgg
+                                </span>
+                              </div>
+
+                              <div style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "4px 10px",
+                                background: "rgba(139, 92, 246, 0.08)",
+                                border: "1px dashed rgba(139, 92, 246, 0.3)",
+                                borderRadius: 8,
+                                fontSize: "0.72rem",
+                                color: "#C4B5FD",
+                              }}>
+                                <span>👆</span>
+                                <span><strong>Klik batang minggu</strong> untuk membedah 7 hari &amp; cafe</span>
+                              </div>
+                            </div>
+
+                            <BarChart
+                              data={weeklyChartData}
+                              color="#8B5CF6"
+                              yAxisUnit="Tap"
+                              xAxisTitle="Minggu"
+                              showValue={true}
+                              onBarClick={(_idx, item: any) => {
+                                if (item.weekKey) {
+                                  setSelectedWeekKey(item.weekKey);
+                                }
+                              }}
+                            />
+
+                            {/* Breakdown Cafe 8 Minggu Ini */}
+                            <CafeBreakdownCard
+                              title="Peringkat Cafe Teraktif (8 Minggu Terakhir)"
+                              subtitle="Akumulasi kontribusi tap per cafe selama 8 minggu."
+                              logs={eightWeeksLogs}
+                              cardUrlMap={cardUrlMap}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
