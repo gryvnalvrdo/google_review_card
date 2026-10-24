@@ -583,10 +583,17 @@ html, body {
   }
 }
 
-@media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+@media (max-width: 640px) {
+  .mobile-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .mobile-container-pad {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  .mobile-hide-sm {
+    display: none !important;
   }
 }
 

@@ -323,7 +323,7 @@ export default function CardsPage() {
 
       {/* Main Container */}
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
+        <div className="mobile-container-pad" style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
           {/* Header Title */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
@@ -335,7 +335,7 @@ export default function CardsPage() {
                 Kelola kartu aktif, cetak ulang QR resolusi tinggi, atau assign stok kartu baru ke toko.
               </p>
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <button
                 type="button"
                 onClick={() => setShowScanner(true)}
@@ -355,18 +355,18 @@ export default function CardsPage() {
           </div>
 
           {/* Main Tab Switcher */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 10 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 10, overflowX: "auto" }}>
             <button
               onClick={() => setActiveTab("aktif")}
               className={`btn ${activeTab === "aktif" ? "btn-primary" : "btn-ghost"}`}
-              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem" }}
+              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem", whiteSpace: "nowrap" }}
             >
               💳 Kartu Toko Aktif ({cards.length})
             </button>
             <button
               onClick={() => setActiveTab("stok")}
               className={`btn ${activeTab === "stok" ? "btn-primary" : "btn-ghost"}`}
-              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem" }}
+              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem", whiteSpace: "nowrap" }}
             >
               📦 Stok Belum Di-Assign ({stockCodes.length})
             </button>
@@ -376,7 +376,7 @@ export default function CardsPage() {
           {activeTab === "aktif" ? (
             <>
               {/* KPI Stats */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 22 }}>
+              <div className="mobile-kpi-grid" style={{ marginBottom: 22 }}>
                 <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
                   <div style={{ fontSize: "0.72rem", color: "#A5B4FC", fontWeight: 700, textTransform: "uppercase" }}>💳 Total Kartu Aktif</div>
                   <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#F0F0FF", marginTop: 4 }}>{cards.length}</div>
@@ -450,23 +450,24 @@ export default function CardsPage() {
                         key={card.code}
                         className="card"
                         style={{
-                          padding: "18px 20px",
+                          padding: "16px 18px",
                           display: "flex",
                           flexDirection: "column",
-                          gap: 14,
+                          gap: 12,
                           background: "#111118",
                           border: "1px solid rgba(255,255,255,0.07)",
                           transition: "border-color 0.2s",
                         }}
                       >
-                        {/* Row 1: Header + Badges + Actions */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF" }}>
+                        {/* Row 1: Header (Store Name & Code) + Edit/Delete Buttons (Anchored) */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF", wordBreak: "break-word" }}>
                                 {card.storeName}
                               </h3>
                               <button
+                                type="button"
                                 onClick={() => copyCodeText(card.code)}
                                 title="Klik untuk salin kode"
                                 style={{
@@ -474,6 +475,7 @@ export default function CardsPage() {
                                   background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)",
                                   color: "#A5B4FC", fontFamily: "monospace", fontSize: "0.75rem",
                                   fontWeight: 700, padding: "2px 8px", borderRadius: 6, cursor: "pointer",
+                                  flexShrink: 0,
                                 }}
                               >
                                 {card.code}
@@ -481,7 +483,7 @@ export default function CardsPage() {
                               </button>
                             </div>
 
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6, alignItems: "center" }}>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                               <span className="badge badge-green">● Aktif</span>
                               <span className="badge badge-orange">👆 {card.tapCount ?? 0} Tap</span>
                               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
@@ -490,47 +492,23 @@ export default function CardsPage() {
                             </div>
                           </div>
 
-                          {/* Quick Actions Buttons */}
-                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          {/* Action Buttons: Anchored top-right so trash can never overflows */}
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
                             <button
-                              onClick={() => downloadQrOnly(card)}
-                              disabled={downloadingQrCode === card.code || !baseUrl}
-                              className="btn btn-ghost"
-                              style={{
-                                padding: "6px 12px", fontSize: "0.78rem",
-                                color: "#34D399", borderColor: "rgba(16,185,129,0.25)", background: "rgba(16,185,129,0.06)",
-                              }}
-                              title="Download QR Code resolusi tinggi untuk cetak besar"
-                            >
-                              {downloadingQrCode === card.code ? "⏳ Mengunduh..." : "📷 QR High-Res"}
-                            </button>
-
-                            <button
-                              onClick={() => downloadCard(card)}
-                              disabled={downloadingCode === card.code || !bgImg}
-                              className="btn btn-ghost"
-                              style={{
-                                padding: "6px 12px", fontSize: "0.78rem",
-                                color: "#A5B4FC", borderColor: "rgba(99,102,241,0.25)", background: "rgba(99,102,241,0.06)",
-                              }}
-                              title="Download kartu PNG utuh dengan desain template"
-                            >
-                              {downloadingCode === card.code ? "⏳ Menyiapkan..." : "🖼️ Kartu PNG"}
-                            </button>
-
-                            <button
+                              type="button"
                               onClick={() => setEditingCard(card)}
                               className="btn btn-ghost"
-                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              style={{ padding: "6px 10px", fontSize: "0.85rem", borderRadius: 8 }}
                               title="Edit Toko"
                             >
                               ✏️
                             </button>
 
                             <button
+                              type="button"
                               onClick={() => setDeleteConfirmCode(card.code)}
                               className="btn btn-danger"
-                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              style={{ padding: "6px 10px", fontSize: "0.85rem", borderRadius: 8 }}
                               title="Hapus Kartu"
                             >
                               🗑️
@@ -538,10 +516,10 @@ export default function CardsPage() {
                           </div>
                         </div>
 
-                        {/* Row 2: Details */}
+                        {/* Row 2: Details Grid */}
                         <div style={{
-                          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                          gap: 12, padding: "10px 14px", background: "rgba(0,0,0,0.3)", borderRadius: 10,
+                          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+                          gap: 10, padding: "10px 14px", background: "rgba(0,0,0,0.3)", borderRadius: 10,
                           fontSize: "0.78rem", border: "1px solid rgba(255,255,255,0.04)",
                         }}>
                           <div>
@@ -562,6 +540,39 @@ export default function CardsPage() {
                               Buka Halaman Ulasan ↗
                             </a>
                           </div>
+                        </div>
+
+                        {/* Row 3: Action Buttons (Responsive flex row) */}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => downloadQrOnly(card)}
+                            disabled={downloadingQrCode === card.code || !baseUrl}
+                            className="btn btn-ghost"
+                            style={{
+                              flex: "1 1 130px", justifyContent: "center",
+                              padding: "8px 12px", fontSize: "0.78rem",
+                              color: "#34D399", borderColor: "rgba(16,185,129,0.25)", background: "rgba(16,185,129,0.06)",
+                            }}
+                            title="Download QR Code resolusi tinggi untuk cetak besar"
+                          >
+                            {downloadingQrCode === card.code ? "⏳ Mengunduh..." : "📷 Unduh QR High-Res"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => downloadCard(card)}
+                            disabled={downloadingCode === card.code || !bgImg}
+                            className="btn btn-ghost"
+                            style={{
+                              flex: "1 1 130px", justifyContent: "center",
+                              padding: "8px 12px", fontSize: "0.78rem",
+                              color: "#A5B4FC", borderColor: "rgba(99,102,241,0.25)", background: "rgba(99,102,241,0.06)",
+                            }}
+                            title="Download kartu PNG utuh dengan desain template"
+                          >
+                            {downloadingCode === card.code ? "⏳ Menyiapkan..." : "🖼️ Unduh Kartu PNG"}
+                          </button>
                         </div>
                       </div>
                     );
@@ -611,7 +622,7 @@ export default function CardsPage() {
                   </a>
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
                   {stockCodes
                     .filter(sc => sc.toLowerCase().includes(searchTerm.toLowerCase()))
                     .map(sc => (

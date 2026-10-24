@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import AdminNav from "../components/AdminNav";
 
 type TapLogEntry = {
@@ -12,6 +12,7 @@ type TapLogEntry = {
 type CardRecord = {
   code: string;
   storeName: string;
+  googleReviewUrl?: string;
   tapCount?: number;
   createdAt: string;
 };
@@ -76,8 +77,9 @@ function BarChart({
 }
 
 // ── TapItem — shared item row ──────────────────────────────────────────
-function TapItem({ log, accentColor = "#34D399", timeAgo, formatFull }: {
+function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull }: {
   log: TapLogEntry;
+  reviewUrl?: string;
   accentColor?: string;
   timeAgo: (iso: string) => string;
   formatFull: (iso: string) => string;
@@ -85,48 +87,69 @@ function TapItem({ log, accentColor = "#34D399", timeAgo, formatFull }: {
   const hue = log.storeName.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 12,
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
       padding: "12px 14px",
       background: "#111118",
       borderBottom: "1px solid rgba(255,255,255,0.04)",
       borderLeft: `3px solid ${accentColor}`,
+      flexWrap: "wrap",
       transition: "background 0.15s",
     }}>
-      {/* Avatar Icon */}
-      <div style={{
-        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-        background: `linear-gradient(135deg, hsl(${hue},65%,26%), hsl(${(hue+45)%360},60%,38%))`,
-        border: `1px solid hsl(${hue},50%,38%)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "1.05rem",
-        boxShadow: `0 2px 10px hsla(${hue},60%,20%,0.4)`,
-      }}>📲</div>
+      {/* Avatar Icon + Info */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 200px" }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+          background: `linear-gradient(135deg, hsl(${hue},65%,26%), hsl(${(hue+45)%360},60%,38%))`,
+          border: `1px solid hsl(${hue},50%,38%)`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: "1rem",
+          boxShadow: `0 2px 10px hsla(${hue},60%,20%,0.4)`,
+        }}>📲</div>
 
-      {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {log.storeName}
-          </span>
-          <span style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "#818CF8", background: "rgba(99,102,241,0.12)", padding: "1px 6px", borderRadius: 4 }}>
-            {log.code}
-          </span>
-        </div>
-        <div style={{ fontSize: "0.72rem", color: "#7A7A95", marginTop: 2 }}>
-          {formatFull(log.tappedAt)}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", wordBreak: "break-word" }}>
+              {log.storeName}
+            </span>
+            <span style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "#818CF8", background: "rgba(99,102,241,0.12)", padding: "1px 6px", borderRadius: 4, flexShrink: 0 }}>
+              {log.code}
+            </span>
+          </div>
+          <div style={{ fontSize: "0.72rem", color: "#7A7A95", marginTop: 2 }}>
+            {formatFull(log.tappedAt)}
+          </div>
         </div>
       </div>
 
-      {/* Time pill */}
-      <span style={{
-        fontSize: "0.72rem", fontWeight: 700,
-        color: accentColor,
-        background: `${accentColor}15`,
-        border: `1px solid ${accentColor}35`,
-        padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0,
-      }}>
-        {timeAgo(log.tappedAt)}
-      </span>
+      {/* Actions: Review Link + Time pill */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: "auto" }}>
+        {reviewUrl && (
+          <a
+            href={reviewUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: "0.72rem", fontWeight: 700, color: "#34D399",
+              background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)",
+              padding: "4px 9px", borderRadius: 8, textDecoration: "none",
+              display: "inline-flex", alignItems: "center", gap: 4,
+            }}
+            title="Buka Google Review toko ini untuk melihat ulasan baru"
+          >
+            ⭐ Review ↗
+          </a>
+        )}
+
+        <span style={{
+          fontSize: "0.72rem", fontWeight: 700,
+          color: accentColor,
+          background: `${accentColor}15`,
+          border: `1px solid ${accentColor}35`,
+          padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap",
+        }}>
+          {timeAgo(log.tappedAt)}
+        </span>
+      </div>
     </div>
   );
 }
@@ -137,6 +160,7 @@ function PeriodSection({
   entries,
   defaultOpen = false,
   accentColor = "#F59E0B",
+  cardUrlMap,
   formatFull,
   timeAgo,
 }: {
@@ -144,6 +168,7 @@ function PeriodSection({
   entries: TapLogEntry[];
   defaultOpen?: boolean;
   accentColor?: string;
+  cardUrlMap: Map<string, string>;
   formatFull: (iso: string) => string;
   timeAgo: (iso: string) => string;
 }) {
@@ -195,7 +220,14 @@ function PeriodSection({
       {open && (
         <div style={{ background: "#0E0E16" }}>
           {entries.map((log, i) => (
-            <TapItem key={`${log.code}-${log.tappedAt}-${i}`} log={log} accentColor={accentColor} timeAgo={timeAgo} formatFull={formatFull} />
+            <TapItem
+              key={`${log.code}-${log.tappedAt}-${i}`}
+              log={log}
+              reviewUrl={cardUrlMap.get(log.code)}
+              accentColor={accentColor}
+              timeAgo={timeAgo}
+              formatFull={formatFull}
+            />
           ))}
         </div>
       )}
@@ -215,6 +247,8 @@ export default function TapsPage() {
   const [activeTab, setActiveTab] = useState<"bulanan" | "harian" | "tren" | "tidur">("bulanan");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
+  const [newTapAlert, setNewTapAlert] = useState<TapLogEntry | null>(null);
+  const lastKnownTapRef = useRef<string | null>(null);
 
   async function fetchData(isBackground = false) {
     if (!isBackground) setLoading(true);
@@ -225,7 +259,23 @@ export default function TapsPage() {
         fetch("/api/admin/taps?limit=5000"),
         fetch("/api/admin/codes"),
       ]);
-      if (tapRes.ok) setLogs((await tapRes.json()).logs ?? []);
+      if (tapRes.ok) {
+        const tapData = await tapRes.json();
+        const incomingLogs: TapLogEntry[] = tapData.logs ?? [];
+        setLogs(incomingLogs);
+
+        // Check if there is a brand new tap arrived during background auto-refresh
+        if (incomingLogs.length > 0) {
+          const newest = incomingLogs[0];
+          if (isBackground && lastKnownTapRef.current && newest.tappedAt !== lastKnownTapRef.current) {
+            setNewTapAlert(newest);
+            try {
+              if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([60, 40, 60]);
+            } catch {}
+          }
+          lastKnownTapRef.current = newest.tappedAt;
+        }
+      }
       if (cardRes.ok) setCards((await cardRes.json()).cards ?? []);
       setLastRefresh(new Date());
     } finally {
@@ -300,6 +350,7 @@ export default function TapsPage() {
   // Active cards are the single source of truth.
   const activeCardMap = useMemo(() => new Map(cards.map(c => [c.code, c.storeName])), [cards]);
   const activeCodesSet = useMemo(() => new Set(cards.map(c => c.code)), [cards]);
+  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, c.googleReviewUrl || ""])), [cards]);
 
   const validLogs = useMemo(() => {
     // If cards have loaded, only keep logs whose code exists in active cards
@@ -485,23 +536,23 @@ export default function TapsPage() {
       <AdminNav active="taps" />
 
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
-        <div style={{ maxWidth: 940, margin: "0 auto", padding: "24px 16px" }}>
+        <div className="mobile-container-pad" style={{ maxWidth: 940, margin: "0 auto", padding: "24px 16px" }}>
 
           {/* Top Title & Quick Description */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
             <div>
               <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
                 📲 Riwayat &amp; Analitik Tap
               </h1>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
-                Pantau performa kartu pelanggan, leaderboard terbanyak per bulan, dan tren aktivitas jam ramai.
+                Pantau performa kartu pelanggan, leaderboard terbanyak per bulan, dan verifikasi ulasan Google langsung.
               </p>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               {/* Auto-Refresh Toggle Pill */}
               <div style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "5px 10px",
+                padding: "6px 10px",
                 background: autoRefreshSec > 0 ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.04)",
                 border: autoRefreshSec > 0 ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(255,255,255,0.08)",
                 borderRadius: 8, fontSize: "0.75rem",
@@ -542,13 +593,9 @@ export default function TapsPage() {
                   }}
                   title="Unduh seluruh data tap ke file Excel/CSV"
                 >
-                  📥 Unduh CSV
+                  📥 CSV
                 </button>
               )}
-
-              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-              </span>
 
               <button
                 onClick={() => fetchData(false)}
@@ -561,9 +608,142 @@ export default function TapsPage() {
             </div>
           </div>
 
-          {/* KPI Stat Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
-            <div className="card" style={{ padding: "16px", borderColor: "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
+          {/* Live Alert Banner: Tap Baru Masuk Secara Realtime (Sebelum Manual Refresh) */}
+          {newTapAlert && (
+            <div style={{
+              background: "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(99,102,241,0.18))",
+              border: "2px solid #10B981",
+              borderRadius: 14,
+              padding: "14px 16px",
+              marginBottom: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+              boxShadow: "0 8px 30px rgba(16,185,129,0.25)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 240px" }}>
+                <div style={{
+                  width: 42, height: 42, borderRadius: 12,
+                  background: "#10B981", color: "#FFF",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "1.3rem", flexShrink: 0,
+                  boxShadow: "0 0 16px rgba(16,185,129,0.6)",
+                }}>
+                  ⚡
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{
+                      fontSize: "0.68rem", fontWeight: 800, color: "#10B981",
+                      background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.35)",
+                      padding: "2px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.05em",
+                    }}>
+                      Tap Baru Masuk Live!
+                    </span>
+                    <strong style={{ color: "#F0F0FF", fontSize: "0.95rem" }}>
+                      {newTapAlert.storeName}
+                    </strong>
+                    <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#A5B4FC" }}>
+                      ({newTapAlert.code})
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#C0C0D8", marginTop: 3 }}>
+                    {formatFull(newTapAlert.tappedAt)} · <span style={{ color: "#34D399", fontWeight: 700 }}>{timeAgo(newTapAlert.tappedAt)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {cardUrlMap.get(newTapAlert.code) ? (
+                  <a
+                    href={cardUrlMap.get(newTapAlert.code)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-primary"
+                    style={{
+                      fontSize: "0.82rem",
+                      padding: "9px 16px",
+                      background: "linear-gradient(135deg, #10B981, #059669)",
+                      border: "none",
+                      boxShadow: "0 4px 16px rgba(16,185,129,0.4)",
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      textDecoration: "none",
+                    }}
+                  >
+                    <span>⭐</span> Buka Google Review Toko ↗
+                  </a>
+                ) : (
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    (Link ulasan belum terisi)
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setNewTapAlert(null)}
+                  className="btn btn-ghost"
+                  style={{ padding: "8px 12px", fontSize: "0.78rem" }}
+                  title="Tutup notifikasi"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Review Verification Bar (Tap Terakhir) */}
+          {validLogs.length > 0 && !newTapAlert && (
+            <div style={{
+              background: "rgba(99,102,241,0.06)",
+              border: "1px solid rgba(99,102,241,0.2)",
+              borderRadius: 12,
+              padding: "10px 14px",
+              marginBottom: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 10,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 220px" }}>
+                <span style={{ fontSize: "1.1rem" }}>📲</span>
+                <div style={{ minWidth: 0, fontSize: "0.78rem" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Tap Terakhir: </span>
+                  <strong style={{ color: "#F0F0FF" }}>{validLogs[0].storeName}</strong>
+                  <span style={{ color: "#34D399", marginLeft: 6 }}>({timeAgo(validLogs[0].tappedAt)})</span>
+                </div>
+              </div>
+
+              {cardUrlMap.get(validLogs[0].code) && (
+                <a
+                  href={cardUrlMap.get(validLogs[0].code)}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    color: "#A5B4FC",
+                    background: "rgba(99,102,241,0.15)",
+                    border: "1px solid rgba(99,102,241,0.3)",
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                  title="Buka halaman Google Review toko ini untuk melihat ulasan baru"
+                >
+                  <span>⭐</span> Verifikasi Google Review Toko ↗
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* KPI Stat Cards (2x2 grid on mobile) */}
+          <div className="mobile-kpi-grid" style={{ marginBottom: 20 }}>
+            <div className="card" style={{ padding: "14px 16px", borderColor: "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Hari Ini</span>
                 <span style={{ fontSize: "1.2rem" }}>☀️</span>
@@ -572,7 +752,7 @@ export default function TapsPage() {
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Tap tercatat hari ini</div>
             </div>
 
-            <div className="card" style={{ padding: "16px", borderColor: "rgba(245,158,11,0.25)", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
+            <div className="card" style={{ padding: "14px 16px", borderColor: "rgba(245,158,11,0.25)", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#FCD34D", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bulan Ini</span>
                 <span style={{ fontSize: "1.2rem" }}>📅</span>
@@ -581,7 +761,7 @@ export default function TapsPage() {
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>{formatMonthLabel(thisMonthKey)}</div>
             </div>
 
-            <div className="card" style={{ padding: "16px", borderColor: "rgba(99,102,241,0.25)", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
+            <div className="card" style={{ padding: "14px 16px", borderColor: "rgba(99,102,241,0.25)", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Tap</span>
                 <span style={{ fontSize: "1.2rem" }}>📲</span>
@@ -590,7 +770,7 @@ export default function TapsPage() {
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Kartu aktif terdaftar</div>
             </div>
 
-            <div className="card" style={{ padding: "16px", borderColor: sleepingCards.length > 0 ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(255,255,255,0.02), #111118)" }}>
+            <div className="card" style={{ padding: "14px 16px", borderColor: sleepingCards.length > 0 ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(255,255,255,0.02), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Belum Ada Tap</span>
                 <span style={{ fontSize: "1.2rem" }}>😴</span>
@@ -737,117 +917,127 @@ export default function TapsPage() {
 
                       {/* Store Rankings List */}
                       {isOpen && (
-                        <div style={{ padding: "8px 16px 16px" }}>
-                          <div style={{
-                            display: "grid", gridTemplateColumns: "36px 1fr 100px 60px 70px",
-                            padding: "10px 8px", fontSize: "0.68rem", fontWeight: 700,
-                            textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)",
-                            borderBottom: "1px solid rgba(255,255,255,0.05)",
-                          }}>
-                            <span>Rank</span>
-                            <span>Nama Toko</span>
-                            <span style={{ textAlign: "center" }}>Volume Tap</span>
-                            <span style={{ textAlign: "right" }}>Jumlah</span>
-                            <span style={{ textAlign: "right" }}>Delta</span>
-                          </div>
-
+                        <div style={{ padding: "8px 14px 16px" }}>
                           {mg.byStore.map((s, idx) => {
                             const delta = s.lastMonthCount > 0 ? s.count - s.lastMonthCount : null;
                             const storeKey = `${mg.monthKey}::${s.storeName}`;
                             const isStoreOpen = expandedStore === storeKey;
                             const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
                             const percent = Math.round((s.count / maxCount) * 100);
+                            const storeReviewUrl = cardUrlMap.get(s.code);
 
                             const rankMedal =
                               idx === 0 ? "🥇" :
                               idx === 1 ? "🥈" :
                               idx === 2 ? "🥉" : `#${idx + 1}`;
 
-                            const medalClass =
-                              idx === 0 ? "badge-gold" :
-                              idx === 1 ? "badge-silver" :
-                              idx === 2 ? "badge-bronze" : "";
-
                             return (
-                              <div key={s.storeName}>
+                              <div key={s.storeName} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                                 <div
-                                  onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
                                   style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "36px 1fr 100px 60px 70px",
-                                    alignItems: "center",
-                                    padding: "12px 8px",
-                                    borderBottom: "1px solid rgba(255,255,255,0.04)",
-                                    cursor: "pointer",
+                                    padding: "12px 6px",
                                     borderRadius: 8,
                                     background: isStoreOpen ? "rgba(99,102,241,0.05)" : "transparent",
                                     transition: "background 0.15s",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 8,
                                   }}
-                                  title="Klik untuk melihat rincian riwayat jam tap"
                                 >
-                                  {/* Rank */}
-                                  <div>
-                                    {idx < 3 ? (
-                                      <span style={{ fontSize: "1.1rem" }}>{rankMedal}</span>
-                                    ) : (
-                                      <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                                  {/* Top row: Rank, Store Name, Count, Delta */}
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                                      <span style={{
+                                        fontSize: idx < 3 ? "1.2rem" : "0.85rem",
+                                        fontWeight: 800,
+                                        width: 28,
+                                        textAlign: "center",
+                                        flexShrink: 0,
+                                        color: idx < 3 ? undefined : "var(--text-muted)",
+                                      }}>
                                         {rankMedal}
                                       </span>
-                                    )}
-                                  </div>
 
-                                  {/* Store Name + NFC Code */}
-                                  <div style={{ minWidth: 0, paddingRight: 8 }}>
-                                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#F0F0FF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                      {s.storeName}
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF", wordBreak: "break-word" }}>
+                                          {s.storeName}
+                                        </div>
+                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                                          <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{s.code}</span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
-                                      <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{s.code}</span>
-                                      <span>· {isStoreOpen ? "Tutup detail ▲" : "Lihat jam tap ▼"}</span>
-                                    </div>
-                                  </div>
 
-                                  {/* Visual Progress Bar */}
-                                  <div style={{ padding: "0 6px" }}>
-                                    <div style={{ background: "rgba(255,255,255,0.06)", height: 6, borderRadius: 999, overflow: "hidden" }}>
-                                      <div
-                                        style={{
-                                          width: `${percent}%`,
-                                          height: "100%",
-                                          background: idx === 0
-                                            ? "linear-gradient(90deg, #F59E0B, #FCD34D)"
-                                            : "linear-gradient(90deg, #4F46E5, #818CF8)",
-                                          borderRadius: 999,
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                      <span style={{ fontWeight: 800, fontSize: "1.05rem", color: idx === 0 ? "#FCD34D" : "#E0E0F0" }}>
+                                        {s.count}×
+                                      </span>
 
-                                  {/* Count */}
-                                  <div style={{ textAlign: "right", fontWeight: 800, fontSize: "0.9rem", color: idx === 0 ? "#FCD34D" : "#E0E0F0" }}>
-                                    {s.count}×
-                                  </div>
-
-                                  {/* Delta */}
-                                  <div style={{ textAlign: "right" }}>
-                                    {isThisMonth ? (
-                                      delta === null ? (
-                                        <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                          baru
-                                        </span>
-                                      ) : delta > 0 ? (
-                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                          +{delta}
-                                        </span>
-                                      ) : delta < 0 ? (
-                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#FCA5A5", background: "rgba(239,68,68,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                          {delta}
-                                        </span>
+                                      {isThisMonth ? (
+                                        delta === null ? (
+                                          <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                            baru
+                                          </span>
+                                        ) : delta > 0 ? (
+                                          <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                            +{delta}
+                                          </span>
+                                        ) : delta < 0 ? (
+                                          <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#FCA5A5", background: "rgba(239,68,68,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                            {delta}
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>±0</span>
+                                        )
                                       ) : (
-                                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>±0</span>
-                                      )
-                                    ) : (
-                                      <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>selesai</span>
+                                        <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>selesai</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Middle row: Progress bar */}
+                                  <div style={{ background: "rgba(255,255,255,0.06)", height: 6, borderRadius: 999, overflow: "hidden", margin: "2px 0" }}>
+                                    <div
+                                      style={{
+                                        width: `${percent}%`,
+                                        height: "100%",
+                                        background: idx === 0
+                                          ? "linear-gradient(90deg, #F59E0B, #FCD34D)"
+                                          : "linear-gradient(90deg, #4F46E5, #818CF8)",
+                                        borderRadius: 999,
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* Bottom row: Actions (Detail tap + Google Review link) */}
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "0.72rem" }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
+                                      style={{
+                                        background: "none", border: "none", color: "#A5B4FC",
+                                        cursor: "pointer", fontSize: "0.72rem", padding: "4px 0",
+                                        display: "flex", alignItems: "center", gap: 4,
+                                      }}
+                                    >
+                                      {isStoreOpen ? "▲ Tutup riwayat jam" : `▼ Lihat detail ${s.count} tap`}
+                                    </button>
+
+                                    {storeReviewUrl && (
+                                      <a
+                                        href={storeReviewUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{
+                                          color: "#34D399", textDecoration: "none", fontWeight: 600,
+                                          display: "inline-flex", alignItems: "center", gap: 4,
+                                          background: "rgba(16,185,129,0.08)", padding: "3px 8px", borderRadius: 6,
+                                          border: "1px solid rgba(16,185,129,0.25)",
+                                        }}
+                                        title="Buka halaman Google Review toko ini untuk verifikasi ulasan"
+                                      >
+                                        ⭐ Buka Google Review ↗
+                                      </a>
                                     )}
                                   </div>
                                 </div>
@@ -855,15 +1045,19 @@ export default function TapsPage() {
                                 {/* Expanded Store Tap Drilldown */}
                                 {isStoreOpen && (
                                   <div style={{
-                                    margin: "6px 0 12px 36px",
+                                    margin: "4px 0 12px 10px",
                                     padding: "12px 14px",
                                     background: "rgba(0,0,0,0.3)",
                                     border: "1px solid rgba(255,255,255,0.06)",
                                     borderRadius: 10,
                                   }}>
-                                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                                       <span>📋 Riwayat {storeTaps.length} Tap — {s.storeName}</span>
-                                      <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>/c/{s.code}</span>
+                                      {storeReviewUrl && (
+                                        <a href={storeReviewUrl} target="_blank" rel="noreferrer" style={{ color: "#34D399", textDecoration: "none" }}>
+                                          ⭐ Buka Ulasan Toko ↗
+                                        </a>
+                                      )}
                                     </div>
 
                                     <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
@@ -884,7 +1078,7 @@ export default function TapsPage() {
                           })}
 
                           {isThisMonth && mg.byStore.some(s => s.lastMonthCount > 0) && (
-                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 12, paddingLeft: 8 }}>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 12, paddingLeft: 6 }}>
                               * Delta (+/−) menunjukkan perbandingan aktivitas tap dibanding bulan lalu ({formatMonthLabel(lastMonthKey)}).
                             </div>
                           )}
@@ -919,6 +1113,7 @@ export default function TapsPage() {
                   entries={hariianPeriods.today}
                   defaultOpen={true}
                   accentColor="#10B981"
+                  cardUrlMap={cardUrlMap}
                   formatFull={formatFull}
                   timeAgo={timeAgo}
                 />
@@ -927,6 +1122,7 @@ export default function TapsPage() {
                   entries={hariianPeriods.yest}
                   defaultOpen={false}
                   accentColor="#F59E0B"
+                  cardUrlMap={cardUrlMap}
                   formatFull={formatFull}
                   timeAgo={timeAgo}
                 />
@@ -935,6 +1131,7 @@ export default function TapsPage() {
                   entries={hariianPeriods.last7}
                   defaultOpen={false}
                   accentColor="#6366F1"
+                  cardUrlMap={cardUrlMap}
                   formatFull={formatFull}
                   timeAgo={timeAgo}
                 />
@@ -943,6 +1140,7 @@ export default function TapsPage() {
                   entries={hariianPeriods.thisMonth}
                   defaultOpen={false}
                   accentColor="#3B82F6"
+                  cardUrlMap={cardUrlMap}
                   formatFull={formatFull}
                   timeAgo={timeAgo}
                 />
@@ -951,6 +1149,7 @@ export default function TapsPage() {
                   entries={hariianPeriods.older}
                   defaultOpen={false}
                   accentColor="#6B7280"
+                  cardUrlMap={cardUrlMap}
                   formatFull={formatFull}
                   timeAgo={timeAgo}
                 />
@@ -1099,7 +1298,7 @@ export default function TapsPage() {
                           </div>
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <span style={{
                             fontSize: "0.72rem", fontWeight: 600,
                             color: "#FCA5A5", background: "rgba(239,68,68,0.12)",
@@ -1113,11 +1312,27 @@ export default function TapsPage() {
                             target="_blank"
                             rel="noreferrer"
                             className="btn btn-ghost"
-                            style={{ padding: "6px 12px", fontSize: "0.75rem" }}
+                            style={{ padding: "6px 10px", fontSize: "0.75rem" }}
                             title="Buka link kartu untuk uji coba"
                           >
                             Tes Link ↗
                           </a>
+                          {card.googleReviewUrl && (
+                            <a
+                              href={card.googleReviewUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                padding: "6px 10px", fontSize: "0.75rem",
+                                color: "#FCD34D", textDecoration: "none", fontWeight: 600,
+                                background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
+                                borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 4,
+                              }}
+                              title="Buka halaman Google Review yang sudah di-assign"
+                            >
+                              ⭐ Review Toko ↗
+                            </a>
+                          )}
                         </div>
                       </div>
                     ))}
