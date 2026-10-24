@@ -2153,6 +2153,98 @@ export default function TapsPage() {
                 )}
               </div>
 
+              {/* Custom Date Picker Trigger Button (Disisipkan di samping kiri Semua Outlet) */}
+              {activeTab === "harian" && (
+                <div className="custom-date-trigger-wrap" style={{ position: "relative", flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className="custom-date-trigger-btn"
+                    style={{
+                      height: 42,
+                      padding: customDate ? "0 34px 0 14px" : "0 14px",
+                      borderRadius: 10,
+                      background: customDate ? "rgba(99, 102, 241, 0.18)" : "rgba(255, 255, 255, 0.03)",
+                      border: customDate ? "1px solid rgba(99, 102, 241, 0.45)" : "1px solid rgba(255, 255, 255, 0.08)",
+                      color: customDate ? "#EDE9FE" : "#94A3B8",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      transition: "all 0.15s ease",
+                      whiteSpace: "nowrap",
+                      position: "relative",
+                    }}
+                    title="Pilih tanggal tertentu untuk melihat riwayat tap"
+                  >
+                    <span>📅</span>
+                    <span>
+                      {customDate ? formatDateShortIndo(customDate) : "Pilih Tanggal"}
+                    </span>
+                    {!customDate && (
+                      <span style={{ fontSize: "0.6rem", opacity: 0.7 }}>▼</span>
+                    )}
+                  </button>
+
+                  {/* Invisible native date input on top so clicking anywhere on the button opens calendar */}
+                  <input
+                    type="date"
+                    value={customDate}
+                    min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
+                    max={toDateInputValue(new Date())}
+                    onChange={(e) => {
+                      setCustomDate(e.target.value);
+                      if (e.target.value) setDailyMode("custom");
+                    }}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      opacity: 0,
+                      width: "100%",
+                      height: "100%",
+                      cursor: "pointer",
+                      zIndex: 1,
+                    }}
+                    title="Klik untuk memilih tanggal"
+                  />
+
+                  {/* Clear/Reset button when date is selected */}
+                  {customDate && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCustomDate("");
+                        setDailyMode("today");
+                      }}
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        zIndex: 3,
+                        background: "rgba(239, 68, 68, 0.2)",
+                        border: "1px solid rgba(239, 68, 68, 0.4)",
+                        color: "#FCA5A5",
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                      title="Hapus filter tanggal (Kembali ke Hari Ini)"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Outlet Filter Button with Dropdown Trigger (Posisikan di Kanan) */}
               <div id="store-filter-dropdown-wrapper" style={{ position: "relative", flexShrink: 0 }}>
                 <button
@@ -2328,68 +2420,6 @@ export default function TapsPage() {
                 </button>
               )}
             </div>
-
-            {/* Sisi Kanan / Row Bawah: Period Selector Pills & Date Picker Row (Tampil di Tab Riwayat) */}
-            {activeTab === "harian" && (
-              <div className="toolbar-right-group">
-                <div className="clean-period-row" style={{ marginBottom: 0 }}>
-                  <button
-                    type="button"
-                    onClick={() => { setDailyMode("today"); setCustomDate(""); }}
-                    className={`clean-period-pill ${dailyMode === "today" && !customDate ? "active" : ""}`}
-                  >
-                    ☀️ Hari Ini ({hariianPeriods.todayTotal})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setDailyMode("last7"); setCustomDate(""); }}
-                    className={`clean-period-pill ${dailyMode === "last7" && !customDate ? "active" : ""}`}
-                  >
-                    📅 7 Hari Terakhir ({hariianPeriods.last7Total})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setDailyMode("last30"); setCustomDate(""); }}
-                    className={`clean-period-pill ${dailyMode === "last30" && !customDate ? "active" : ""}`}
-                  >
-                    🗓️ 30 Hari Terakhir ({hariianPeriods.last30Total})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setDailyMode("all"); setCustomDate(""); }}
-                    className={`clean-period-pill ${dailyMode === "all" && !customDate ? "active" : ""}`}
-                  >
-                    📑 Semua ({filtered.length})
-                  </button>
-                </div>
-
-                {/* Clean Date Picker (100% Mobile Ready, Zero Horizontal Scroll) */}
-                <div className="toolbar-date-picker-wrap">
-                  <input
-                    id="custom-date-picker"
-                    type="date"
-                    value={customDate}
-                    min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
-                    max={toDateInputValue(new Date())}
-                    onChange={(e) => {
-                      setCustomDate(e.target.value);
-                      if (e.target.value) setDailyMode("custom");
-                    }}
-                    className={`toolbar-date-picker-input ${customDate ? "active" : ""}`}
-                  />
-                  {customDate && (
-                    <button
-                      type="button"
-                      onClick={() => { setCustomDate(""); setDailyMode("today"); }}
-                      className="toolbar-date-picker-clear"
-                      title="Kembali ke Hari Ini"
-                    >
-                      ✕ Reset
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
 

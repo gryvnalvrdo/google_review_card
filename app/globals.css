@@ -1032,16 +1032,17 @@ html, body {
 }
 
 /* === UNIFIED DASHBOARD TOOLBAR (Full Width Balance) === */
+/* === UNIFIED DASHBOARD TOOLBAR (Sleek Single Row & Mobile Grid) === */
 .dashboard-unified-toolbar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   background: rgba(18, 20, 32, 0.65);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  padding: 12px 16px;
-  margin-bottom: 22px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   width: 100%;
 }
@@ -1049,7 +1050,7 @@ html, body {
 .toolbar-top-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -1060,94 +1061,57 @@ html, body {
   max-width: none !important;
 }
 
-.toolbar-left-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  width: 100%;
+.custom-date-trigger-wrap {
+  position: relative;
+  flex-shrink: 0;
 }
 
-.toolbar-right-group {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  flex-wrap: wrap;
+.custom-date-trigger-btn:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #F8FAFC !important;
 }
 
-.toolbar-date-picker-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.toolbar-date-picker-input {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  color: #F0F0FF;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  outline: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.toolbar-date-picker-input.active {
-  background: rgba(99, 102, 241, 0.18);
-  border-color: #6366F1;
-}
-
-.toolbar-date-picker-clear {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #FCA5A5;
-  padding: 7px 10px;
-  border-radius: 8px;
-  font-size: 0.76rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .dashboard-unified-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    padding: 12px;
+    padding: 10px 12px !important;
+    gap: 8px !important;
   }
+
   .toolbar-top-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
   }
+
   .toolbar-top-row .smart-search-input-wrap {
-    flex: 1;
-    min-width: 0;
+    width: 100% !important;
+    flex: 1 1 100% !important;
   }
-  .toolbar-left-group {
-    width: 100%;
+
+  .custom-date-trigger-wrap {
+    flex: 1 1 calc(50% - 4px) !important;
+    min-width: 0 !important;
   }
-  .toolbar-right-group {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+
+  .custom-date-trigger-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 0 10px !important;
+    font-size: 0.78rem !important;
   }
-  .toolbar-date-picker-wrap {
-    width: 100%;
-    display: flex;
+
+  #store-filter-dropdown-wrapper {
+    flex: 1 1 calc(50% - 4px) !important;
+    min-width: 0 !important;
   }
-  .toolbar-date-picker-input {
-    flex: 1;
-    width: 100%;
-    padding: 9px 12px;
+
+  .outlet-trigger-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 0 10px !important;
+    font-size: 0.78rem !important;
   }
 }
 
