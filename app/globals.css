@@ -1168,11 +1168,66 @@ html, body {
 .dashboard-grid-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  position: sticky;
-  top: 80px;
+  gap: 16px;
   min-width: 0;
   width: 100%;
+}
+
+@media (min-width: 1025px) {
+  .dashboard-grid-sidebar {
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 95px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  .dashboard-grid-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .dashboard-grid-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dashboard-grid-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+  }
+  .dashboard-grid-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.45);
+  }
+
+  .tap-group-box {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 95px);
+    overflow: hidden;
+  }
+
+  .tap-group-scroll-area {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    flex: 1;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  .tap-group-scroll-area::-webkit-scrollbar {
+    width: 6px;
+  }
+  .tap-group-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .tap-group-scroll-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+  }
+  .tap-group-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.45);
+  }
 }
 
 @media (max-width: 1024px) {

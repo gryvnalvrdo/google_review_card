@@ -2427,7 +2427,7 @@ export default function TapsPage() {
                         </span>
                       </div>
 
-                      <div>
+                      <div className="tap-group-scroll-area">
                         {activePeriodInfo.entries.slice(0, tapDisplayLimit).map((log, i) => {
                           const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
                           const d = new Date(log.tappedAt);
@@ -2484,12 +2484,12 @@ export default function TapsPage() {
 
                         {/* Pagination / Load More Tap Button (Zero Endless Scroll Fatigue) */}
                         {activePeriodInfo.entries.length > tapDisplayLimit && (
-                          <div style={{ textAlign: "center", padding: "14px 16px" }}>
+                          <div style={{ textAlign: "center", padding: "14px 16px", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                             <button
                               type="button"
                               onClick={() => setTapDisplayLimit(prev => prev + 25)}
                               style={{
-                                width: "100%",
+                                flex: "1 1 auto",
                                 padding: "10px 16px",
                                 borderRadius: 10,
                                 background: "rgba(99, 102, 241, 0.12)",
@@ -2506,6 +2506,24 @@ export default function TapsPage() {
                               }}
                             >
                               <span>⬇️</span> Tampilkan 25 Tap Sebelumnya ({activePeriodInfo.entries.length - tapDisplayLimit} tersisa)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTapDisplayLimit(activePeriodInfo.entries.length)}
+                              style={{
+                                padding: "10px 14px",
+                                borderRadius: 10,
+                                background: "rgba(255, 255, 255, 0.04)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                                color: "#CBD5E1",
+                                fontSize: "0.8rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                              title="Tampilkan semua riwayat tap sekaligus"
+                            >
+                              Semua ({activePeriodInfo.entries.length})
                             </button>
                           </div>
                         )}
