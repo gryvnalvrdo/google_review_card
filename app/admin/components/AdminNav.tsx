@@ -24,7 +24,7 @@ export default function AdminNav({ active }: AdminNavProps) {
 
   const navItems = [
     { id: "dashboard", label: "Dashboard", href: "/admin", icon: "📊" },
-    { id: "cards", label: "Kartu & Stok", href: "/admin/cards", icon: "💳" },
+    { id: "cards", label: "Kartu Toko", href: "/admin/cards", icon: "💳" },
     { id: "taps", label: "Riwayat Tap", href: "/admin/taps", icon: "📈" },
     { id: "print", label: "Mesin Cetak QR", href: "/admin/print", icon: "🖨️" },
   ];

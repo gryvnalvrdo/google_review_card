@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import AdminNav from "../components/AdminNav";
+import { getPublicGoogleReviewUrl } from "../../../lib/redirect";
 
 type TapLogEntry = {
   code: string;
@@ -134,9 +135,9 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
               padding: "4px 9px", borderRadius: 8, textDecoration: "none",
               display: "inline-flex", alignItems: "center", gap: 4,
             }}
-            title="Buka Google Review toko ini untuk melihat ulasan baru"
+            title="Buka menu ulasan toko ini untuk melihat ulasan pelanggan"
           >
-            ⭐ Review ↗
+            ⭐ Ulasan ↗
           </a>
         )}
 
@@ -350,7 +351,7 @@ export default function TapsPage() {
   // Active cards are the single source of truth.
   const activeCardMap = useMemo(() => new Map(cards.map(c => [c.code, c.storeName])), [cards]);
   const activeCodesSet = useMemo(() => new Set(cards.map(c => c.code)), [cards]);
-  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, c.googleReviewUrl || ""])), [cards]);
+  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "")])), [cards]);
 
   const validLogs = useMemo(() => {
     // If cards have loaded, only keep logs whose code exists in active cards
@@ -671,8 +672,9 @@ export default function TapsPage() {
                       display: "inline-flex", alignItems: "center", gap: 6,
                       textDecoration: "none",
                     }}
+                    title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
                   >
-                    <span>⭐</span> Buka Google Review Toko ↗
+                    <span>⭐</span> Buka Menu Ulasan Toko ↗
                   </a>
                 ) : (
                   <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
@@ -733,9 +735,9 @@ export default function TapsPage() {
                     alignItems: "center",
                     gap: 6,
                   }}
-                  title="Buka halaman Google Review toko ini untuk melihat ulasan baru"
+                  title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
                 >
-                  <span>⭐</span> Verifikasi Google Review Toko ↗
+                  <span>⭐</span> Menu Ulasan Toko ↗
                 </a>
               )}
             </div>
@@ -1034,9 +1036,9 @@ export default function TapsPage() {
                                           background: "rgba(16,185,129,0.08)", padding: "3px 8px", borderRadius: 6,
                                           border: "1px solid rgba(16,185,129,0.25)",
                                         }}
-                                        title="Buka halaman Google Review toko ini untuk verifikasi ulasan"
+                                        title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
                                       >
-                                        ⭐ Buka Google Review ↗
+                                        ⭐ Buka Menu Ulasan ↗
                                       </a>
                                     )}
                                   </div>
@@ -1054,8 +1056,8 @@ export default function TapsPage() {
                                     <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                                       <span>📋 Riwayat {storeTaps.length} Tap — {s.storeName}</span>
                                       {storeReviewUrl && (
-                                        <a href={storeReviewUrl} target="_blank" rel="noreferrer" style={{ color: "#34D399", textDecoration: "none" }}>
-                                          ⭐ Buka Ulasan Toko ↗
+                                        <a href={storeReviewUrl} target="_blank" rel="noreferrer" style={{ color: "#34D399", textDecoration: "none" }} title="Buka menu ulasan Google publik toko ini">
+                                          ⭐ Buka Menu Ulasan Toko ↗
                                         </a>
                                       )}
                                     </div>
@@ -1319,7 +1321,7 @@ export default function TapsPage() {
                           </a>
                           {card.googleReviewUrl && (
                             <a
-                              href={card.googleReviewUrl}
+                              href={getPublicGoogleReviewUrl(card.googleReviewUrl)}
                               target="_blank"
                               rel="noreferrer"
                               style={{
@@ -1328,9 +1330,9 @@ export default function TapsPage() {
                                 background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
                                 borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 4,
                               }}
-                              title="Buka halaman Google Review yang sudah di-assign"
+                              title="Buka menu ulasan Google publik toko ini"
                             >
-                              ⭐ Review Toko ↗
+                              ⭐ Menu Ulasan Toko ↗
                             </a>
                           )}
                         </div>

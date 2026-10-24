@@ -22,7 +22,6 @@ type TapLogEntry = {
 
 export default function AdminDashboard() {
   const [cards, setCards] = useState<CardRecord[]>([]);
-  const [stockCodes, setStockCodes] = useState<string[]>([]);
   const [code, setCode] = useState("");
   const [storeName, setStoreName] = useState("");
   const [googleReviewUrl, setGoogleReviewUrl] = useState("");
@@ -35,10 +34,8 @@ export default function AdminDashboard() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [stockPage, setStockPage] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [deleteStockConfirm, setDeleteStockConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
   const [tapLogs, setTapLogs] = useState<TapLogEntry[]>([]);
@@ -50,20 +47,13 @@ export default function AdminDashboard() {
 
   async function loadCards() {
     try {
-      const [resCodes, stockRes] = await Promise.all([
-        fetch("/api/admin/codes"),
-        fetch("/api/admin/stock"),
-      ]);
+      const resCodes = await fetch("/api/admin/codes");
       if (resCodes.ok) {
         const data = await resCodes.json();
         setCards(data.cards ?? []);
       }
-      if (stockRes.ok) {
-        const stockData = await stockRes.json();
-        setStockCodes(stockData.codes ?? []);
-      }
     } catch (e) {
-      console.error("Gagal load cards / stock:", e);
+      console.error("Gagal load cards:", e);
     }
   }
 
@@ -180,25 +170,6 @@ export default function AdminDashboard() {
       loadTapLogs();
     }
     setDeleteConfirm(null);
-  }
-
-  async function handleDeleteStock(scCode: string) {
-    const res = await fetch(`/api/admin/stock/${scCode}`, { method: "DELETE" });
-    if (res.ok) {
-      setStockCodes((prev) => prev.filter((c) => c !== scCode));
-    }
-    setDeleteStockConfirm(null);
-  }
-
-  async function handleClearStock() {
-    if (!confirm("⚠️ YAKIN HAPUS SEMUA STOK?\n\nSemua kode stok yang belum di-assign akan dihapus permanen.")) return;
-    const res = await fetch("/api/admin/stock/clear", { method: "DELETE" });
-    if (res.ok) {
-      setStockCodes([]);
-      setStockPage(0);
-    } else {
-      alert("Gagal menghapus semua stok.");
-    }
   }
 
   function copyToClipboard(text: string, id: string) {
@@ -509,37 +480,6 @@ export default function AdminDashboard() {
         </>
       )}
 
-      {/* Delete Stock Confirmation Modal */}
-      {deleteStockConfirm && (
-        <>
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, backdropFilter: "blur(6px)" }}
-            onClick={() => setDeleteStockConfirm(null)}
-          />
-          <div style={{
-            position: "fixed", top: "50%", left: "50%",
-            transform: "translate(-50%, -50%)", zIndex: 301,
-            background: "#14141E", border: "1px solid rgba(239,68,68,0.35)",
-            borderRadius: 18, padding: "28px 24px",
-            width: "min(92vw, 360px)", textAlign: "center",
-          }}>
-            <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>📦</div>
-            <h3 style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: 6, color: "#F0F0FF" }}>Hapus Kode Stok?</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 20 }}>
-              Kode stok <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteStockConfirm}</strong> akan dihapus dari antrean cetak.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => setDeleteStockConfirm(null)}>
-                Batal
-              </button>
-              <button className="btn btn-danger" style={{ flex: 1, justifyContent: "center" }} onClick={() => handleDeleteStock(deleteStockConfirm)}>
-                Hapus
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* Main Page Layout */}
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
         <main style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
@@ -548,9 +488,9 @@ export default function AdminDashboard() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14, marginBottom: 24 }}>
             {[
               { label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#4F46E5", sub: "Terhubung ke Google Review" },
-              { label: "Stok Kode Tersedia", value: stockCodes.length, icon: "📦", color: "#06B6D4", sub: "Siap di-assign ke toko baru" },
               { label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString("id-ID")}`, icon: "💰", color: "#10B981", sub: "Penjualan fisik kartu" },
               { label: "Total Tap Pelanggan", value: totalTaps, icon: "👆", color: "#F59E0B", sub: "Scan QR & tap NFC aktif" },
+              { label: "Rata-rata Tap/Kartu", value: cards.length > 0 ? (totalTaps / cards.length).toFixed(1) + "×" : "0×", icon: "📊", color: "#06B6D4", sub: "Performa kartu aktif" },
             ].map((s) => (
               <div
                 key={s.label}
@@ -696,99 +636,6 @@ export default function AdminDashboard() {
 
             {/* Right Column Widgets */}
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-              {/* STOK INVENTORY WIDGET */}
-              <div className="card" style={{ padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                    📦 Stok Kode Belum Di-Assign ({stockCodes.length})
-                  </h2>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <a href="/admin/print" className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: "0.75rem" }}>
-                      + Buat Stok
-                    </a>
-                    {stockCodes.length > 0 && (
-                      <button
-                        onClick={handleClearStock}
-                        className="btn btn-ghost"
-                        style={{ padding: "4px 10px", fontSize: "0.75rem", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.2)" }}
-                      >
-                        Hapus Semua
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {stockCodes.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "24px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.07)" }}>
-                    <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                      Belum ada kode stok yang tersimpan. Buka <a href="/admin/print" style={{ color: "#A5B4FC" }}>Mesin Cetak QR</a> untuk generate sekumpulan kode baru.
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {stockCodes.slice(stockPage * 5, (stockPage + 1) * 5).map((sc) => (
-                      <div
-                        key={sc}
-                        style={{
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                          padding: "10px 14px", background: "rgba(255,255,255,0.03)",
-                          borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: "0.8rem" }}>🏷️</span>
-                          <span style={{ fontFamily: "monospace", color: "#A5B4FC", fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.05em" }}>
-                            {sc}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button
-                            onClick={() => setDeleteStockConfirm(sc)}
-                            className="btn btn-ghost"
-                            style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#FCA5A5" }}
-                            title="Hapus stok ini"
-                          >
-                            🗑️
-                          </button>
-                          <button
-                            onClick={() => openNewForm(sc)}
-                            className="btn btn-primary"
-                            style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: 6 }}
-                          >
-                            Assign ke Toko →
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Pagination */}
-                    {stockCodes.length > 5 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, padding: "0 4px" }}>
-                        <button
-                          onClick={() => setStockPage(p => Math.max(0, p - 1))}
-                          disabled={stockPage === 0}
-                          className="btn btn-ghost"
-                          style={{ padding: "4px 10px", fontSize: "0.75rem", opacity: stockPage === 0 ? 0.35 : 1 }}
-                        >
-                          ← Prev
-                        </button>
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                          Halaman {stockPage + 1} dari {Math.ceil(stockCodes.length / 5)}
-                        </span>
-                        <button
-                          onClick={() => setStockPage(p => Math.min(Math.ceil(stockCodes.length / 5) - 1, p + 1))}
-                          disabled={stockPage >= Math.ceil(stockCodes.length / 5) - 1}
-                          className="btn btn-ghost"
-                          style={{ padding: "4px 10px", fontSize: "0.75rem", opacity: stockPage >= Math.ceil(stockCodes.length / 5) - 1 ? 0.35 : 1 }}
-                        >
-                          Next →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
 
               {/* MONTHLY REVENUE ACCORDION */}
               <div className="card" style={{ padding: "20px" }}>

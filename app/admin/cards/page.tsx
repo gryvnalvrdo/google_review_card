@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import AdminNav from "../components/AdminNav";
 import QRScanner from "../components/QRScanner";
+import { getPublicGoogleReviewUrl } from "../../../lib/redirect";
 
 const QR_EXPORT_SIZE = 1000; // ukuran QR PNG yang di-download (px)
 
@@ -27,14 +28,11 @@ interface CardData {
 
 export default function CardsPage() {
   const [cards, setCards] = useState<CardData[]>([]);
-  const [stockCodes, setStockCodes] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"aktif" | "stok">("aktif");
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price">("date");
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
-  const [deleteStockConfirm, setDeleteStockConfirm] = useState<string | null>(null);
   const [downloadingCode, setDownloadingCode] = useState<string | null>(null);
   const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -54,20 +52,13 @@ export default function CardsPage() {
 
   async function fetchCards() {
     try {
-      const [resCodes, resStock] = await Promise.all([
-        fetch("/api/admin/codes"),
-        fetch("/api/admin/stock"),
-      ]);
+      const resCodes = await fetch("/api/admin/codes");
       if (resCodes.ok) {
         const data = await resCodes.json();
         setCards(data.cards ?? []);
       }
-      if (resStock.ok) {
-        const stockData = await resStock.json();
-        setStockCodes(stockData.codes ?? []);
-      }
     } catch (e) {
-      console.error("Gagal load cards / stock:", e);
+      console.error("Gagal load cards:", e);
     } finally {
       setLoading(false);
     }
@@ -83,26 +74,6 @@ export default function CardsPage() {
       alert("Gagal menghapus kartu.");
     }
     setDeleteConfirmCode(null);
-  }
-
-  async function handleDeleteStock(code: string) {
-    const res = await fetch(`/api/admin/stock/${code}`, { method: "DELETE" });
-    if (res.ok) {
-      setStockCodes(prev => prev.filter(c => c !== code));
-    } else {
-      alert("Gagal menghapus kode stok.");
-    }
-    setDeleteStockConfirm(null);
-  }
-
-  async function handleClearStock() {
-    if (!confirm("⚠️ YAKIN HAPUS SEMUA STOK?\n\nSemua kode stok yang belum di-assign akan dihapus permanen.")) return;
-    const res = await fetch("/api/admin/stock/clear", { method: "DELETE" });
-    if (res.ok) {
-      setStockCodes([]);
-    } else {
-      alert("Gagal menghapus semua stok.");
-    }
   }
 
   async function handleEditSubmit(e: React.FormEvent) {
@@ -290,36 +261,6 @@ export default function CardsPage() {
         </>
       )}
 
-      {/* Delete Stock Confirmation Modal */}
-      {deleteStockConfirm && (
-        <>
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, backdropFilter: "blur(6px)" }}
-            onClick={() => setDeleteStockConfirm(null)}
-          />
-          <div style={{
-            position: "fixed", top: "50%", left: "50%",
-            transform: "translate(-50%, -50%)", zIndex: 301,
-            background: "#14141E", border: "1px solid rgba(239,68,68,0.35)",
-            borderRadius: 18, padding: "28px 24px",
-            width: "min(92vw, 360px)", textAlign: "center",
-          }}>
-            <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>📦</div>
-            <h3 style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: 6, color: "#F0F0FF" }}>Hapus Kode Stok?</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 20 }}>
-              Kode stok <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteStockConfirm}</strong> akan dihapus dari daftar stok.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => setDeleteStockConfirm(null)}>
-                Batal
-              </button>
-              <button className="btn btn-danger" style={{ flex: 1, justifyContent: "center" }} onClick={() => handleDeleteStock(deleteStockConfirm)}>
-                Hapus
-              </button>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Main Container */}
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
@@ -329,10 +270,10 @@ export default function CardsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
             <div>
               <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                🗂️ Manajemen Kartu &amp; Stok
+                💳 Daftar Kartu Toko
               </h1>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
-                Kelola kartu aktif, cetak ulang QR resolusi tinggi, atau assign stok kartu baru ke toko.
+                Kelola kartu toko aktif, cetak ulang QR resolusi tinggi, atau edit data toko.
               </p>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -353,28 +294,6 @@ export default function CardsPage() {
               </a>
             </div>
           </div>
-
-          {/* Main Tab Switcher */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 10, overflowX: "auto" }}>
-            <button
-              onClick={() => setActiveTab("aktif")}
-              className={`btn ${activeTab === "aktif" ? "btn-primary" : "btn-ghost"}`}
-              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem", whiteSpace: "nowrap" }}
-            >
-              💳 Kartu Toko Aktif ({cards.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("stok")}
-              className={`btn ${activeTab === "stok" ? "btn-primary" : "btn-ghost"}`}
-              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem", whiteSpace: "nowrap" }}
-            >
-              📦 Stok Belum Di-Assign ({stockCodes.length})
-            </button>
-          </div>
-
-          {/* ══════════ TAB 1: KARTU AKTIF ══════════ */}
-          {activeTab === "aktif" ? (
-            <>
               {/* KPI Stats */}
               <div className="mobile-kpi-grid" style={{ marginBottom: 22 }}>
                 <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
@@ -536,8 +455,14 @@ export default function CardsPage() {
                           </div>
                           <div>
                             <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Target Google Review</span>
-                            <a href={card.googleReviewUrl} target="_blank" rel="noreferrer" style={{ color: "#FCD34D", textDecoration: "none", wordBreak: "break-all" }}>
-                              Buka Halaman Ulasan ↗
+                            <a
+                              href={getPublicGoogleReviewUrl(card.googleReviewUrl)}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: "#FCD34D", textDecoration: "none", wordBreak: "break-all" }}
+                              title="Buka menu ulasan Google publik toko ini"
+                            >
+                              Buka Menu Ulasan ↗
                             </a>
                           </div>
                         </div>
@@ -579,99 +504,6 @@ export default function CardsPage() {
                   })}
                 </div>
               )}
-            </>
-          ) : (
-            /* ══════════ TAB 2: STOK BELUM ASSIGN ══════════ */
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="🔍 Cari kode stok..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <a href="/admin/print" className="btn btn-primary" style={{ fontSize: "0.82rem" }}>
-                    + Cetak Stok Baru
-                  </a>
-                  {stockCodes.length > 0 && (
-                    <button onClick={handleClearStock} className="btn btn-danger" style={{ fontSize: "0.82rem" }}>
-                      🗑️ Hapus Semua
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {loading ? (
-                <div style={{ textAlign: "center", padding: "60px 0" }}>
-                  <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
-                  <p style={{ color: "var(--text-muted)" }}>Memuat stok kartu...</p>
-                </div>
-              ) : stockCodes.length === 0 ? (
-                <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
-                  <div style={{ fontSize: "2.5rem", marginBottom: 10, opacity: 0.5 }}>📦</div>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Belum Ada Stok Tersedia</h3>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 16 }}>
-                    Generate kode kartu baru di menu Mesin Cetak QR untuk menambah stok kartu fisik.
-                  </p>
-                  <a href="/admin/print" className="btn btn-primary" style={{ display: "inline-flex" }}>
-                    Buka Mesin Cetak QR →
-                  </a>
-                </div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
-                  {stockCodes
-                    .filter(sc => sc.toLowerCase().includes(searchTerm.toLowerCase()))
-                    .map(sc => (
-                      <div
-                        key={sc}
-                        className="card"
-                        style={{
-                          padding: "16px",
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: "space-between",
-                          gap: 14,
-                          background: "#111118",
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{
-                            fontFamily: "monospace", fontSize: "1.1rem", fontWeight: 800,
-                            color: "#A5B4FC", letterSpacing: "0.05em",
-                            background: "rgba(99,102,241,0.12)", padding: "4px 10px", borderRadius: 8,
-                          }}>
-                            {sc}
-                          </span>
-                          <span className="badge badge-purple" style={{ fontSize: "0.62rem" }}>Siap Pakai</span>
-                        </div>
-
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button
-                            onClick={() => setDeleteStockConfirm(sc)}
-                            className="btn btn-danger"
-                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
-                            title="Hapus Stok"
-                          >
-                            🗑️
-                          </button>
-                          <a
-                            href={`/admin?code=${sc}`}
-                            className="btn btn-primary"
-                            style={{ flex: 1, justifyContent: "center", textDecoration: "none", fontSize: "0.8rem", padding: "6px 12px" }}
-                          >
-                            Assign ke Toko →
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </>
-          )}
 
         </div>
       </div>
