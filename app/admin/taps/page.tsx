@@ -76,7 +76,6 @@ function BarChart({
   showValue?: boolean;
   onBarClick?: (index: number, item: any) => void;
   selectedIndex?: number | null;
-  benchmarkLine?: any;
 }) {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
