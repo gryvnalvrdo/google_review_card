@@ -49,6 +49,66 @@ function playBeep() {
   }
 }
 
+const LS_CAMERA_ID = "grc_preferred_camera_id";
+const LS_CAMERA_INDEX = "grc_preferred_camera_index";
+
+function getCameraDisplayName(device: MediaDeviceInfo, index: number): string {
+  const l = (device.label || "").toLowerCase();
+  if (l.includes("front") || l.includes("depan") || l.includes("selfie")) {
+    return "Kamera Depan";
+  }
+  if (l.includes("1") || l.includes("main") || l.includes("wide")) {
+    return `Lensa ${index + 1} (Fokus Utama)`;
+  }
+  return `Lensa Kamera ${index + 1}`;
+}
+
+function selectBestCamera(videoDevices: MediaDeviceInfo[]): MediaDeviceInfo | null {
+  if (videoDevices.length === 0) return null;
+  if (videoDevices.length === 1) return videoDevices[0];
+
+  // 1. Check if user already saved a preference
+  try {
+    const savedId = localStorage.getItem(LS_CAMERA_ID);
+    if (savedId) {
+      const match = videoDevices.find((d) => d.deviceId === savedId);
+      if (match) return match;
+    }
+    const savedIdx = localStorage.getItem(LS_CAMERA_INDEX);
+    if (savedIdx !== null) {
+      const idx = parseInt(savedIdx, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < videoDevices.length) {
+        return videoDevices[idx];
+      }
+    }
+  } catch {}
+
+  // 2. Filter out front / selfie cameras
+  const rearCameras = videoDevices.filter((d) => {
+    const l = (d.label || "").toLowerCase();
+    return (
+      !l.includes("front") &&
+      !l.includes("selfie") &&
+      !l.includes("user") &&
+      !l.includes("depan")
+    );
+  });
+
+  const candidates = rearCameras.length > 0 ? rearCameras : videoDevices;
+  if (candidates.length === 1) return candidates[0];
+
+  // 3. If there are multiple rear cameras, on multi-lens phones (Samsung/Xiaomi/iPhone):
+  // The first camera in the list (index 0) is often the fixed-focus ultra-wide (0.5x),
+  // while the second camera (index 1) is the main sharp 1.0x autofocus sensor.
+  // When the user clicked the button next to the lamp, it switched to index 1!
+  // So if index 1 is available among rear candidates, default to index 1!
+  if (candidates.length >= 2) {
+    return candidates[1];
+  }
+
+  return candidates[0];
+}
+
 export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,11 +121,21 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [scannedSuccess, setScannedSuccess] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const activeTrackRef = useRef<MediaStreamTrack | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const isStoppedRef = useRef(false);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMsg(msg);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMsg(null);
+    }, 2800);
+  }, []);
 
   // Stop all camera streams
   const stopStream = useCallback(() => {
@@ -79,6 +149,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
       streamRef.current = null;
     }
     activeTrackRef.current = null;
+    setTorchOn(false);
   }, []);
 
   const handleFoundCode = useCallback((rawText: string) => {
@@ -195,7 +266,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   }, [decodeCanvas, handleFoundCode]);
 
   // Start Camera Stream with HD constraints & Continuous Autofocus
-  const startCamera = useCallback(async (deviceId?: string) => {
+  const startCamera = useCallback(async (preferredId?: string) => {
     stopStream();
     isStoppedRef.current = false;
     setLoading(true);
@@ -203,23 +274,70 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     setScannedSuccess(false);
 
     try {
-      // 1. High Resolution & Autofocus Constraints
-      const constraints: MediaStreamConstraints = {
-        audio: false,
-        video: deviceId
-          ? {
-              deviceId: { exact: deviceId },
-              width: { ideal: 1920, min: 1280 },
-              height: { ideal: 1080, min: 720 },
-            }
-          : {
-              facingMode: { ideal: "environment" }, // Prefer back / macro camera
-              width: { ideal: 1920, min: 1280 },
-              height: { ideal: 1080, min: 720 },
-            },
-      };
+      // 1. Determine target device ID
+      let targetId = preferredId;
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (!targetId && typeof window !== "undefined") {
+        try {
+          const savedId = localStorage.getItem(LS_CAMERA_ID);
+          if (savedId) targetId = savedId;
+        } catch {}
+      }
+
+      // If no targetId is set yet, check if we can inspect enumerated devices
+      if (!targetId && typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+        try {
+          const all = await navigator.mediaDevices.enumerateDevices();
+          const vInputs = all.filter((d) => d.kind === "videoinput");
+          if (vInputs.length > 0) {
+            setDevices(vInputs);
+            const best = selectBestCamera(vInputs);
+            if (best && best.deviceId) {
+              targetId = best.deviceId;
+              try {
+                localStorage.setItem(LS_CAMERA_ID, best.deviceId);
+              } catch {}
+            }
+          }
+        } catch {
+          // Non-critical enumeration check before getUserMedia
+        }
+      }
+
+      // 2. High Resolution & Autofocus Constraints
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: targetId
+            ? {
+                deviceId: { exact: targetId },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              }
+            : {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              },
+        });
+      } catch (firstErr) {
+        // Fallback if exact deviceId constraint is rejected
+        if (targetId) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              deviceId: { ideal: targetId },
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
+          });
+        } else {
+          throw firstErr;
+        }
+      }
+
       streamRef.current = stream;
 
       const track = stream.getVideoTracks()[0];
@@ -231,6 +349,8 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           const caps = (track as unknown as { getCapabilities?: () => Record<string, unknown> }).getCapabilities?.() || {};
           if ("torch" in caps) {
             setHasTorch(true);
+          } else {
+            setHasTorch(false);
           }
           if ("focusMode" in caps && Array.isArray((caps as { focusMode: unknown[] }).focusMode)) {
             const fm = (caps as { focusMode: string[] }).focusMode;
@@ -251,14 +371,14 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         await videoRef.current.play();
       }
 
-      // Enumerate available cameras
+      // Re-enumerate available cameras now that permission is definitely granted
       try {
         const allDevices = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = allDevices.filter((d) => d.kind === "videoinput");
         setDevices(videoInputs);
-        if (!selectedDeviceId && track) {
-          const currentId = track.getSettings().deviceId;
-          if (currentId) setSelectedDeviceId(currentId);
+        const actualId = track ? track.getSettings().deviceId : targetId;
+        if (actualId) {
+          setSelectedDeviceId(actualId);
         }
       } catch {}
 
@@ -275,7 +395,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         setError("Gagal membuka kamera beresolusi tinggi. Anda juga dapat memilih foto QR dari galeri.");
       }
     }
-  }, [selectedDeviceId, startScanningLoop, stopStream]);
+  }, [startScanningLoop, stopStream]);
 
   // Toggle Torch/Flashlight
   const toggleTorch = async () => {
@@ -332,10 +452,29 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     img.src = objectUrl;
   };
 
+  const switchCamera = useCallback(() => {
+    if (devices.length < 2) return;
+    const currentIndex = devices.findIndex((d) => d.deviceId === selectedDeviceId);
+    const nextIndex = (currentIndex + 1) % devices.length;
+    const nextDevice = devices[nextIndex];
+    if (nextDevice) {
+      setSelectedDeviceId(nextDevice.deviceId);
+      try {
+        localStorage.setItem(LS_CAMERA_ID, nextDevice.deviceId);
+        localStorage.setItem(LS_CAMERA_INDEX, String(nextIndex));
+      } catch {}
+
+      const displayName = getCameraDisplayName(nextDevice, nextIndex);
+      showToast(`${displayName} disimpan sebagai default ⭐`);
+      startCamera(nextDevice.deviceId);
+    }
+  }, [devices, selectedDeviceId, showToast, startCamera]);
+
   useEffect(() => {
     startCamera();
     return () => {
       stopStream();
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, [startCamera, stopStream]);
 
@@ -500,14 +639,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
 
                 {devices.length > 1 && (
                   <button
-                    onClick={() => {
-                      const currentIndex = devices.findIndex((d) => d.deviceId === selectedDeviceId);
-                      const nextDevice = devices[(currentIndex + 1) % devices.length];
-                      if (nextDevice) {
-                        setSelectedDeviceId(nextDevice.deviceId);
-                        startCamera(nextDevice.deviceId);
-                      }
-                    }}
+                    onClick={switchCamera}
                     style={{
                       width: 38, height: 38, borderRadius: 10,
                       background: "rgba(0,0,0,0.6)",
@@ -517,12 +649,37 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
                       cursor: "pointer", fontSize: "1.1rem",
                       backdropFilter: "blur(8px)",
                     }}
-                    title="Ganti Lensa Kamera"
+                    title="Ganti Lensa & Simpan sebagai Default"
                   >
                     🔄
                   </button>
                 )}
               </div>
+
+              {/* Toast Feedback: Camera saved as default */}
+              {toastMsg && (
+                <div style={{
+                  position: "absolute",
+                  bottom: 14,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "rgba(16, 185, 129, 0.95)",
+                  color: "#FFFFFF",
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  padding: "6px 14px",
+                  borderRadius: 20,
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.6)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  zIndex: 25,
+                  pointerEvents: "none",
+                  whiteSpace: "nowrap",
+                }}>
+                  {toastMsg}
+                </div>
+              )}
 
               {/* Loading Spinner */}
               {loading && (
@@ -571,7 +728,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           </div>
 
           <div style={{ fontSize: "0.68rem", color: "#7A7A95", textAlign: "center", lineHeight: 1.4 }}>
-            Didukung oleh hardware autofocus kamera HD &amp; barcode engine pintar.
+            💡 Tekan tombol 🔄 samping lampu untuk ganti lensa — pilihan Anda otomatis tersimpan sebagai kamera default.
           </div>
         </div>
 
