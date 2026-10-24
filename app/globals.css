@@ -3228,8 +3228,31 @@ html, body {
 
 /* ── Outlet Filter Dropdown & Mobile Bottom Sheet ── */
 .outlet-filter-menu {
+  background: #181824 !important;
+  border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(99, 102, 241, 0.2) !important;
+  padding: 10px !important;
+  max-height: 380px !important;
+  overflow-y: auto !important;
+  z-index: 1000 !important;
   animation: dropdownPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: top right;
+}
+
+.outlet-filter-menu::-webkit-scrollbar {
+  width: 6px;
+}
+.outlet-filter-menu::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 999px;
+}
+.outlet-filter-menu::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 999px;
+}
+.outlet-filter-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.7);
 }
 
 @keyframes dropdownPop {

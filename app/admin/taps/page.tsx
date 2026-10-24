@@ -1118,6 +1118,17 @@ export default function TapsPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [cards, validLogs]);
 
+  // Riwayat Tap & Hero Metrics: difilter oleh input pencarian
+  const searchFilteredLogs = useMemo(() => {
+    let list = validLogs;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(l => l.storeName.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
+    }
+    return list;
+  }, [validLogs, search]);
+
+  // Tab Tren & Jam: difilter oleh filter outlet dan input pencarian
   const storeFilteredLogs = useMemo(() => {
     let list = validLogs;
     if (selectedStoreFilters.length > 0) {
@@ -1139,32 +1150,32 @@ export default function TapsPage() {
     );
   }
 
-  // Stats (Mengikuti filter outlet & pencarian langsung)
+  // Stats Hero Metrics (Mengikuti pencarian aktif untuk Riwayat Tap)
   const todayCount = useMemo(() => {
     const todayStr = new Date().toDateString();
-    return storeFilteredLogs.filter(l => new Date(l.tappedAt).toDateString() === todayStr).length;
-  }, [storeFilteredLogs]);
+    return searchFilteredLogs.filter(l => new Date(l.tappedAt).toDateString() === todayStr).length;
+  }, [searchFilteredLogs]);
 
   const thisWeekCount = useMemo(() => {
     const now = new Date();
     const cutoff7 = new Date(now);
     cutoff7.setDate(now.getDate() - 7);
     cutoff7.setHours(0, 0, 0, 0);
-    return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff7).length;
-  }, [storeFilteredLogs]);
+    return searchFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff7).length;
+  }, [searchFilteredLogs]);
 
   const thisMonthCount = useMemo(() => {
     const now = new Date();
     const cutoff30 = new Date(now);
     cutoff30.setDate(now.getDate() - 30);
     cutoff30.setHours(0, 0, 0, 0);
-    return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff30).length;
-  }, [storeFilteredLogs]);
+    return searchFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff30).length;
+  }, [searchFilteredLogs]);
 
-  const totalFilteredCount = storeFilteredLogs.length;
+  const totalFilteredCount = searchFilteredLogs.length;
 
-  // ── Harian: split by period ──────────────────────────────────────────
-  const filtered = storeFilteredLogs;
+  // ── Harian / Riwayat Tap: split by period ────────────────────────────
+  const filtered = searchFilteredLogs;
 
   const customDateEntries = useMemo(() => {
     if (!customDate) return [];
@@ -1272,8 +1283,8 @@ export default function TapsPage() {
   const cafeBreakdownList = useMemo((): CafeSummary[] => {
     const countsMap = new Map<string, { count: number; code: string }>();
 
-    // Lacak cafe yang aktif (jika filter outlet aktif, tampilkan outlet tersebut; jika tidak, semua outlet)
-    const storeListToTrack = selectedStoreFilters.length > 0 ? selectedStoreFilters : availableStores;
+    // Lacak semua cafe yang terdaftar
+    const storeListToTrack = availableStores;
     storeListToTrack.forEach(s => {
       const card = cards.find(c => c.storeName === s);
       countsMap.set(s, { count: 0, code: card?.code || "" });
@@ -1293,7 +1304,7 @@ export default function TapsPage() {
         pct: total > 0 ? Math.round((info.count / total) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count || a.storeName.localeCompare(b.storeName));
-  }, [activePeriodInfo.entries, availableStores, cards, cardUrlMap, selectedStoreFilters]);
+  }, [activePeriodInfo.entries, availableStores, cards, cardUrlMap]);
 
   // ── KALKULASI DATA ANALYST & LAPORAN EKSEKUTIF KLIEN ───────────────────
   // 1. Pertumbuhan DoD (Hari Ini vs Kemarin)
@@ -2306,7 +2317,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${activeTab === "harian" && dailyMode === "today" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("today"); setCustomDate(""); }}
+                onClick={() => { setActiveTab("harian"); setDailyMode("today"); setCustomDate(""); setStoreFilterOpen(false); }}
                 title="Tampilkan total tap hari ini"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(16,185,129,0.1)", color: "#34D399", border: "1px solid rgba(16,185,129,0.25)" }}>
@@ -2321,7 +2332,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${activeTab === "harian" && dailyMode === "last7" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("last7"); setCustomDate(""); }}
+                onClick={() => { setActiveTab("harian"); setDailyMode("last7"); setCustomDate(""); setStoreFilterOpen(false); }}
                 title="Tampilkan total tap 7 hari terakhir (mingguan)"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(99,102,241,0.1)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.25)" }}>
@@ -2336,7 +2347,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${activeTab === "harian" && dailyMode === "last30" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("last30"); setCustomDate(""); }}
+                onClick={() => { setActiveTab("harian"); setDailyMode("last30"); setCustomDate(""); setStoreFilterOpen(false); }}
                 title="Tampilkan total tap 30 hari terakhir (bulanan)"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(245,158,11,0.1)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}>
@@ -2351,7 +2362,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${activeTab === "harian" && dailyMode === "all" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("all"); setCustomDate(""); }}
+                onClick={() => { setActiveTab("harian"); setDailyMode("all"); setCustomDate(""); setStoreFilterOpen(false); }}
                 title="Tampilkan semua riwayat tap sepanjang masa"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(139,92,246,0.1)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.25)" }}>
@@ -2370,7 +2381,7 @@ export default function TapsPage() {
             <button
               id="tab-btn-tren"
               type="button"
-              onClick={() => setActiveTab("tren")}
+              onClick={() => { setActiveTab("tren"); setStoreFilterOpen(false); }}
               className={`main-view-btn ${activeTab === "tren" ? "active" : ""}`}
             >
               <span>📊</span> Tren &amp; Jam
@@ -2378,7 +2389,7 @@ export default function TapsPage() {
             <button
               id="tab-btn-harian"
               type="button"
-              onClick={() => setActiveTab("harian")}
+              onClick={() => { setActiveTab("harian"); setStoreFilterOpen(false); }}
               className={`main-view-btn ${activeTab === "harian" ? "active" : ""}`}
             >
               <span>📋</span> Riwayat Tap
@@ -2386,7 +2397,7 @@ export default function TapsPage() {
             <button
               id="tab-btn-bulanan"
               type="button"
-              onClick={() => setActiveTab("bulanan")}
+              onClick={() => { setActiveTab("bulanan"); setStoreFilterOpen(false); }}
               className={`main-view-btn ${activeTab === "bulanan" ? "active" : ""}`}
             >
               <span>🏆</span> Leaderboard Toko
@@ -2394,7 +2405,7 @@ export default function TapsPage() {
             <button
               id="tab-btn-tidur"
               type="button"
-              onClick={() => setActiveTab("tidur")}
+              onClick={() => { setActiveTab("tidur"); setStoreFilterOpen(false); }}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
               <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
@@ -2544,179 +2555,183 @@ export default function TapsPage() {
                 </div>
               )}
 
-              {/* Outlet Filter Button with Dropdown Trigger (Posisikan di Kanan) */}
-              <div id="store-filter-dropdown-wrapper" style={{ position: "relative", flexShrink: 0 }}>
-                <button
-                  type="button"
-                  id="store-filter-btn"
-                  onClick={() => setStoreFilterOpen(o => !o)}
-                  className="outlet-trigger-btn"
-                  style={{
-                    height: 42,
-                    padding: "0 14px",
-                    borderRadius: 10,
-                    background: selectedStoreFilters.length > 0 ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.03)",
-                    border: selectedStoreFilters.length > 0 ? "1px solid rgba(99,102,241,0.45)" : "1px solid rgba(255,255,255,0.08)",
-                    color: selectedStoreFilters.length > 0 ? "#EDE9FE" : "#94A3B8",
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    transition: "all 0.15s ease",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <span>🏪</span>
-                  <span>
-                    {selectedStoreFilters.length === 0
-                      ? "Semua Outlet"
-                      : `${selectedStoreFilters.length} Outlet Terpilih`}
-                  </span>
-                  <span style={{ fontSize: "0.6rem", opacity: 0.7 }}>
-                    {storeFilterOpen ? "▲" : "▼"}
-                  </span>
-                </button>
-
-                {storeFilterOpen && (
-                  <>
-                    <div
-                      onClick={() => setStoreFilterOpen(false)}
+              {/* Outlet Filter Button with Dropdown Trigger (KHUSUS TAB TREN & JAM) */}
+              {activeTab === "tren" && (
+                <>
+                  <div id="store-filter-dropdown-wrapper" style={{ position: "relative", flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      id="store-filter-btn"
+                      onClick={() => setStoreFilterOpen(o => !o)}
+                      className="outlet-trigger-btn"
                       style={{
-                        position: "fixed",
-                        inset: 0,
-                        zIndex: 998,
-                        background: "rgba(0,0,0,0.45)",
-                        backdropFilter: "blur(2px)",
+                        height: 42,
+                        padding: "0 14px",
+                        borderRadius: 10,
+                        background: selectedStoreFilters.length > 0 ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.03)",
+                        border: selectedStoreFilters.length > 0 ? "1px solid rgba(99,102,241,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                        color: selectedStoreFilters.length > 0 ? "#EDE9FE" : "#94A3B8",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        transition: "all 0.15s ease",
+                        whiteSpace: "nowrap",
                       }}
-                    />
-                    <div className="outlet-filter-menu">
-                      {/* Mobile Sheet Drag Indicator & Header */}
-                      <div className="outlet-sheet-header" style={{ flexDirection: "column", gap: 8, marginBottom: 10 }}>
-                        <div style={{ width: 38, height: 4, background: "rgba(255,255,255,0.25)", borderRadius: 999, margin: "0 auto 6px" }} />
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                          <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
-                            <span>🏪</span> Filter Outlet Toko
-                          </span>
+                    >
+                      <span>🏪</span>
+                      <span>
+                        {selectedStoreFilters.length === 0
+                          ? "Semua Outlet"
+                          : `${selectedStoreFilters.length} Outlet Terpilih`}
+                      </span>
+                      <span style={{ fontSize: "0.6rem", opacity: 0.7 }}>
+                        {storeFilterOpen ? "▲" : "▼"}
+                      </span>
+                    </button>
+
+                    {storeFilterOpen && (
+                      <>
+                        <div
+                          onClick={() => setStoreFilterOpen(false)}
+                          style={{
+                            position: "fixed",
+                            inset: 0,
+                            zIndex: 998,
+                            background: "rgba(0,0,0,0.45)",
+                            backdropFilter: "blur(2px)",
+                          }}
+                        />
+                        <div className="outlet-filter-menu">
+                          {/* Mobile Sheet Drag Indicator & Header */}
+                          <div className="outlet-sheet-header" style={{ flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                            <div style={{ width: 38, height: 4, background: "rgba(255,255,255,0.25)", borderRadius: 999, margin: "0 auto 6px" }} />
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                                <span>🏪</span> Filter Outlet Toko
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setStoreFilterOpen(false)}
+                                style={{
+                                  background: "rgba(255,255,255,0.08)",
+                                  border: "none",
+                                  color: "#94A3B8",
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: "50%",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "0.8rem",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => setStoreFilterOpen(false)}
-                            style={{
-                              background: "rgba(255,255,255,0.08)",
-                              border: "none",
-                              color: "#94A3B8",
-                              width: 26,
-                              height: 26,
-                              borderRadius: "50%",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "0.8rem",
-                              fontWeight: 700,
-                            }}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "8px 10px",
-                          borderRadius: 8,
-                          fontSize: "0.78rem",
-                          fontWeight: 700,
-                          color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
-                          background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          marginBottom: 4,
-                        }}
-                      >
-                        <span style={{
-                          width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                          border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
-                          background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 9, color: "#FFF",
-                        }}>✓</span>
-                        Semua Outlet ({availableStores.length})
-                      </button>
-
-                      <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
-
-                      {availableStores.map(store => {
-                        const checked = selectedStoreFilters.includes(store);
-                        return (
-                          <button
-                            key={store}
-                            type="button"
-                            onClick={() => toggleStoreFilter(store)}
+                            onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
                             style={{
                               width: "100%",
                               textAlign: "left",
-                              padding: "7px 10px",
-                              borderRadius: 7,
-                              fontSize: "0.76rem",
-                              fontWeight: 600,
-                              color: checked ? "#F8FAFC" : "#CBD5E1",
-                              background: checked ? "rgba(99, 102, 241, 0.14)" : "transparent",
+                              padding: "8px 10px",
+                              borderRadius: 8,
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                              color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
+                              background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
                               border: "none",
                               cursor: "pointer",
                               display: "flex",
                               alignItems: "center",
                               gap: 8,
+                              marginBottom: 4,
                             }}
                           >
                             <span style={{
                               width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                              border: checked ? "2px solid #6366F1" : "2px solid #475569",
-                              background: checked ? "#6366F1" : "transparent",
+                              border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
+                              background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
                               display: "inline-flex", alignItems: "center", justifyContent: "center",
                               fontSize: 9, color: "#FFF",
-                            }}>{checked ? "✓" : ""}</span>
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {store}
-                            </span>
+                            }}>✓</span>
+                            Semua Outlet ({availableStores.length})
                           </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
 
-              {selectedStoreFilters.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedStoreFilters([])}
-                  style={{
-                    height: 42,
-                    padding: "0 12px",
-                    borderRadius: 10,
-                    background: "rgba(239, 68, 68, 0.12)",
-                    border: "1px solid rgba(239, 68, 68, 0.3)",
-                    color: "#FCA5A5",
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    whiteSpace: "nowrap",
-                  }}
-                  title="Reset filter outlet"
-                >
-                  <span>✕</span> Reset
-                </button>
+                          <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+
+                          {availableStores.map(store => {
+                            const checked = selectedStoreFilters.includes(store);
+                            return (
+                              <button
+                                key={store}
+                                type="button"
+                                onClick={() => toggleStoreFilter(store)}
+                                style={{
+                                  width: "100%",
+                                  textAlign: "left",
+                                  padding: "7px 10px",
+                                  borderRadius: 7,
+                                  fontSize: "0.76rem",
+                                  fontWeight: 600,
+                                  color: checked ? "#F8FAFC" : "#CBD5E1",
+                                  background: checked ? "rgba(99, 102, 241, 0.14)" : "transparent",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                }}
+                              >
+                                <span style={{
+                                  width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                                  border: checked ? "2px solid #6366F1" : "2px solid #475569",
+                                  background: checked ? "#6366F1" : "transparent",
+                                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                  fontSize: 9, color: "#FFF",
+                                }}>{checked ? "✓" : ""}</span>
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {store}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {selectedStoreFilters.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStoreFilters([])}
+                      style={{
+                        height: 42,
+                        padding: "0 12px",
+                        borderRadius: 10,
+                        background: "rgba(239, 68, 68, 0.12)",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        color: "#FCA5A5",
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        whiteSpace: "nowrap",
+                      }}
+                      title="Reset filter outlet"
+                    >
+                      <span>✕</span> Reset
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -3005,10 +3020,10 @@ export default function TapsPage() {
                           </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {selectedStoreFilters.length > 0 && (
+                          {search && (
                             <button
                               type="button"
-                              onClick={() => setSelectedStoreFilters([])}
+                              onClick={() => setSearch("")}
                               style={{
                                 background: "rgba(239, 68, 68, 0.15)",
                                 border: "1px solid rgba(239, 68, 68, 0.3)",
@@ -3019,7 +3034,7 @@ export default function TapsPage() {
                                 fontWeight: 700,
                                 cursor: "pointer",
                               }}
-                              title="Tampilkan semua cafe"
+                              title="Hapus filter pencarian cafe"
                             >
                               ✕ Reset
                             </button>
@@ -3060,13 +3075,13 @@ export default function TapsPage() {
                           <>
                             <div className="cafe-scorecard-grid">
                               {(showAllSidebarStores ? storesWithTaps : storesWithTaps.slice(0, 5)).map((c, idx) => {
-                                const isSelected = selectedStoreFilters.includes(c.storeName);
+                                const isSelected = search.toLowerCase() === c.storeName.toLowerCase();
                                 const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
 
                                 return (
                                   <div
                                     key={c.storeName}
-                                    onClick={() => toggleStoreFilter(c.storeName)}
+                                    onClick={() => setSearch(search.toLowerCase() === c.storeName.toLowerCase() ? "" : c.storeName)}
                                     className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
                                     title={`Klik untuk filter aktivitas ${c.storeName}`}
                                   >
