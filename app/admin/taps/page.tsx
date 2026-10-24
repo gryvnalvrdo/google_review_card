@@ -3030,74 +3030,105 @@ export default function TapsPage() {
                         </div>
                       </div>
 
-                      <div className="cafe-scorecard-grid">
-                        {(showAllSidebarStores ? cafeBreakdownList : cafeBreakdownList.slice(0, 5)).map((c, idx) => {
-                          const isSelected = selectedStoreFilters.includes(c.storeName);
-                          const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+                      {(() => {
+                        const storesWithTaps = cafeBreakdownList.filter(c => c.count > 0);
 
+                        if (storesWithTaps.length === 0) {
                           return (
-                            <div
-                              key={c.storeName}
-                              onClick={() => toggleStoreFilter(c.storeName)}
-                              className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
-                              title={`Klik untuk filter aktivitas ${c.storeName}`}
-                            >
-                              <div className="cafe-scorecard-left">
-                                <span className="cafe-rank-badge">{rankBadge}</span>
-                                <div className="cafe-name-wrap">
-                                  <div className="cafe-name-text">
-                                    <span>{c.storeName}</span>
-                                    {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
-                                  </div>
-                                  <div className="cafe-sub-text">
-                                    <span className="cafe-code-pill">{c.code}</span>
-                                    {c.count > 0 && <span>· {c.pct}%</span>}
-                                  </div>
-                                </div>
+                            <div style={{
+                              padding: "36px 16px",
+                              textAlign: "center",
+                              color: "var(--text-muted)",
+                            }}>
+                              <div style={{ fontSize: "1.8rem", marginBottom: 8 }}>☕</div>
+                              <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#CBD5E1", marginBottom: 4 }}>
+                                Belum Ada Aktivitas Tap
                               </div>
-
-                              <div className="cafe-scorecard-right">
-                                <div className="cafe-count-wrap">
-                                  <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
-                                    {c.count}
-                                  </span>
-                                  <span className="cafe-count-unit">tap</span>
-                                </div>
+                              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                                Belum ada cafe yang menerima tap pelanggan {
+                                  dailyMode === "today" && !customDate ? "hari ini" :
+                                  dailyMode === "last7" && !customDate ? "dalam 7 hari terakhir" :
+                                  dailyMode === "last30" && !customDate ? "dalam 30 hari terakhir" :
+                                  customDate ? `pada ${formatDateShortIndo(customDate)}` : "pada periode ini"
+                                }.
                               </div>
                             </div>
                           );
-                        })}
-                      </div>
+                        }
 
-                      {/* Toggle Collapsible Store List (Pangkas 70% Tinggi Layar di Mobile) */}
-                      {cafeBreakdownList.length > 5 && (
-                        <div style={{ padding: "0 14px 12px" }}>
-                          <button
-                            type="button"
-                            onClick={() => setShowAllSidebarStores(prev => !prev)}
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              background: "rgba(255,255,255,0.03)",
-                              border: "1px dashed rgba(255,255,255,0.12)",
-                              borderRadius: 8,
-                              color: "#A5B4FC",
-                              fontSize: "0.76rem",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 6,
-                              transition: "all 0.15s ease",
-                            }}
-                          >
-                            {showAllSidebarStores
-                              ? "▲ Tampilkan Lebih Sedikit (Top 5 Saja)"
-                              : `▼ Lihat Semua ${cafeBreakdownList.length} Outlet (+${cafeBreakdownList.length - 5} lainnya)`}
-                          </button>
-                        </div>
-                      )}
+                        return (
+                          <>
+                            <div className="cafe-scorecard-grid">
+                              {(showAllSidebarStores ? storesWithTaps : storesWithTaps.slice(0, 5)).map((c, idx) => {
+                                const isSelected = selectedStoreFilters.includes(c.storeName);
+                                const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+
+                                return (
+                                  <div
+                                    key={c.storeName}
+                                    onClick={() => toggleStoreFilter(c.storeName)}
+                                    className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
+                                    title={`Klik untuk filter aktivitas ${c.storeName}`}
+                                  >
+                                    <div className="cafe-scorecard-left">
+                                      <span className="cafe-rank-badge">{rankBadge}</span>
+                                      <div className="cafe-name-wrap">
+                                        <div className="cafe-name-text">
+                                          <span>{c.storeName}</span>
+                                          {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
+                                        </div>
+                                        <div className="cafe-sub-text">
+                                          <span className="cafe-code-pill">{c.code}</span>
+                                          {c.count > 0 && <span>· {c.pct}%</span>}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="cafe-scorecard-right">
+                                      <div className="cafe-count-wrap">
+                                        <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
+                                          {c.count}
+                                        </span>
+                                        <span className="cafe-count-unit">tap</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Toggle Collapsible Store List (Pangkas 70% Tinggi Layar di Mobile) */}
+                            {storesWithTaps.length > 5 && (
+                              <div style={{ padding: "0 14px 12px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllSidebarStores(prev => !prev)}
+                                  style={{
+                                    width: "100%",
+                                    padding: "8px 12px",
+                                    background: "rgba(255,255,255,0.03)",
+                                    border: "1px dashed rgba(255,255,255,0.12)",
+                                    borderRadius: 8,
+                                    color: "#A5B4FC",
+                                    fontSize: "0.76rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 6,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  {showAllSidebarStores
+                                    ? "▲ Tampilkan Lebih Sedikit (Top 5 Saja)"
+                                    : `▼ Lihat Semua ${storesWithTaps.length} Outlet (+${storesWithTaps.length - 5} lainnya)`}
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -3289,7 +3320,18 @@ export default function TapsPage() {
 
                       {/* Store Rankings List */}
                       <div style={{ padding: "8px 14px 16px" }}>
-                        {mg.byStore.map((s, idx) => {
+                        {mg.total === 0 ? (
+                          <div style={{ padding: "36px 16px", textAlign: "center", color: "var(--text-muted)" }}>
+                            <div style={{ fontSize: "1.8rem", marginBottom: 8 }}>☕</div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#CBD5E1", marginBottom: 4 }}>
+                              Belum Ada Aktivitas Tap
+                            </div>
+                            <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                              Belum ada aktivitas tap kartu untuk bulan {mg.label}.
+                            </div>
+                          </div>
+                        ) : (
+                          mg.byStore.filter(s => s.count > 0).map((s, idx) => {
                           const delta = s.lastMonthCount > 0 ? s.count - s.lastMonthCount : null;
                           const storeKey = `${mg.monthKey}::${s.storeName}`;
                           const isStoreOpen = expandedStore === storeKey;
@@ -3463,7 +3505,7 @@ export default function TapsPage() {
                               )}
                             </div>
                           );
-                        })}
+                        }))}
 
 
                       </div>
