@@ -2018,7 +2018,7 @@ export default function TapsPage() {
                   </div>
 
                   {/* Status / Badge Periode Terpilih */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {selectedMonthKey === "all" ? (
                       <span
                         className="badge"
@@ -2028,6 +2028,7 @@ export default function TapsPage() {
                           border: "1px solid rgba(16, 185, 129, 0.35)",
                           fontSize: "0.72rem",
                           fontWeight: 700,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         🌐 Rekap All-Time
@@ -2041,6 +2042,7 @@ export default function TapsPage() {
                           border: "1px solid rgba(245, 158, 11, 0.35)",
                           fontSize: "0.72rem",
                           fontWeight: 700,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         ⚡ Bulan Berjalan
@@ -2054,6 +2056,7 @@ export default function TapsPage() {
                           border: "1px solid rgba(99, 102, 241, 0.35)",
                           fontSize: "0.72rem",
                           fontWeight: 700,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         📁 Arsip Historis
@@ -2081,16 +2084,18 @@ export default function TapsPage() {
                       {/* Month Header Banner */}
                       <div
                         style={{
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                          padding: "16px 20px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          padding: "14px 16px",
                           background: isThisMonth ? "rgba(245,158,11,0.06)" : "transparent",
                           borderBottom: "1px solid rgba(255,255,255,0.06)",
-                          flexWrap: "wrap", gap: 10,
+                          gap: 12,
                         }}
                       >
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#F0F0FF" }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                            <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#F0F0FF", whiteSpace: "nowrap" }}>
                               🏆 Rekap {mg.label}
                             </span>
                             {selectedMonthKey === "all" ? (
@@ -2099,6 +2104,7 @@ export default function TapsPage() {
                                 background: "rgba(16,185,129,0.18)", color: "#34D399",
                                 border: "1px solid rgba(16,185,129,0.4)",
                                 padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
+                                whiteSpace: "nowrap", flexShrink: 0,
                               }}>
                                 All-Time
                               </span>
@@ -2108,6 +2114,7 @@ export default function TapsPage() {
                                 background: "rgba(245,158,11,0.18)", color: "#FCD34D",
                                 border: "1px solid rgba(245,158,11,0.4)",
                                 padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
+                                whiteSpace: "nowrap", flexShrink: 0,
                               }}>
                                 Bulan Berjalan
                               </span>
@@ -2117,21 +2124,24 @@ export default function TapsPage() {
                                 background: "rgba(99,102,241,0.18)", color: "#A5B4FC",
                                 border: "1px solid rgba(99,102,241,0.4)",
                                 padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
+                                whiteSpace: "nowrap", flexShrink: 0,
                               }}>
                                 Arsip Historis
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4 }}>
+                          <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", wordBreak: "break-word" }}>
                             {mg.byStore.length} Toko Terdaftar Aktif · Total {mg.total} Tap Pelanggan
                           </div>
                         </div>
 
-                        <div style={{ textAlign: "right" }}>
-                          <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#FCD34D" }}>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <span style={{ fontSize: "1.35rem", fontWeight: 800, color: "#FCD34D", lineHeight: 1, display: "block" }}>
                             {mg.total}×
                           </span>
-                          <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)" }}>Total Tap</span>
+                          <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 3 }}>
+                            Total Tap
+                          </span>
                         </div>
                       </div>
 
