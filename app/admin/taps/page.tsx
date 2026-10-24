@@ -1817,25 +1817,6 @@ export default function TapsPage() {
                     showValue={true}
                   />
 
-                  {/* Legend & Axis Guide */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981" }} />
-                      <span>Hari ini</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#F59E0B" }} />
-                      <span>Aktivitas harian</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu Y:</span>
-                      <span>Skala jumlah tap</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu X:</span>
-                      <span>Tanggal / Hari</span>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Peak Hours with Period Filter (Hari Ini, 7 Hari Terakhir, 1 Bulan Terakhir, Semua) */}
@@ -1955,26 +1936,6 @@ export default function TapsPage() {
                     </div>
                   )}
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981" }} />
-                      <span>
-                        Jam puncak periode {hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"} ({peakHour ? `${peakHour.label}: ${peakHour.count} tap` : "-"})
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#6366F1" }} />
-                      <span>Aktivitas per jam</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu Y:</span>
-                      <span>Skala jumlah tap per jam</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu X:</span>
-                      <span>Pukul / Jam (00.00 - 23.00)</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             )
