@@ -670,6 +670,10 @@ export default function TapsPage() {
   const [storeFilterOpen, setStoreFilterOpen] = useState(false);
   const [trenView, setTrenView] = useState<"jam" | "harian" | "mingguan">("jam");
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
+  const [weeklyPeriodType, setWeeklyPeriodType] = useState<"8w" | "12w" | "month" | "year">("8w");
+  const [weekPageOffset, setWeekPageOffset] = useState<number>(0);
+  const [selectedWeeklyMonth, setSelectedWeeklyMonth] = useState<string>("");
+  const [selectedWeeklyYear, setSelectedWeeklyYear] = useState<number>(() => new Date().getFullYear());
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
   const [showExportMenu, setShowExportMenu] = useState(false);
   const lastKnownTapRef = useRef<string | null>(null);
@@ -1403,6 +1407,7 @@ export default function TapsPage() {
   const tappedCodes = useMemo(() => new Set(validLogs.map(l => l.code)), [validLogs]);
 
   // ── Tren Mingguan (8 Minggu Terakhir) & Drilldown ─────────────────────
+  // ── Tren Mingguan (Paginasi Fleksibel, Arsip Bulanan & Sepanjang Tahun) ─
   const weeklyTrendData = useMemo(() => {
     const weeks: {
       weekKey: string;
@@ -1418,36 +1423,139 @@ export default function TapsPage() {
     const now = new Date();
     const currentWeekInfo = getWeekRange(now);
 
-    for (let i = 7; i >= 0; i--) {
-      const refDate = new Date(currentWeekInfo.start);
-      refDate.setDate(refDate.getDate() - (i * 7));
-      const wInfo = getWeekRange(refDate);
+    if (weeklyPeriodType === "8w" || weeklyPeriodType === "12w") {
+      const pageSize = weeklyPeriodType === "12w" ? 12 : 8;
+      const startIdx = (pageSize - 1) + (weekPageOffset * pageSize);
+      const endIdx = weekPageOffset * pageSize;
 
-      const wLogs = storeFilteredLogs.filter(l => {
-        const t = new Date(l.tappedAt).getTime();
-        return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
-      });
+      for (let i = startIdx; i >= endIdx; i--) {
+        const refDate = new Date(currentWeekInfo.start);
+        refDate.setDate(refDate.getDate() - (i * 7));
+        const wInfo = getWeekRange(refDate);
 
-      const sDay = wInfo.start.getDate();
-      const sMo = wInfo.start.getMonth() + 1;
-      const eDay = wInfo.end.getDate();
-      const eMo = wInfo.end.getMonth() + 1;
-      const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
+        const wLogs = storeFilteredLogs.filter(l => {
+          const t = new Date(l.tappedAt).getTime();
+          return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
+        });
 
-      weeks.push({
-        weekKey: wInfo.weekKey,
-        label: wInfo.label,
-        subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
-        mobileSubLabel: mobileRange,
-        start: wInfo.start,
-        end: wInfo.end,
-        count: wLogs.length,
-        logs: wLogs,
-      });
+        const sDay = wInfo.start.getDate();
+        const sMo = wInfo.start.getMonth() + 1;
+        const eDay = wInfo.end.getDate();
+        const eMo = wInfo.end.getMonth() + 1;
+        const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
+
+        weeks.push({
+          weekKey: wInfo.weekKey,
+          label: wInfo.label,
+          subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
+          mobileSubLabel: mobileRange,
+          start: wInfo.start,
+          end: wInfo.end,
+          count: wLogs.length,
+          logs: wLogs,
+        });
+      }
+    } else if (weeklyPeriodType === "month") {
+      // Minggu-minggu dalam bulan yang dipilih
+      const targetMonthKey = selectedWeeklyMonth || thisMonthKey;
+      const [yStr, mStr] = targetMonthKey.split("-");
+      const y = parseInt(yStr, 10);
+      const m = parseInt(mStr, 10) - 1;
+      const firstOfMonth = new Date(y, m, 1);
+      const lastOfMonth = new Date(y, m + 1, 0);
+
+      const startWeek = getWeekRange(firstOfMonth);
+      const endWeek = getWeekRange(lastOfMonth);
+
+      const cur = new Date(startWeek.start);
+      while (cur.getTime() <= endWeek.start.getTime()) {
+        const wInfo = getWeekRange(cur);
+        const wLogs = storeFilteredLogs.filter(l => {
+          const t = new Date(l.tappedAt).getTime();
+          return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
+        });
+
+        const sDay = wInfo.start.getDate();
+        const sMo = wInfo.start.getMonth() + 1;
+        const eDay = wInfo.end.getDate();
+        const eMo = wInfo.end.getMonth() + 1;
+        const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
+
+        weeks.push({
+          weekKey: wInfo.weekKey,
+          label: wInfo.label,
+          subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
+          mobileSubLabel: mobileRange,
+          start: wInfo.start,
+          end: wInfo.end,
+          count: wLogs.length,
+          logs: wLogs,
+        });
+
+        cur.setDate(cur.getDate() + 7);
+      }
+    } else if (weeklyPeriodType === "year") {
+      // Sepanjang tahun yang dipilih (minggu per minggu)
+      const targetYear = selectedWeeklyYear || now.getFullYear();
+      const isThisYear = targetYear === now.getFullYear();
+      const firstDay = new Date(targetYear, 0, 1);
+      const startWeek = getWeekRange(firstDay);
+      const endLimit = isThisYear ? currentWeekInfo.start : getWeekRange(new Date(targetYear, 11, 31)).start;
+
+      const cur = new Date(startWeek.start);
+      while (cur.getTime() <= endLimit.getTime()) {
+        const wInfo = getWeekRange(cur);
+        const wLogs = storeFilteredLogs.filter(l => {
+          const t = new Date(l.tappedAt).getTime();
+          return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
+        });
+
+        const sDay = wInfo.start.getDate();
+        const sMo = wInfo.start.getMonth() + 1;
+        const eDay = wInfo.end.getDate();
+        const eMo = wInfo.end.getMonth() + 1;
+        const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
+
+        weeks.push({
+          weekKey: wInfo.weekKey,
+          label: wInfo.label,
+          subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
+          mobileSubLabel: mobileRange,
+          start: wInfo.start,
+          end: wInfo.end,
+          count: wLogs.length,
+          logs: wLogs,
+        });
+
+        cur.setDate(cur.getDate() + 7);
+      }
     }
 
     return weeks;
-  }, [storeFilteredLogs]);
+  }, [storeFilteredLogs, weeklyPeriodType, weekPageOffset, selectedWeeklyMonth, selectedWeeklyYear, thisMonthKey]);
+
+  const weeklyPeriodLabel = useMemo(() => {
+    if (weeklyTrendData.length === 0) return "Tren Mingguan";
+    const earliest = weeklyTrendData[0].start;
+    const latest = weeklyTrendData[weeklyTrendData.length - 1].end;
+    if (weeklyPeriodType === "8w") {
+      return weekPageOffset === 0
+        ? "8 Minggu Terakhir"
+        : `${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)} (8 Minggu)`;
+    }
+    if (weeklyPeriodType === "12w") {
+      return weekPageOffset === 0
+        ? "12 Minggu Terakhir"
+        : `${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)} (12 Minggu)`;
+    }
+    if (weeklyPeriodType === "month") {
+      return `Bulan ${formatMonthLabel(selectedWeeklyMonth || thisMonthKey)}`;
+    }
+    if (weeklyPeriodType === "year") {
+      return `Tahun ${selectedWeeklyYear}`;
+    }
+    return "Tren Mingguan";
+  }, [weeklyTrendData, weeklyPeriodType, weekPageOffset, selectedWeeklyMonth, selectedWeeklyYear, thisMonthKey]);
 
   const selectedWeekObj = useMemo(() => {
     if (!selectedWeekKey) return null;
@@ -1676,6 +1784,7 @@ export default function TapsPage() {
           {/* Sub Navigation Tabs (Grid 2x2 di Mobile agar Belum Ada Tap terlihat dan mudah ditekan) */}
           <div className="taps-nav-grid">
             <button
+              id="tab-btn-harian"
               onClick={() => setActiveTab("harian")}
               className={`btn ${activeTab === "harian" ? "btn-primary" : "btn-ghost"}`}
               style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
@@ -1683,6 +1792,7 @@ export default function TapsPage() {
               <span>📋</span> Riwayat Tap Harian
             </button>
             <button
+              id="tab-btn-bulanan"
               onClick={() => setActiveTab("bulanan")}
               className={`btn ${activeTab === "bulanan" ? "btn-primary" : "btn-ghost"}`}
               style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
@@ -1690,6 +1800,7 @@ export default function TapsPage() {
               <span>📊</span> Rekap Bulanan & Peringkat
             </button>
             <button
+              id="tab-btn-tren"
               onClick={() => { setActiveTab("tren"); setTrenView("mingguan"); }}
               className={`btn ${activeTab === "tren" ? "btn-primary" : "btn-ghost"}`}
               style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
@@ -1697,6 +1808,7 @@ export default function TapsPage() {
               <span>📈</span> Tren, Jam & Cafe
             </button>
             <button
+              id="tab-btn-tidur"
               onClick={() => setActiveTab("tidur")}
               className={`btn ${activeTab === "tidur" ? "btn-danger" : "btn-ghost"}`}
               style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
@@ -1928,7 +2040,7 @@ export default function TapsPage() {
                   background: "#111118", padding: "12px 16px",
                   borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)",
                 }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <div className="month-selector-left" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
                     <label
                       htmlFor="unified-month-select"
                       style={{
@@ -2436,195 +2548,214 @@ export default function TapsPage() {
             ) : (
               <div className="card" style={{ padding: "20px" }}>
                 {/* ── Global Outlet Filter Bar (Multi-Select) ── */}
-                <div style={{
-                  marginBottom: 18,
-                  padding: "10px 14px",
-                  background: selectedStoreFilters.length > 0 ? "rgba(99, 102, 241, 0.12)" : "rgba(255, 255, 255, 0.03)",
-                  border: selectedStoreFilters.length > 0 ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: 10,
-                }}>
-                  {/* Row 1: Label + Dropdown Trigger + Reset */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: selectedStoreFilters.length > 0 ? "#A5B4FC" : "#E2E8F0", display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      <span>🏪</span> Filter Outlet:
-                    </span>
-
-                    {/* Custom dropdown trigger */}
-                    <div id="store-filter-dropdown-wrapper" style={{ position: "relative", flex: 1, minWidth: 180 }}>
-                      <button
-                        type="button"
-                        onClick={() => setStoreFilterOpen(o => !o)}
+                {/* Di Kanan pada Desktop, Kanan-Kiri (Side-by-Side) pada Mobile */}
+                <div className="outlet-filter-container">
+                  <div
+                    className="outlet-filter-bar"
+                    style={{
+                      background: selectedStoreFilters.length > 0 ? "rgba(99, 102, 241, 0.12)" : "rgba(255, 255, 255, 0.03)",
+                      border: selectedStoreFilters.length > 0 ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid rgba(255, 255, 255, 0.08)",
+                      borderRadius: 10,
+                      padding: "8px 12px",
+                    }}
+                  >
+                    {/* Row 1: Label + Dropdown Trigger + Reset (strictly side-by-side) */}
+                    <div className="outlet-filter-row1">
+                      <span
+                        className="filter-label"
                         style={{
-                          width: "100%",
-                          background: "#161622",
-                          color: "#F8FAFC",
-                          border: selectedStoreFilters.length > 0 ? "1px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.15)",
-                          borderRadius: 8,
-                          padding: "6px 32px 6px 12px",
-                          fontSize: "0.8rem",
-                          fontWeight: 600,
-                          textAlign: "left",
-                          cursor: "pointer",
-                          display: "flex",
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          color: selectedStoreFilters.length > 0 ? "#A5B4FC" : "#E2E8F0",
+                          display: "inline-flex",
                           alignItems: "center",
                           gap: 6,
-                          position: "relative",
+                          flexShrink: 0,
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {selectedStoreFilters.length === 0
-                            ? `Semua Outlet (${availableStores.length} Cafe)`
-                            : selectedStoreFilters.length === 1
-                            ? selectedStoreFilters[0]
-                            : `${selectedStoreFilters.length} Outlet Dipilih`}
-                        </span>
-                        <span style={{ position: "absolute", right: 10, fontSize: "0.6rem", color: "#A5B4FC", pointerEvents: "none" }}>
-                          {storeFilterOpen ? "▲" : "▼"}
-                        </span>
-                      </button>
+                        <span>🏪</span> Filter Outlet:
+                      </span>
 
-                      {/* Dropdown panel */}
-                      {storeFilterOpen && (
-                        <div
+                      {/* Custom dropdown trigger */}
+                      <div id="store-filter-dropdown-wrapper" style={{ position: "relative", minWidth: 160, flex: 1, maxWidth: 260 }}>
+                        <button
+                          type="button"
+                          onClick={() => setStoreFilterOpen(o => !o)}
                           style={{
-                            position: "absolute",
-                            top: "calc(100% + 6px)",
-                            left: 0,
-                            right: 0,
-                            zIndex: 999,
-                            background: "#181824",
-                            border: "1px solid rgba(99,102,241,0.4)",
-                            borderRadius: 10,
-                            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                            maxHeight: 260,
-                            overflowY: "auto",
-                            padding: "6px",
+                            width: "100%",
+                            background: "#161622",
+                            color: "#F8FAFC",
+                            border: selectedStoreFilters.length > 0 ? "1px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.15)",
+                            borderRadius: 8,
+                            padding: "6px 28px 6px 10px",
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            textAlign: "left",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            position: "relative",
                           }}
                         >
-                          {/* Pilih Semua / Reset */}
-                          <button
-                            type="button"
-                            onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
+                          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {selectedStoreFilters.length === 0
+                              ? `Semua Outlet (${availableStores.length})`
+                              : selectedStoreFilters.length === 1
+                              ? selectedStoreFilters[0]
+                              : `${selectedStoreFilters.length} Outlet Dipilih`}
+                          </span>
+                          <span style={{ position: "absolute", right: 8, fontSize: "0.58rem", color: "#A5B4FC", pointerEvents: "none" }}>
+                            {storeFilterOpen ? "▲" : "▼"}
+                          </span>
+                        </button>
+
+                        {/* Dropdown panel */}
+                        {storeFilterOpen && (
+                          <div
                             style={{
-                              width: "100%",
-                              textAlign: "left",
-                              padding: "7px 10px",
-                              borderRadius: 7,
-                              fontSize: "0.78rem",
-                              fontWeight: 700,
-                              color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
-                              background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              marginBottom: 4,
+                              position: "absolute",
+                              top: "calc(100% + 6px)",
+                              left: 0,
+                              right: 0,
+                              zIndex: 999,
+                              background: "#181824",
+                              border: "1px solid rgba(99,102,241,0.4)",
+                              borderRadius: 10,
+                              boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                              maxHeight: 260,
+                              overflowY: "auto",
+                              padding: "6px",
                             }}
                           >
-                            <span style={{
-                              width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                              border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
-                              background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
-                              display: "inline-flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 9, color: "#FFF",
-                            }}>✓</span>
-                            Semua Outlet
-                          </button>
+                            {/* Pilih Semua / Reset */}
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
+                              style={{
+                                width: "100%",
+                                textAlign: "left",
+                                padding: "7px 10px",
+                                borderRadius: 7,
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                                color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
+                                background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                marginBottom: 4,
+                              }}
+                            >
+                              <span style={{
+                                width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                                border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
+                                background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 9, color: "#FFF",
+                              }}>✓</span>
+                              Semua Outlet
+                            </button>
 
-                          <div style={{ height: 1, background: "rgba(255,255,255,0.07)", marginBottom: 4 }} />
+                            <div style={{ height: 1, background: "rgba(255,255,255,0.07)", marginBottom: 4 }} />
 
-                          {availableStores.map(store => {
-                            const checked = selectedStoreFilters.includes(store);
-                            return (
-                              <button
-                                key={store}
-                                type="button"
-                                onClick={() => toggleStoreFilter(store)}
-                                style={{
-                                  width: "100%",
-                                  textAlign: "left",
-                                  padding: "7px 10px",
-                                  borderRadius: 7,
-                                  fontSize: "0.78rem",
-                                  fontWeight: checked ? 700 : 500,
-                                  color: checked ? "#C7D2FE" : "#CBD5E1",
-                                  background: checked ? "rgba(99,102,241,0.15)" : "transparent",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  transition: "background 0.1s ease",
-                                }}
-                              >
-                                <span style={{
-                                  width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                                  border: checked ? "2px solid #6366F1" : "2px solid #475569",
-                                  background: checked ? "#6366F1" : "transparent",
-                                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                  fontSize: 9, color: "#FFF",
-                                }}>{checked ? "✓" : ""}</span>
-                                {store}
-                              </button>
-                            );
-                          })}
-                        </div>
+                            {availableStores.map(store => {
+                              const checked = selectedStoreFilters.includes(store);
+                              return (
+                                <button
+                                  key={store}
+                                  type="button"
+                                  onClick={() => toggleStoreFilter(store)}
+                                  style={{
+                                    width: "100%",
+                                    textAlign: "left",
+                                    padding: "7px 10px",
+                                    borderRadius: 7,
+                                    fontSize: "0.78rem",
+                                    fontWeight: checked ? 700 : 500,
+                                    color: checked ? "#C7D2FE" : "#CBD5E1",
+                                    background: checked ? "rgba(99,102,241,0.15)" : "transparent",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    transition: "background 0.1s ease",
+                                  }}
+                                >
+                                  <span style={{
+                                    width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                                    border: checked ? "2px solid #6366F1" : "2px solid #475569",
+                                    background: checked ? "#6366F1" : "transparent",
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                    fontSize: 9, color: "#FFF",
+                                  }}>{checked ? "✓" : ""}</span>
+                                  {store}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedStoreFilters.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStoreFilters([])}
+                          style={{
+                            background: "rgba(239, 68, 68, 0.15)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                            color: "#FCA5A5",
+                            borderRadius: 6,
+                            padding: "5px 8px",
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                            flexShrink: 0,
+                            whiteSpace: "nowrap",
+                            transition: "all 0.15s ease",
+                          }}
+                          title="Reset Filter"
+                        >
+                          <span>✕</span> Reset
+                        </button>
                       )}
                     </div>
 
+                    {/* Row 2: Selected chips + count info */}
                     {selectedStoreFilters.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedStoreFilters([])}
-                        style={{
-                          background: "rgba(239, 68, 68, 0.15)",
-                          border: "1px solid rgba(239, 68, 68, 0.3)",
-                          color: "#FCA5A5",
-                          borderRadius: 6,
-                          padding: "5px 10px",
-                          fontSize: "0.74rem",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          flexShrink: 0,
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        <span>✕</span> Reset
-                      </button>
+                      <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", justifyContent: "flex-end" }}>
+                        {selectedStoreFilters.map(s => (
+                          <span
+                            key={s}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 5,
+                              background: "rgba(99,102,241,0.2)",
+                              border: "1px solid rgba(99,102,241,0.4)",
+                              borderRadius: 999, padding: "2px 8px 2px 10px",
+                              fontSize: "0.72rem", fontWeight: 700, color: "#C7D2FE",
+                            }}
+                          >
+                            {s}
+                            <button
+                              type="button"
+                              onClick={() => toggleStoreFilter(s)}
+                              style={{ background: "none", border: "none", color: "#818CF8", cursor: "pointer", padding: 0, fontSize: "0.8rem", lineHeight: 1 }}
+                            >✕</button>
+                          </span>
+                        ))}
+                        <span style={{ fontSize: "0.72rem", color: "#818CF8", fontWeight: 600 }}>
+                          · {storeFilteredLogs.length} tap
+                        </span>
+                      </div>
                     )}
                   </div>
-
-                  {/* Row 2: Selected chips + count info */}
-                  {selectedStoreFilters.length > 0 && (
-                    <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-                      {selectedStoreFilters.map(s => (
-                        <span
-                          key={s}
-                          style={{
-                            display: "inline-flex", alignItems: "center", gap: 5,
-                            background: "rgba(99,102,241,0.2)",
-                            border: "1px solid rgba(99,102,241,0.4)",
-                            borderRadius: 999, padding: "2px 8px 2px 10px",
-                            fontSize: "0.74rem", fontWeight: 700, color: "#C7D2FE",
-                          }}
-                        >
-                          {s}
-                          <button
-                            type="button"
-                            onClick={() => toggleStoreFilter(s)}
-                            style={{ background: "none", border: "none", color: "#818CF8", cursor: "pointer", padding: 0, fontSize: "0.8rem", lineHeight: 1 }}
-                          >✕</button>
-                        </span>
-                      ))}
-                      <span style={{ fontSize: "0.72rem", color: "#818CF8", fontWeight: 600 }}>
-                        · {storeFilteredLogs.length} tap
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* ── Tampilan 1: Mode Drill-Down Tanggal Spesifik (Level 3) ── */}
@@ -2715,7 +2846,7 @@ export default function TapsPage() {
                             ? `📅 Tren Aktivitas Harian (${trendRange} Hari Terakhir)`
                             : selectedWeekObj
                             ? `📅 Rincian 7 Hari: ${selectedWeekObj.subLabel} (${selectedWeekObj.label})`
-                            : "📊 Tren Aktivitas Mingguan (8 Minggu Terakhir)"}
+                            : `📊 Tren Aktivitas Mingguan (${weeklyPeriodLabel})`}
                         </h3>
                         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
                           {trenView === "jam"
@@ -2730,7 +2861,7 @@ export default function TapsPage() {
                             ? "Jumlah tap per hari pada semua kartu aktif. Klik pada salah satu batang tanggal untuk membedah jam sibuk & cafe teraktif."
                             : selectedWeekObj
                             ? `Performa 7 hari (Senin s/d Minggu) pada ${selectedWeekObj.subLabel}. Klik salah satu batang hari untuk melihat sebaran jam & cafe.`
-                            : "Akumulasi tap per minggu kalender (Senin - Minggu). Klik salah satu batang minggu untuk membedah 7 hari di dalamnya."}
+                            : `Akumulasi tap per minggu kalender (${weeklyPeriodLabel}). Klik salah satu batang minggu untuk membedah 7 hari di dalamnya.`}
                         </p>
                       </div>
 
@@ -3123,11 +3254,11 @@ export default function TapsPage() {
                             {/* 1. Breadcrumb Interaktif Navigasi (Level 2) */}
                             <InteractiveBreadcrumb
                               items={[
-                                { label: "Semua Minggu (8 Minggu)", icon: "🏠", onClick: () => setSelectedWeekKey(null) },
+                                { label: `Semua Minggu (${weeklyPeriodLabel})`, icon: "🏠", onClick: () => setSelectedWeekKey(null) },
                                 { label: `${selectedWeekObj.subLabel} (${selectedWeekObj.label})`, icon: "📅", active: true },
                               ]}
                               onBack={() => setSelectedWeekKey(null)}
-                              backLabel="Kembali ke Semua Minggu"
+                              backLabel={`Kembali ke ${weeklyPeriodLabel}`}
                             />
 
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
@@ -3177,19 +3308,21 @@ export default function TapsPage() {
                             )}
                           </div>
                         ) : (
-                          /* Level 1: Grafik Batang 8 Minggu Kalender */
+                          /* Level 1: Grafik Batang Mingguan dengan Navigasi Periode & Arsip */
                           <div>
                             {/* 1. Breadcrumb Interaktif Navigasi (Level 1) */}
                             <InteractiveBreadcrumb
                               items={[
-                                { label: "Tren Mingguan (8 Minggu Terakhir)", icon: "🏠", active: true },
+                                { label: `Tren Mingguan (${weeklyPeriodLabel})`, icon: "🏠", active: true },
                               ]}
                             />
 
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
+                            {/* Row Kontrol: Di Kanan pada Desktop, Kanan-Kiri pada Mobile */}
+                            <div className="weekly-nav-container" style={{ marginBottom: 12 }}>
+                              {/* Ringkasan Badges */}
                               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                                 <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
-                                  Total 8 Minggu: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
+                                  Total: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
                                 </span>
                                 {(() => {
                                   const maxWeek = weeklyTrendData.reduce((prev, cur) => (cur.count > prev.count ? cur : prev), weeklyTrendData[0]);
@@ -3204,6 +3337,137 @@ export default function TapsPage() {
                                 })()}
                               </div>
 
+                              {/* Navigasi Periode Mingguan & Selector (Kanan pada Desktop, Kanan-Kiri pada Mobile) */}
+                              <div className="weekly-nav-buttons">
+                                {/* Selector Periode */}
+                                <div style={{ position: "relative", display: "inline-block" }}>
+                                  <select
+                                    value={
+                                      weeklyPeriodType === "month"
+                                        ? `month:${selectedWeeklyMonth || thisMonthKey}`
+                                        : weeklyPeriodType === "year"
+                                        ? `year:${selectedWeeklyYear}`
+                                        : weeklyPeriodType
+                                    }
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setSelectedWeekKey(null);
+                                      setWeekPageOffset(0);
+                                      if (val === "8w" || val === "12w") {
+                                        setWeeklyPeriodType(val);
+                                      } else if (val.startsWith("month:")) {
+                                        setWeeklyPeriodType("month");
+                                        setSelectedWeeklyMonth(val.replace("month:", ""));
+                                      } else if (val.startsWith("year:")) {
+                                        setWeeklyPeriodType("year");
+                                        setSelectedWeeklyYear(parseInt(val.replace("year:", ""), 10));
+                                      }
+                                    }}
+                                    style={{
+                                      background: "#181824",
+                                      border: "1px solid rgba(139, 92, 246, 0.45)",
+                                      color: "#EDE9FE",
+                                      padding: "5px 24px 5px 8px",
+                                      borderRadius: 8,
+                                      fontSize: "0.74rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      appearance: "none",
+                                      WebkitAppearance: "none",
+                                      outline: "none",
+                                    }}
+                                  >
+                                    <option value="8w">🌟 8 Minggu Terakhir</option>
+                                    <option value="12w">🗓️ 12 Minggu Terakhir (3 Bulan)</option>
+                                    <optgroup label="── Pilih Berdasarkan Bulan ──" style={{ background: "#111118", color: "#A5B4FC" }}>
+                                      {monthsByYear.flatMap(y => y.months).map(m => (
+                                        <option key={m.monthKey} value={`month:${m.monthKey}`}>
+                                          {m.monthKey === thisMonthKey ? `🌟 ${m.label} (Bulan Ini)` : m.label}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                    <optgroup label="── Sepanjang Tahun ──" style={{ background: "#111118", color: "#FCD34D" }}>
+                                      {monthsByYear.map(y => (
+                                        <option key={y.year} value={`year:${y.year}`}>
+                                          Tahun {y.year} (Semua Minggu)
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  </select>
+                                  <span style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", fontSize: "0.55rem", color: "#C4B5FD", pointerEvents: "none" }}>
+                                    ▼
+                                  </span>
+                                </div>
+
+                                {/* Tombol Navigasi ◄ dan ► (Khusus mode 8w dan 12w) */}
+                                {(weeklyPeriodType === "8w" || weeklyPeriodType === "12w") && (
+                                  <div style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setWeekPageOffset(o => o + 1)}
+                                      style={{
+                                        background: "rgba(139,92,246,0.15)",
+                                        border: "1px solid rgba(139,92,246,0.35)",
+                                        color: "#C4B5FD",
+                                        padding: "4px 8px",
+                                        borderRadius: 6,
+                                        fontSize: "0.72rem",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                      title="Lihat minggu-minggu sebelumnya di masa lalu"
+                                    >
+                                      ◄ Lalu
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setWeekPageOffset(o => Math.max(0, o - 1))}
+                                      disabled={weekPageOffset === 0}
+                                      style={{
+                                        background: weekPageOffset === 0 ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.15)",
+                                        border: weekPageOffset === 0 ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.35)",
+                                        color: weekPageOffset === 0 ? "var(--text-muted)" : "#C4B5FD",
+                                        padding: "4px 8px",
+                                        borderRadius: 6,
+                                        fontSize: "0.72rem",
+                                        fontWeight: 700,
+                                        cursor: weekPageOffset === 0 ? "not-allowed" : "pointer",
+                                        opacity: weekPageOffset === 0 ? 0.4 : 1,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                      title="Lihat minggu-minggu berikutnya"
+                                    >
+                                      Maju ►
+                                    </button>
+
+                                    {weekPageOffset > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setWeekPageOffset(0)}
+                                        style={{
+                                          background: "rgba(245,158,11,0.15)",
+                                          border: "1px solid rgba(245,158,11,0.35)",
+                                          color: "#FCD34D",
+                                          padding: "4px 8px",
+                                          borderRadius: 6,
+                                          fontSize: "0.7rem",
+                                          fontWeight: 700,
+                                          cursor: "pointer",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                        title="Kembali ke minggu berjalan"
+                                      >
+                                        🌟 Terkini
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
                               <div style={{
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -3233,11 +3497,11 @@ export default function TapsPage() {
                               }}
                             />
 
-                            {/* Breakdown Cafe 8 Minggu — sembunyikan jika hanya 1 outlet difilter */}
+                            {/* Breakdown Cafe Periode Mingguan — sembunyikan jika hanya 1 outlet difilter */}
                             {!isSingleOutletFilter && (
                               <CafeBreakdownCard
-                                title="Peringkat Cafe Teraktif (8 Minggu Terakhir)"
-                                subtitle="Akumulasi kontribusi tap per cafe selama 8 minggu."
+                                title={`Peringkat Cafe Teraktif (${weeklyPeriodLabel})`}
+                                subtitle={`Akumulasi kontribusi tap per cafe selama ${weeklyPeriodLabel}.`}
                                 logs={eightWeeksLogs}
                                 cardUrlMap={cardUrlMap}
                               />
