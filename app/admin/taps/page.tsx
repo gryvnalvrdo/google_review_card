@@ -559,7 +559,7 @@ function HourlyCafeBreakdownCard({
   activeCardMap,
   periodName,
 }: {
-  hour: number;
+  hour: number | null;
   peakHour: { hour: number; count: number; label: string } | null;
   logs: TapLogEntry[];
   allHourCounts: number[];
@@ -569,6 +569,10 @@ function HourlyCafeBreakdownCard({
   periodName: string;
 }) {
   const [showAll, setShowAll] = useState(false);
+
+  if (hour === null || hour === undefined) {
+    return null;
+  }
 
   const startHourStr = String(hour).padStart(2, "0");
   const nextHourStr = String((hour + 1) % 24).padStart(2, "0");
@@ -607,8 +611,8 @@ function HourlyCafeBreakdownCard({
       .map((_, h) => h)
       .filter((h) => (allHourCounts[h] || 0) > 0);
 
-    // Jika jam yang sedang dipilih belum ada di list (misal pengguna klik batang di grafik yang bernilai 0), sertakan agar select tidak hilang
-    if (hour !== null && hour !== undefined && !list.includes(hour) && (allHourCounts[hour] || 0) === 0) {
+    // Jika pengguna memilih jam secara manual (misal klik batang 0 tap di grafik saat ada jam aktif lain), sertakan agar select tidak hilang
+    if (list.length > 0 && hour !== null && hour !== undefined && !list.includes(hour)) {
       list.push(hour);
       list.sort((a, b) => a - b);
     }
@@ -1751,12 +1755,13 @@ export default function TapsPage() {
   }, [hourFilteredLogs]);
 
   // Jam aktif yang sedang dipilih (otomatis default ke Jam Puncak jika belum ada pilihan manual)
-  const activeHour = selectedHour !== null
+  const activeHour: number | null = selectedHour !== null
     ? selectedHour
-    : (peakHour ? peakHour.hour : (allHourCounts.findIndex(c => c > 0) !== -1 ? allHourCounts.findIndex(c => c > 0) : 17));
+    : (peakHour ? peakHour.hour : (allHourCounts.findIndex(c => c > 0) !== -1 ? allHourCounts.findIndex(c => c > 0) : null));
 
   // Filter logs khusus jam yang dipilih
   const selectedHourLogs = useMemo(() => {
+    if (activeHour === null) return [];
     return hourFilteredLogs.filter(l => new Date(l.tappedAt).getHours() === activeHour);
   }, [hourFilteredLogs, activeHour]);
 
@@ -3701,7 +3706,9 @@ export default function TapsPage() {
                           xAxisTitle="Jam"
                           showValue={true}
                           selectedIndex={activeHour}
-                          onBarClick={(i) => setSelectedHour(i)}
+                          onBarClick={(i) => {
+                            if (hourFilteredLogs.length > 0) setSelectedHour(i);
+                          }}
                         />
 
                         {hourFilteredLogs.length === 0 && (
@@ -3720,7 +3727,7 @@ export default function TapsPage() {
                         )}
 
                         {/* Rincian Cafe Khusus Jam Terpilih — Terhubung langsung dengan grafik jam & dropdown */}
-                        {!isSingleOutletFilter && (
+                        {!isSingleOutletFilter && hourFilteredLogs.length > 0 && activeHour !== null && (
                           <HourlyCafeBreakdownCard
                             hour={activeHour}
                             peakHour={peakHour}
