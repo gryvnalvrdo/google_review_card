@@ -1437,7 +1437,7 @@ export default function TapsPage() {
       weeks.push({
         weekKey: wInfo.weekKey,
         label: wInfo.label,
-        subLabel: `Mgg ${getWeekNumber(wInfo.start)}`,
+        subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
         start: wInfo.start,
         end: wInfo.end,
         count: wLogs.length,
@@ -1518,7 +1518,7 @@ export default function TapsPage() {
         value: w.count,
         weekKey: w.weekKey,
         highlight: isSelected || (w.count === maxV && maxV > 0),
-        tooltip: `${w.subLabel} (${w.label}): ${w.count} tap${w.wowGrowth !== undefined && w.wowGrowth !== null ? ` (${w.wowGrowth >= 0 ? `+${w.wowGrowth}%` : `${w.wowGrowth}%`} vs mgg lalu)` : ""}`,
+        tooltip: `${w.subLabel} (${w.label}): ${w.count} tap${w.wowGrowth !== undefined && w.wowGrowth !== null ? ` (${w.wowGrowth >= 0 ? `+${w.wowGrowth}%` : `${w.wowGrowth}%`} vs minggu lalu)` : ""}`,
       };
     });
   }, [weeklyTrendData, selectedWeekKey]);
@@ -2839,7 +2839,7 @@ export default function TapsPage() {
                                   Total 8 Minggu: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
                                 </span>
                                 <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
-                                  Rata-rata: ~{Math.round(weeklyTrendData.reduce((s, w) => s + w.count, 0) / 8)} tap/mgg
+                                  Rata-rata: ~{Math.round(weeklyTrendData.reduce((s, w) => s + w.count, 0) / 8)} tap/minggu
                                 </span>
                                 {/* 3. Indikator Pertumbuhan WoW Minggu Terakhir */}
                                 {(() => {
@@ -2890,7 +2890,7 @@ export default function TapsPage() {
                                     value: Math.max(avgWeekly, 1),
                                     label: "Rata-rata Mingguan",
                                     color: "#A78BFA",
-                                    unit: "tap/mgg",
+                                    unit: "tap/minggu",
                                   }}
                                   onBarClick={(_idx, item: any) => {
                                     if (item.weekKey) {
