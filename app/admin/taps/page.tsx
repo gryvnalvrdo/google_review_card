@@ -568,6 +568,7 @@ function HourlyCafeBreakdownCard({
   allHourCounts,
   onSelectHour,
   cardUrlMap,
+  activeCardMap,
   periodName,
 }: {
   hour: number;
@@ -576,6 +577,7 @@ function HourlyCafeBreakdownCard({
   allHourCounts: number[];
   onSelectHour: (h: number) => void;
   cardUrlMap: Map<string, string>;
+  activeCardMap?: Map<string, string>;
   periodName: string;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -589,18 +591,22 @@ function HourlyCafeBreakdownCard({
   const countsByStore = useMemo(() => {
     const map = new Map<string, { count: number; code: string; storeName: string }>();
     for (const log of logs) {
-      const name = log.storeName || "Toko Tanpa Nama";
-      const existing = map.get(name);
+      const resolvedName = (log.storeName && log.storeName.trim())
+        || (activeCardMap && activeCardMap.get(log.code))
+        || (log.code ? `Toko (${log.code})` : "Toko Tanpa Nama");
+
+      const key = log.code || resolvedName;
+      const existing = map.get(key);
       if (existing) {
         existing.count += 1;
       } else {
-        map.set(name, { count: 1, code: log.code, storeName: name });
+        map.set(key, { count: 1, code: log.code, storeName: resolvedName });
       }
     }
     const arr = Array.from(map.values());
     arr.sort((a, b) => b.count - a.count);
     return arr;
-  }, [logs]);
+  }, [logs, activeCardMap]);
 
   const totalHourTaps = logs.length;
   const max = countsByStore.length > 0 ? countsByStore[0].count : 1;
@@ -721,52 +727,83 @@ function HourlyCafeBreakdownCard({
                   transition: "all 0.15s ease",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
-                    <span style={{ fontSize: "0.85rem", width: 22, textAlign: "center", fontWeight: 700, color: "#94A3B8" }}>
-                      {medals[i] || `#${i + 1}`}
+                    <span style={{ fontSize: "1rem", width: 24, textAlign: "center", flexShrink: 0, lineHeight: 1 }}>
+                      {medals[i] || <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748B" }}>#{i + 1}</span>}
                     </span>
-                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#F8FAFC", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {store.storeName}
-                    </span>
-                    <span style={{ fontSize: "0.68rem", fontWeight: 600, color: "#94A3B8", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", padding: "1px 6px", borderRadius: 4, fontFamily: "monospace" }}>
-                      {store.code}
-                    </span>
+                    <div style={{ minWidth: 0, flex: 1, display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
+                      <span
+                        title={store.storeName}
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "0.88rem",
+                          color: "#F8FAFC",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          minWidth: 0,
+                          flexShrink: 1,
+                        }}
+                      >
+                        {store.storeName}
+                      </span>
+                      {store.code && (
+                        <span style={{
+                          fontSize: "0.66rem",
+                          fontWeight: 600,
+                          color: "#94A3B8",
+                          background: "rgba(255,255,255,0.06)",
+                          border: "1px solid rgba(255,255,255,0.09)",
+                          padding: "1px 5px",
+                          borderRadius: 4,
+                          fontFamily: "monospace",
+                          flexShrink: 0,
+                        }}>
+                          {store.code}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#EDE9FE" }}>
-                      {store.count} tap <span style={{ color: "#64748B", fontWeight: 500 }}>({percentOfHour}%)</span>
-                    </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#EDE9FE" }}>
+                        {store.count} <span style={{ fontSize: "0.7rem", color: "#94A3B8", fontWeight: 500 }}>tap</span>
+                      </span>
+                      <span style={{ fontSize: "0.7rem", color: "#818CF8", fontWeight: 600, marginLeft: 4 }}>
+                        ({percentOfHour}%)
+                      </span>
+                    </div>
                     {reviewUrl && (
                       <a
                         href={reviewUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="cafe-review-link"
-                        title="Buka menu ulasan toko ini"
+                        title={`Buka menu ulasan ${store.storeName}`}
                         style={{
-                          fontSize: "0.72rem",
+                          fontSize: "0.68rem",
                           fontWeight: 700,
                           color: "#FCD34D",
-                          background: "rgba(245, 158, 11, 0.08)",
-                          border: "1px solid rgba(245, 158, 11, 0.25)",
-                          padding: "3px 8px",
-                          borderRadius: 6,
+                          background: "rgba(245, 158, 11, 0.1)",
+                          border: "1px solid rgba(245, 158, 11, 0.28)",
+                          padding: "3px 6px",
+                          borderRadius: 5,
                           textDecoration: "none",
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: 3,
+                          lineHeight: 1,
                         }}
                       >
-                        <span>⭐</span> ↗
+                        ⭐↗
                       </a>
                     )}
                   </div>
                 </div>
 
                 {/* Progress bar porsi tap di jam ini */}
-                <div style={{ background: "rgba(255,255,255,0.06)", height: 5, borderRadius: 999, overflow: "hidden" }}>
+                <div style={{ background: "rgba(255,255,255,0.06)", height: 4, borderRadius: 999, overflow: "hidden" }}>
                   <div
                     style={{
                       width: `${relativePercent}%`,
@@ -933,7 +970,8 @@ export default function TapsPage() {
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showAllSidebarStores, setShowAllSidebarStores] = useState(false);
-  const [tapDisplayLimit, setTapDisplayLimit] = useState(25);
+  const [tapDisplayLimit, setTapDisplayLimit] = useState(15);
+  const [mobileSubView, setMobileSubView] = useState<"feed" | "outlets">("feed");
   const lastKnownTapRef = useRef<string | null>(null);
   const datePickerRef = useRef<HTMLInputElement>(null);
 
@@ -2729,7 +2767,25 @@ export default function TapsPage() {
                 </p>
               </div>
             ) : (
-              <div className="dashboard-grid-2col">
+              <div className={`dashboard-grid-2col show-mobile-${mobileSubView}`}>
+                {/* ── MOBILE SUBVIEW TOGGLE (Zero Endless Scroll Fatigue) ── */}
+                <div className="mobile-harian-subview-toggle mobile-only">
+                  <button
+                    type="button"
+                    onClick={() => setMobileSubView("feed")}
+                    className={`mobile-subview-btn ${mobileSubView === "feed" ? "active" : ""}`}
+                  >
+                    <span>📋</span> Aliran Tap ({activePeriodInfo.entries.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileSubView("outlets")}
+                    className={`mobile-subview-btn ${mobileSubView === "outlets" ? "active" : ""}`}
+                  >
+                    <span>🏪</span> Ringkasan Outlet &amp; Jam
+                  </button>
+                </div>
+
                 {/* ── KOLOM UTAMA: FEED RIWAYAT TAP ── */}
                 <div className="dashboard-grid-main">
                   {activePeriodInfo.entries.length === 0 ? (
@@ -2767,7 +2823,10 @@ export default function TapsPage() {
 
                       <div className="tap-group-scroll-area">
                         {activePeriodInfo.entries.slice(0, tapDisplayLimit).map((log, i) => {
-                          const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
+                          const resolvedStoreName = (log.storeName && log.storeName.trim())
+                            || activeCardMap.get(log.code)
+                            || (log.code ? `Kartu ${log.code}` : "Toko Tanpa Nama");
+                          const reviewUrl = cardUrlMap.get(log.code) || (resolvedStoreName ? getPublicGoogleReviewUrl("", resolvedStoreName) : "");
                           const d = new Date(log.tappedAt);
                           const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
                           const isPrevYear = d.getFullYear() !== new Date().getFullYear();
@@ -2776,18 +2835,18 @@ export default function TapsPage() {
                             month: "short",
                             ...(isPrevYear ? { year: "numeric" } : {}),
                           });
-                          const initials = getStoreInitials(log.storeName);
+                          const initials = getStoreInitials(resolvedStoreName);
 
                           return (
                             <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-row-native">
                               {/* Kolom Kiri / Utama: Avatar Toko Minimalis + Info Toko */}
                               <div className="tap-row-main">
-                                <div className="tap-store-avatar" title={log.storeName}>
+                                <div className="tap-store-avatar" title={resolvedStoreName}>
                                   <span>{initials}</span>
                                 </div>
                                 <div className="tap-store-info">
-                                  <div className="tap-store-name" title={log.storeName}>{log.storeName}</div>
-                                  <div className="tap-store-sub desktop-only">
+                                  <div className="tap-store-name" title={resolvedStoreName}>{resolvedStoreName}</div>
+                                  <div className="tap-store-sub">
                                     <span className="tap-code-tag">{log.code}</span>
                                     <span className="tap-meta-dot">·</span>
                                     <span className="tap-date-text">{dateStr}</span>
@@ -2795,17 +2854,11 @@ export default function TapsPage() {
                                 </div>
                               </div>
 
-                              {/* Kolom Kanan / Samping: Meta Mobile, Timestamp Tenang Terpadu, Sleek Review Button */}
+                              {/* Kolom Kanan / Samping: Timestamp & Review Link */}
                               <div className="tap-row-side">
-                                <div className="tap-store-sub mobile-only">
-                                  <span className="tap-code-tag">{log.code}</span>
-                                  <span className="tap-meta-dot">·</span>
-                                  <span className="tap-date-text">{dateStr}</span>
-                                </div>
-
                                 <div className="tap-time-stack" title={formatFull(log.tappedAt)}>
-                                  <span className="tap-time-exact">{timeStr}</span>
                                   <span className="tap-time-ago">{timeAgo(log.tappedAt)}</span>
+                                  <span className="tap-time-exact">{timeStr}</span>
                                 </div>
 
                                 {reviewUrl && (
@@ -2814,10 +2867,10 @@ export default function TapsPage() {
                                     target="_blank"
                                     rel="noreferrer"
                                     className="tap-review-btn"
-                                    title="Buka menu ulasan Google publik toko ini"
+                                    title={`Buka menu ulasan Google publik ${resolvedStoreName}`}
                                   >
                                     <span className="tap-review-star">⭐</span>
-                                    <span className="tap-review-text">Ulasan ↗</span>
+                                    <span className="tap-review-text desktop-only">Ulasan ↗</span>
                                   </a>
                                 )}
                               </div>
@@ -3918,6 +3971,7 @@ export default function TapsPage() {
                             allHourCounts={allHourCounts}
                             onSelectHour={(h) => setSelectedHour(h)}
                             cardUrlMap={cardUrlMap}
+                            activeCardMap={activeCardMap}
                             periodName={hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"}
                           />
                         )}
