@@ -1181,9 +1181,14 @@ html, body {
     flex-direction: column;
     gap: 20px;
   }
+  .dashboard-grid-main {
+    order: 1;
+    width: 100%;
+  }
   .dashboard-grid-sidebar {
-    order: -1;
+    order: 2;
     position: static;
+    width: 100%;
   }
 }
 
@@ -1517,12 +1522,19 @@ html, body {
 
 .tap-group-badge {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #34D399;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  padding: 2px 8px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 4px 12px;
   border-radius: 999px;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  letter-spacing: 0.3px;
 }
 
 .desktop-only {

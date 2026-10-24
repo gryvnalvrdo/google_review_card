@@ -271,39 +271,38 @@ export default function CardsPage() {
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "calc(110px + env(safe-area-inset-bottom, 24px))" }}>
         <div className="mobile-container-pad" style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
-          {/* Header Title */}
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-              💳 Daftar Kartu Toko
-            </h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
-              Kelola kartu toko aktif, cetak ulang QR resolusi tinggi, atau edit data toko.
-            </p>
-          </div>
-              {/* KPI Stats (Hero Omzet on mobile, 3-col on desktop) */}
-              <div className="stats-grid-3" style={{ marginBottom: 22 }}>
-                <div className="card stat-card-compact stat-card-cards" style={{ background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)", borderRadius: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span className="stat-card-title" style={{ color: "#A5B4FC", fontWeight: 700 }}>Kartu Toko Aktif</span>
-                    <span className="stat-card-icon" style={{ fontSize: "1.2rem" }}>💳</span>
-                  </div>
-                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#F0F0FF" }}>{cards.length}</div>
+          {/* Header Title & Active Cards Pill */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+                💳 Daftar Kartu Toko
+              </h1>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: "4px 0 0" }}>
+                Kelola kartu toko aktif, cetak ulang QR resolusi tinggi, atau edit data toko.
+              </p>
+            </div>
+
+            {/* Single Metric: Kartu Aktif Saja */}
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 16px",
+              background: "linear-gradient(180deg, rgba(99,102,241,0.12), rgba(99,102,241,0.04))",
+              border: "1px solid rgba(99,102,241,0.3)",
+              borderRadius: 12,
+            }}>
+              <span style={{ fontSize: "1.2rem" }}>💳</span>
+              <div>
+                <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Kartu Toko Aktif
                 </div>
-                <div className="card stat-card-compact stat-card-revenue" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.09), #111118)", borderColor: "rgba(16,185,129,0.25)", borderRadius: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span className="stat-card-title" style={{ color: "#6EE7B7", fontWeight: 700 }}>Total Omzet</span>
-                    <span className="stat-card-icon" style={{ fontSize: "1.2rem" }}>💰</span>
-                  </div>
-                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#34D399" }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
-                </div>
-                <div className="card stat-card-compact stat-card-taps" style={{ background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)", borderRadius: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span className="stat-card-title" style={{ color: "#FCD34D", fontWeight: 700 }}>Total Tap</span>
-                    <span className="stat-card-icon" style={{ fontSize: "1.2rem" }}>👆</span>
-                  </div>
-                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#FCD34D" }}>{totalTaps}×</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
+                  {cards.length} <span style={{ fontSize: "0.78rem", color: "#94A3B8", fontWeight: 600 }}>kartu</span>
                 </div>
               </div>
+            </div>
+          </div>
 
               {/* Toolbar: Tetap sejajar (side-by-side) baik di mobile maupun desktop */}
               <div style={{ display: "flex", gap: 8, marginBottom: 18, alignItems: "center", width: "100%", flexWrap: "nowrap" }}>

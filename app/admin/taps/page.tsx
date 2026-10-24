@@ -668,6 +668,8 @@ export default function TapsPage() {
   const [selectedWeeklyYear, setSelectedWeeklyYear] = useState<number>(() => new Date().getFullYear());
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showAllSidebarStores, setShowAllSidebarStores] = useState(false);
+  const [tapDisplayLimit, setTapDisplayLimit] = useState(25);
   const lastKnownTapRef = useRef<string | null>(null);
 
   async function fetchData(isBackground = false) {
@@ -2426,7 +2428,7 @@ export default function TapsPage() {
                       </div>
 
                       <div>
-                        {activePeriodInfo.entries.map((log, i) => {
+                        {activePeriodInfo.entries.slice(0, tapDisplayLimit).map((log, i) => {
                           const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
                           const d = new Date(log.tappedAt);
                           const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -2479,6 +2481,34 @@ export default function TapsPage() {
                             </div>
                           );
                         })}
+
+                        {/* Pagination / Load More Tap Button (Zero Endless Scroll Fatigue) */}
+                        {activePeriodInfo.entries.length > tapDisplayLimit && (
+                          <div style={{ textAlign: "center", padding: "14px 16px" }}>
+                            <button
+                              type="button"
+                              onClick={() => setTapDisplayLimit(prev => prev + 25)}
+                              style={{
+                                width: "100%",
+                                padding: "10px 16px",
+                                borderRadius: 10,
+                                background: "rgba(99, 102, 241, 0.12)",
+                                border: "1px dashed rgba(99, 102, 241, 0.35)",
+                                color: "#A5B4FC",
+                                fontSize: "0.82rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 8,
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <span>⬇️</span> Tampilkan 25 Tap Sebelumnya ({activePeriodInfo.entries.length - tapDisplayLimit} tersisa)
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2614,7 +2644,7 @@ export default function TapsPage() {
                       </div>
 
                       <div className="cafe-scorecard-grid">
-                        {cafeBreakdownList.map((c, idx) => {
+                        {(showAllSidebarStores ? cafeBreakdownList : cafeBreakdownList.slice(0, 5)).map((c, idx) => {
                           const isSelected = selectedStoreFilters.includes(c.storeName);
                           const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
 
@@ -2664,6 +2694,36 @@ export default function TapsPage() {
                           );
                         })}
                       </div>
+
+                      {/* Toggle Collapsible Store List (Pangkas 70% Tinggi Layar di Mobile) */}
+                      {cafeBreakdownList.length > 5 && (
+                        <div style={{ padding: "0 14px 12px" }}>
+                          <button
+                            type="button"
+                            onClick={() => setShowAllSidebarStores(prev => !prev)}
+                            style={{
+                              width: "100%",
+                              padding: "8px 12px",
+                              background: "rgba(255,255,255,0.03)",
+                              border: "1px dashed rgba(255,255,255,0.12)",
+                              borderRadius: 8,
+                              color: "#A5B4FC",
+                              fontSize: "0.76rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 6,
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            {showAllSidebarStores
+                              ? "▲ Tampilkan Lebih Sedikit (Top 5 Saja)"
+                              : `▼ Lihat Semua ${cafeBreakdownList.length} Outlet (+${cafeBreakdownList.length - 5} lainnya)`}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
