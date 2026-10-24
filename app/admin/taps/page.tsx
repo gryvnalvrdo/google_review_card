@@ -135,9 +135,9 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
               padding: "4px 9px", borderRadius: 8, textDecoration: "none",
               display: "inline-flex", alignItems: "center", gap: 4,
             }}
-            title="Buka menu ulasan toko ini untuk melihat ulasan pelanggan"
+            title="Buka halaman awal toko untuk melihat ulasan pelanggan"
           >
-            ⭐ Ulasan ↗
+            ⭐ Review ↗
           </a>
         )}
 
