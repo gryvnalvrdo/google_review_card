@@ -440,11 +440,11 @@ export default function CardsPage() {
                           <div>
                             <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Target Google Review</span>
                             <a
-                              href={getPublicGoogleReviewUrl(card.googleReviewUrl)}
+                              href={getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName)}
                               target="_blank"
                               rel="noreferrer"
                               style={{ color: "#FCD34D", textDecoration: "none", wordBreak: "break-all" }}
-                              title="Buka menu ulasan Google publik toko ini"
+                              title="Buka ulasan toko di Google Search"
                             >
                               Buka Menu Ulasan ↗
                             </a>

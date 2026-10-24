@@ -351,7 +351,7 @@ export default function TapsPage() {
   // Active cards are the single source of truth.
   const activeCardMap = useMemo(() => new Map(cards.map(c => [c.code, c.storeName])), [cards]);
   const activeCodesSet = useMemo(() => new Set(cards.map(c => c.code)), [cards]);
-  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "")])), [cards]);
+  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "", c.storeName)])), [cards]);
 
   const validLogs = useMemo(() => {
     // If cards have loaded, only keep logs whose code exists in active cards
@@ -926,7 +926,7 @@ export default function TapsPage() {
                             const isStoreOpen = expandedStore === storeKey;
                             const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
                             const percent = Math.round((s.count / maxCount) * 100);
-                            const storeReviewUrl = cardUrlMap.get(s.code);
+                            const storeReviewUrl = cardUrlMap.get(s.code) || (s.storeName ? getPublicGoogleReviewUrl("", s.storeName) : "");
 
                             const rankMedal =
                               idx === 0 ? "🥇" :
@@ -1313,7 +1313,7 @@ export default function TapsPage() {
                           </a>
                           {card.googleReviewUrl && (
                             <a
-                              href={getPublicGoogleReviewUrl(card.googleReviewUrl)}
+                              href={getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName)}
                               target="_blank"
                               rel="noreferrer"
                               style={{

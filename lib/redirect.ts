@@ -24,48 +24,49 @@ export function isAllowedReviewUrl(url: string): boolean {
 }
 
 /**
- * Mengubah URL tujuan Google Review (yang defaultnya langsung memunculkan pop-up formulir rating bintang)
- * menjadi halaman awal profil toko di Google Maps ("halaman awalnya aja"),
- * agar admin dapat melihat menu, informasi umum, dan daftar ulasan pelanggan tanpa terhalang pop-up rating.
+ * Mengubah link review menjadi URL ulasan publik di Google Search (BUKAN Google Maps).
  *
- * Contoh transformasi:
- * - https://search.google.com/local/writereview?placeid=ChIJ... -> https://www.google.com/maps/place/?q=place_id:ChIJ...
- * - https://search.google.com/local/reviews?placeid=ChIJ... -> https://www.google.com/maps/place/?q=place_id:ChIJ...
- * - https://g.page/r/XXXXX/review -> https://g.page/r/XXXXX
- * - https://g.page/namatoko/review/ -> https://g.page/namatoko
- * - Query param writereview dibersihkan
+ * Mengapa Google Search dan BUKAN Google Maps?
+ * Pada smartphone (Android & iPhone), link ke `google.com/maps` otomatis membuka aplikasi Google Maps bawaan.
+ * Aplikasi Google Maps mobile TIDAK mengenali query format `place_id:` melalui deep link,
+ * sehingga sering memunculkan error "Hasil tidak ditemukan" / kosong di mobile.
+ *
+ * Dengan mengarahkan ke Google Search (`www.google.com/search?q=...`):
+ * 1. Selalu terbuka di browser (Chrome / Safari), BUKAN membuka aplikasi Google Maps.
+ * 2. Menampilkan Google Knowledge Panel resmi toko beserta rating bintang dan tab ulasan pelanggan.
+ * 3. Tidak memunculkan dialog pop-up "Tulis ulasan bintang 5" (yang mengganggu jika admin hanya ingin memantau).
  */
-export function getPublicGoogleReviewUrl(url?: string): string {
+export function getPublicGoogleReviewUrl(url?: string, storeName?: string): string {
+  // 1. Jika nama toko tersedia, gunakan Google Search dengan query "[Nama Toko] ulasan"
+  if (storeName && storeName.trim()) {
+    const trimmed = storeName.trim();
+    const query = /ulasan|review/i.test(trimmed) ? trimmed : `${trimmed} ulasan`;
+    return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  }
+
   if (!url) return "";
   let clean = url.trim();
 
-  // 1. Ekstrak placeid jika ada di URL (misal: search.google.com/local/writereview?placeid=ChIJ... atau local/reviews?placeid=...):
-  // Konversi LANGSUNG ke URL Google Maps place resmi! Ini membuka halaman awal profil toko secara bersih
-  // tanpa memunculkan form / dialog pop-up rating bintang sama sekali.
-  const matchPlaceId = clean.match(/placeid=([a-zA-Z0-9_\-]+)/i);
-  if (matchPlaceId && matchPlaceId[1]) {
-    return `https://www.google.com/maps/place/?q=place_id:${matchPlaceId[1]}`;
+  // 2. Jika ada link g.page dengan nama toko (misal: https://g.page/tokoberkah/review)
+  const gPageMatch = clean.match(/g\.page\/([^/?#]+)/i);
+  if (gPageMatch && gPageMatch[1] && gPageMatch[1].toLowerCase() !== "r") {
+    const slug = decodeURIComponent(gPageMatch[1]).replace(/[-_]/g, " ");
+    return `https://www.google.com/search?q=${encodeURIComponent(slug + " ulasan")}`;
   }
 
-  // 2. Jika merupakan link g.page (misal: https://g.page/r/XXXXX/review atau https://g.page/tokoname/review):
-  // Hapus '/review' agar otomatis redirect ke halaman awal profil toko di Google Maps
-  clean = clean.replace(/\/review(\/)?(?=[?#]|$)/gi, "");
+  // 3. Jika ada placeid di URL tapi tidak ada nama toko
+  const matchPlaceId = clean.match(/placeid=([a-zA-Z0-9_\-]+)/i);
+  if (matchPlaceId && matchPlaceId[1]) {
+    return `https://www.google.com/search?q=${encodeURIComponent("ulasan google place_id:" + matchPlaceId[1])}`;
+  }
 
-  // 3. Ubah /local/writereview -> /local/reviews jika tidak ada placeid
+  // Fallback: bersihkan query param writereview
   clean = clean.replace(/\/local\/writereview/gi, "/local/reviews");
-
-  // 4. Bersihkan query param writereview jika ada (?writereview=1 dsb)
+  clean = clean.replace(/\/writereview/gi, "");
   clean = clean.replace(/([?&])writereview(=[^&#]*)?(&|$)/gi, (match, p1, p2, p3) => {
     return p3 === "&" ? p1 : "";
   });
-
-  // 5. Bersihkan trailing ? atau &
   clean = clean.replace(/[?&]$/, "");
-
-  // 6. Normalisasi jika query string diawali dengan &
-  if (clean.includes("&") && !clean.includes("?")) {
-    clean = clean.replace("&", "?");
-  }
 
   return clean;
 }

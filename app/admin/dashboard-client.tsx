@@ -216,7 +216,7 @@ export default function AdminDashboard() {
   // Active cards and calculations
   const totalTaps = useMemo(() => cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0), [cards]);
   const totalRevenue = useMemo(() => cards.reduce((sum, c) => sum + (c.price ?? 50000), 0), [cards]);
-  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "")])), [cards]);
+  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "", c.storeName)])), [cards]);
 
   const monthlyRevenueObj = useMemo(() => {
     return cards.reduce((acc, card) => {
@@ -752,7 +752,7 @@ export default function AdminDashboard() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {tapLogs.slice(0, 6).map((log, i) => {
-                      const reviewUrl = cardUrlMap.get(log.code);
+                      const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
                       return (
                         <div
                           key={`${log.code}-${log.tappedAt}-${i}`}
