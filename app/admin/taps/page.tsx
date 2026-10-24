@@ -3121,19 +3121,6 @@ export default function TapsPage() {
                                   </span>
                                   <span className="cafe-count-unit">tap</span>
                                 </div>
-
-                                {showReviewBtn && c.reviewUrl && (
-                                  <a
-                                    href={c.reviewUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="cafe-review-quick-btn"
-                                    title="Buka menu ulasan Google publik"
-                                  >
-                                    ⭐
-                                  </a>
-                                )}
                               </div>
                             </div>
                           );
