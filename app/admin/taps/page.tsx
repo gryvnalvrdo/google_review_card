@@ -381,6 +381,21 @@ export default function TapsPage() {
       weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
     });
   }
+  function formatTapDateTime(iso: string) {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString("id-ID", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const time = d.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return `${date} · ${time}`;
+  }
 
   // ── CRITICAL FIX: Filter out any logs from deleted cards! ───────────
   // Active cards are the single source of truth.
@@ -1545,14 +1560,68 @@ export default function TapsPage() {
                                     📋 Riwayat {storeTaps.length} Tap — {s.storeName}
                                   </div>
 
-                                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 240, overflowY: "auto" }}>
                                     {storeTaps.map((t, ti) => (
-                                      <div key={`${t.tappedAt}-${ti}`} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#C0C0D8", borderBottom: "1px solid rgba(255,255,255,0.03)", paddingBottom: 4 }}>
-                                        <span>
-                                          <strong style={{ color: "#7A7A95", marginRight: 6 }}>#{ti + 1}</strong>
-                                          {formatFull(t.tappedAt)}
-                                        </span>
-                                        <span style={{ color: "#34D399", fontWeight: 600 }}>{timeAgo(t.tappedAt)}</span>
+                                      <div
+                                        key={`${t.tappedAt}-${ti}`}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "space-between",
+                                          gap: 10,
+                                          padding: "7px 8px",
+                                          borderRadius: 6,
+                                          background: ti % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                                          borderBottom: "1px solid rgba(255,255,255,0.04)",
+                                        }}
+                                      >
+                                        {/* Kolom Kiri: #Nomor + Tanggal & Jam */}
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
+                                          <span
+                                            style={{
+                                              fontFamily: "monospace",
+                                              fontSize: "0.72rem",
+                                              fontWeight: 700,
+                                              color: ti === 0 ? "#FCD34D" : "#7A7A95",
+                                              minWidth: 26,
+                                              flexShrink: 0,
+                                            }}
+                                          >
+                                            #{ti + 1}
+                                          </span>
+                                          <span
+                                            style={{
+                                              color: "#E2E8F0",
+                                              fontSize: "0.75rem",
+                                              whiteSpace: "nowrap",
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                            }}
+                                            title={formatFull(t.tappedAt)}
+                                          >
+                                            {formatTapDateTime(t.tappedAt)}
+                                          </span>
+                                        </div>
+
+                                        {/* Kolom Kanan: 18m lalu / 2 hari lalu sejajar rapi */}
+                                        <div style={{ flexShrink: 0, textAlign: "right" }}>
+                                          <span
+                                            style={{
+                                              display: "inline-block",
+                                              fontSize: "0.68rem",
+                                              fontWeight: 700,
+                                              color: "#34D399",
+                                              background: "rgba(16,185,129,0.12)",
+                                              border: "1px solid rgba(16,185,129,0.25)",
+                                              padding: "2px 8px",
+                                              borderRadius: 6,
+                                              whiteSpace: "nowrap",
+                                              fontFamily: "monospace",
+                                            }}
+                                          >
+                                            {timeAgo(t.tappedAt)}
+                                          </span>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
