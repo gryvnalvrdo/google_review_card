@@ -1277,20 +1277,15 @@ export default function TapsPage() {
               <div>
 
 
-                {/* Filter Cepat Periode & Kalender Pemilih Tanggal */}
-                <div style={{
-                  display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center",
-                  justifyContent: "space-between", marginBottom: 18,
-                  padding: "12px 14px", background: "#111118", border: "1px solid rgba(255,255,255,0.06)",
-                  borderRadius: 12,
-                }}>
-                  {/* Pills Filter Periode Cepat: Hari Ini, 7 Hari Terakhir, 1 Bulan Terakhir, Semua */}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {/* Filter Cepat Periode & Kalender Pemilih Tanggal (2x2 Grid di Mobile, Rapi & Sejajar) */}
+                <div className="filter-toolbar-box">
+                  {/* Pills Filter Periode Cepat: 2x2 Grid di Mobile */}
+                  <div className="filter-pills-group">
                     <button
                       type="button"
                       onClick={() => { setDailyMode("today"); setCustomDate(""); }}
                       className={`btn ${dailyMode === "today" && !customDate ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                      style={{ padding: "8px 10px", fontSize: "0.76rem", borderRadius: 8 }}
                     >
                       ☀️ Hari Ini ({hariianPeriods.todayTotal})
                     </button>
@@ -1299,7 +1294,7 @@ export default function TapsPage() {
                       type="button"
                       onClick={() => { setDailyMode("last7"); setCustomDate(""); }}
                       className={`btn ${dailyMode === "last7" && !customDate ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                      style={{ padding: "8px 10px", fontSize: "0.76rem", borderRadius: 8 }}
                     >
                       📅 7 Hari Terakhir ({hariianPeriods.last7Total})
                     </button>
@@ -1308,7 +1303,7 @@ export default function TapsPage() {
                       type="button"
                       onClick={() => { setDailyMode("last30"); setCustomDate(""); }}
                       className={`btn ${dailyMode === "last30" && !customDate ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                      style={{ padding: "8px 10px", fontSize: "0.76rem", borderRadius: 8 }}
                     >
                       🗓️ 1 Bulan Terakhir ({hariianPeriods.last30Total})
                     </button>
@@ -1317,16 +1312,16 @@ export default function TapsPage() {
                       type="button"
                       onClick={() => { setDailyMode("all"); setCustomDate(""); }}
                       className={`btn ${dailyMode === "all" && !customDate ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                      style={{ padding: "8px 10px", fontSize: "0.76rem", borderRadius: 8 }}
                     >
                       📑 Semua ({filtered.length})
                     </button>
                   </div>
 
                   {/* Kalender Pemilih Tanggal */}
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <label htmlFor="custom-date-picker" style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                      🗓️ Pilih Hari / Tanggal:
+                  <div className="filter-date-group">
+                    <label htmlFor="custom-date-picker" style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      🗓️ Pilih Tanggal:
                     </label>
                     <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
                       <input
@@ -1341,9 +1336,9 @@ export default function TapsPage() {
                           background: customDate ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.04)",
                           border: customDate ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.12)",
                           color: "#F0F0FF",
-                          padding: "6px 12px",
+                          padding: "6px 10px",
                           borderRadius: 8,
-                          fontSize: "0.78rem",
+                          fontSize: "0.76rem",
                           fontWeight: 600,
                           outline: "none",
                           cursor: "pointer",

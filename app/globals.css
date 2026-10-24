@@ -657,7 +657,64 @@ html, body {
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
+/* Filter Period Pills & Date Picker Toolbar */
+.filter-toolbar-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  background: #111118;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+}
+
+.filter-pills-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+.filter-pills-group .btn {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.filter-date-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
 @media (min-width: 769px) {
   .sheet, .sheet-backdrop, .fab { display: none !important; }
+  
+  .filter-toolbar-box {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .filter-pills-group {
+    display: flex;
+    flex-wrap: wrap;
+    width: auto;
+  }
+  .filter-pills-group .btn {
+    width: auto;
+  }
+  .filter-date-group {
+    width: auto;
+    padding-top: 0;
+    border-top: none;
+    justify-content: flex-end;
+  }
 }
+
 
