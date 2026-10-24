@@ -85,44 +85,65 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
   timeAgo: (iso: string) => string;
   formatFull: (iso: string) => string;
 }) {
-  const hue = log.storeName.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+  const d = new Date(log.tappedAt);
+  const timeStr = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+
   return (
     <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-      padding: "12px 14px",
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+      padding: "12px 16px",
       background: "#111118",
       borderBottom: "1px solid rgba(255,255,255,0.04)",
-      borderLeft: `3px solid ${accentColor}`,
+      borderLeft: `4px solid ${accentColor}`,
       flexWrap: "wrap",
       transition: "background 0.15s",
     }}>
-      {/* Avatar Icon + Info */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 200px" }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-          background: `linear-gradient(135deg, hsl(${hue},65%,26%), hsl(${(hue+45)%360},60%,38%))`,
-          border: `1px solid hsl(${hue},50%,38%)`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "1rem",
-          boxShadow: `0 2px 10px hsla(${hue},60%,20%,0.4)`,
-        }}>📲</div>
+      {/* Kolom Kiri: Jam Tap Tegas + Nama Toko & Kode */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 230px" }}>
+        {/* Badge Jam Tap Sangat Menonjol */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 8,
+            padding: "5px 8px",
+            textAlign: "center",
+            flexShrink: 0,
+            minWidth: 54,
+          }}
+          title={formatFull(log.tappedAt)}
+        >
+          <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#F0F0FF", fontFamily: "monospace", lineHeight: 1.1 }}>
+            {timeStr}
+          </div>
+          <div style={{ fontSize: "0.62rem", color: "var(--text-muted)", marginTop: 2, textTransform: "uppercase" }}>
+            {dateStr}
+          </div>
+        </div>
 
+        {/* Info Toko & Kode */}
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", wordBreak: "break-word" }}>
+            <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.92rem", wordBreak: "break-word" }}>
               {log.storeName}
             </span>
-            <span style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "#818CF8", background: "rgba(99,102,241,0.12)", padding: "1px 6px", borderRadius: 4, flexShrink: 0 }}>
+            <span style={{
+              fontFamily: "monospace", fontSize: "0.68rem", fontWeight: 700,
+              color: "#818CF8", background: "rgba(99,102,241,0.12)",
+              border: "1px solid rgba(99,102,241,0.25)",
+              padding: "1px 6px", borderRadius: 5, flexShrink: 0,
+            }}>
               {log.code}
             </span>
           </div>
-          <div style={{ fontSize: "0.72rem", color: "#7A7A95", marginTop: 2 }}>
-            {formatFull(log.tappedAt)}
+          <div style={{ fontSize: "0.72rem", color: "#7A7A95", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
+            <span>🕒 {timeAgo(log.tappedAt)}</span>
           </div>
         </div>
       </div>
 
-      {/* Actions: Review Link + Time pill */}
+      {/* Kolom Kanan: Tombol Menu Ulasan */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: "auto" }}>
         {reviewUrl && (
           <a
@@ -130,26 +151,16 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
             target="_blank"
             rel="noreferrer"
             style={{
-              fontSize: "0.72rem", fontWeight: 700, color: "#34D399",
-              background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)",
-              padding: "4px 9px", borderRadius: 8, textDecoration: "none",
-              display: "inline-flex", alignItems: "center", gap: 4,
+              fontSize: "0.74rem", fontWeight: 700, color: "#FCD34D",
+              background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
+              padding: "6px 12px", borderRadius: 8, textDecoration: "none",
+              display: "inline-flex", alignItems: "center", gap: 5,
             }}
-            title="Buka halaman awal toko untuk melihat ulasan pelanggan"
+            title="Buka ulasan Google toko ini di browser"
           >
-            ⭐ Review ↗
+            <span>⭐</span> Menu Ulasan ↗
           </a>
         )}
-
-        <span style={{
-          fontSize: "0.72rem", fontWeight: 700,
-          color: accentColor,
-          background: `${accentColor}15`,
-          border: `1px solid ${accentColor}35`,
-          padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap",
-        }}>
-          {timeAgo(log.tappedAt)}
-        </span>
       </div>
     </div>
   );
@@ -159,7 +170,7 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
 function PeriodSection({
   title,
   entries,
-  defaultOpen = false,
+  defaultOpen = true,
   accentColor = "#F59E0B",
   cardUrlMap,
   formatFull,
@@ -177,8 +188,9 @@ function PeriodSection({
   if (entries.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div style={{ marginBottom: 12, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
       <button
+        type="button"
         onClick={() => setOpen(o => !o)}
         style={{
           width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -195,14 +207,14 @@ function PeriodSection({
             width: 8, height: 8, borderRadius: "50%",
             background: accentColor, flexShrink: 0, boxShadow: `0 0 8px ${accentColor}99`,
           }} />
-          <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "#E0E0F0" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase", color: "#E0E0F0" }}>
             {title}
           </span>
         </span>
 
         <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
-            fontSize: "0.72rem", fontWeight: 800,
+            fontSize: "0.74rem", fontWeight: 800,
             color: accentColor,
             background: `${accentColor}18`,
             border: `1px solid ${accentColor}40`,
@@ -211,7 +223,7 @@ function PeriodSection({
             {entries.length} TAP
           </span>
           <span style={{
-            fontSize: "0.7rem", color: "#7A7A95",
+            fontSize: "0.72rem", color: "#7A7A95",
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 0.25s", display: "inline-block",
           }}>▼</span>
@@ -224,7 +236,7 @@ function PeriodSection({
             <TapItem
               key={`${log.code}-${log.tappedAt}-${i}`}
               log={log}
-              reviewUrl={cardUrlMap.get(log.code)}
+              reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
               accentColor={accentColor}
               timeAgo={timeAgo}
               formatFull={formatFull}
@@ -245,7 +257,10 @@ export default function TapsPage() {
   const [autoRefreshSec, setAutoRefreshSec] = useState<number>(30);
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState<"bulanan" | "harian" | "tren" | "tidur">("bulanan");
+  const [activeTab, setActiveTab] = useState<"harian" | "bulanan" | "tren" | "tidur">("harian");
+  const [dailyMode, setDailyMode] = useState<"today" | "yesterday" | "last7" | "all" | "custom">("today");
+  const [customDate, setCustomDate] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
   const [newTapAlert, setNewTapAlert] = useState<TapLogEntry | null>(null);
@@ -331,6 +346,26 @@ export default function TapsPage() {
     return new Date(parseInt(y), parseInt(m) - 1, 1)
       .toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   }
+  function toDateInputValue(d: Date) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  function matchesDate(iso: string, targetYmd: string) {
+    const d = new Date(iso);
+    return toDateInputValue(d) === targetYmd;
+  }
+  function formatDateIndo(dateInput: string | Date) {
+    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    if (isNaN(d.getTime())) return String(dateInput);
+    return d.toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
   function timeAgo(iso: string) {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
@@ -391,30 +426,41 @@ export default function TapsPage() {
     l.code.toLowerCase().includes(search.toLowerCase())
   ), [validLogs, search]);
 
+  const customDateEntries = useMemo(() => {
+    if (!customDate) return [];
+    return filtered.filter(l => matchesDate(l.tappedAt, customDate));
+  }, [filtered, customDate]);
+
   const hariianPeriods = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toDateString();
-    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-    const cutoff7 = new Date(now); cutoff7.setDate(now.getDate() - 7); cutoff7.setHours(0, 0, 0, 0);
-    const cutoffMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayYmd = toDateInputValue(now);
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yestYmd = toDateInputValue(yesterday);
+
+    const cutoff7 = new Date(now);
+    cutoff7.setDate(now.getDate() - 7);
+    cutoff7.setHours(0, 0, 0, 0);
 
     const today: TapLogEntry[] = [];
     const yest: TapLogEntry[] = [];
     const last7: TapLogEntry[] = [];
-    const thisMonth: TapLogEntry[] = [];
     const older: TapLogEntry[] = [];
 
     for (const entry of filtered) {
       const d = new Date(entry.tappedAt);
-      const ds = d.toDateString();
-      if (ds === todayStr) { today.push(entry); continue; }
-      if (ds === yesterdayStr) { yest.push(entry); continue; }
-      if (d >= cutoff7) { last7.push(entry); continue; }
-      if (d >= cutoffMonth) { thisMonth.push(entry); continue; }
-      older.push(entry);
+      const ymd = toDateInputValue(d);
+      if (ymd === todayYmd) {
+        today.push(entry);
+      } else if (ymd === yestYmd) {
+        yest.push(entry);
+      } else if (d >= cutoff7) {
+        last7.push(entry);
+      } else {
+        older.push(entry);
+      }
     }
-    return { today, yest, last7, thisMonth, older };
+    return { today, yest, last7, older };
   }, [filtered]);
 
   // ── Tab: Bulanan (Leaderboard Tanpa Kartu Terhapus) ───────────────────
@@ -484,6 +530,21 @@ export default function TapsPage() {
     }).filter(mg => mg.byStore.length > 0),
     [monthlyGroups, search]
   );
+
+  const selectedMonthKey = selectedMonth || thisMonthKey;
+  const pastMonths = useMemo(() => {
+    return monthlyGroups.filter(mg => mg.monthKey !== thisMonthKey);
+  }, [monthlyGroups, thisMonthKey]);
+
+  const selectedMonthGroup = useMemo(() => {
+    return (
+      filteredMonthly.find(mg => mg.monthKey === selectedMonthKey) ||
+      monthlyGroups.find(mg => mg.monthKey === selectedMonthKey) ||
+      null
+    );
+  }, [filteredMonthly, monthlyGroups, selectedMonthKey]);
+
+  const isCurrentSelected = selectedMonthKey === thisMonthKey;
 
   // ── Tab: Tren ────────────────────────────────────────────────────────
   const trendData = useMemo(() => {
@@ -787,32 +848,32 @@ export default function TapsPage() {
           {/* Sub Navigation Tabs */}
           <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, marginBottom: 18, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <button
-              onClick={() => setActiveTab("bulanan")}
-              className={`btn ${activeTab === "bulanan" ? "btn-primary" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
-            >
-              🏆 Peringkat Per Bulan
-            </button>
-            <button
               onClick={() => setActiveTab("harian")}
               className={`btn ${activeTab === "harian" ? "btn-primary" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              📋 Feed Harian
+              <span>📋</span> Riwayat Tap Harian
+            </button>
+            <button
+              onClick={() => setActiveTab("bulanan")}
+              className={`btn ${activeTab === "bulanan" ? "btn-primary" : "btn-ghost"}`}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <span>📊</span> Rekap Bulanan & Peringkat
             </button>
             <button
               onClick={() => setActiveTab("tren")}
               className={`btn ${activeTab === "tren" ? "btn-primary" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              📈 Tren &amp; Jam Ramai
+              <span>📈</span> Tren & Jam Sibuk
             </button>
             <button
               onClick={() => setActiveTab("tidur")}
               className={`btn ${activeTab === "tidur" ? "btn-danger" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              😴 Kartu Belum Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
+              <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
             </button>
           </div>
 
@@ -839,7 +900,382 @@ export default function TapsPage() {
             )}
           </div>
 
-          {/* ═════════ TAB 1: BULANAN (LEADERBOARD) ═════════ */}
+          {/* ═════════ TAB 1: RIWAYAT TAP HARIAN (DEFAULT UTAMA) ═════════ */}
+          {activeTab === "harian" && (
+            loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                <p style={{ color: "var(--text-muted)" }}>Memuat aktivitas riwayat tap...</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>📲</div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Tidak Ada Data</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  {search ? `Tidak ditemukan tap untuk "${search}".` : "Belum ada aktivitas tap yang tercatat."}
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Banner Pintasan Rekap Bulan Ini */}
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "10px 14px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)",
+                  borderRadius: 10, marginBottom: 16, flexWrap: "wrap", gap: 10,
+                }}>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                    Total tap bulan ini ({formatMonthLabel(thisMonthKey)}): <strong style={{ color: "#FCD34D" }}>{thisMonthCount} tap</strong>
+                  </div>
+                  <button
+                    onClick={() => { setActiveTab("bulanan"); setSelectedMonth(thisMonthKey); }}
+                    className="btn btn-ghost"
+                    style={{ padding: "5px 12px", fontSize: "0.75rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
+                  >
+                    📊 Buka Rekap Bulan Ini & Peringkat Toko ↗
+                  </button>
+                </div>
+
+                {/* Filter Cepat Periode & Kalender Pemilih Tanggal */}
+                <div style={{
+                  display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center",
+                  justifyContent: "space-between", marginBottom: 18,
+                  padding: "12px 14px", background: "#111118", border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: 12,
+                }}>
+                  {/* Pills Filter Periode Cepat */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <button
+                      type="button"
+                      onClick={() => { setDailyMode("today"); setCustomDate(""); }}
+                      className={`btn ${dailyMode === "today" && !customDate ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                    >
+                      ☀️ Hari Ini ({hariianPeriods.today.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setDailyMode("yesterday"); setCustomDate(""); }}
+                      className={`btn ${dailyMode === "yesterday" && !customDate ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                    >
+                      ⏱️ Kemarin ({hariianPeriods.yest.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setDailyMode("last7"); setCustomDate(""); }}
+                      className={`btn ${dailyMode === "last7" && !customDate ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                    >
+                      📅 7 Hari Terakhir ({hariianPeriods.today.length + hariianPeriods.yest.length + hariianPeriods.last7.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setDailyMode("all"); setCustomDate(""); }}
+                      className={`btn ${dailyMode === "all" && !customDate ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
+                    >
+                      📑 Semua ({filtered.length})
+                    </button>
+                  </div>
+
+                  {/* Kalender Pemilih Tanggal */}
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <label htmlFor="custom-date-picker" style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                      🗓️ Pilih Hari / Tanggal:
+                    </label>
+                    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                      <input
+                        id="custom-date-picker"
+                        type="date"
+                        value={customDate}
+                        onChange={(e) => {
+                          setCustomDate(e.target.value);
+                          if (e.target.value) setDailyMode("custom");
+                        }}
+                        style={{
+                          background: customDate ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.04)",
+                          border: customDate ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.12)",
+                          color: "#F0F0FF",
+                          padding: "6px 12px",
+                          borderRadius: 8,
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                          outline: "none",
+                          cursor: "pointer",
+                        }}
+                      />
+                      {customDate && (
+                        <button
+                          type="button"
+                          onClick={() => { setCustomDate(""); setDailyMode("today"); }}
+                          style={{
+                            marginLeft: 6, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
+                            color: "#FCA5A5", cursor: "pointer", fontWeight: 700, fontSize: "0.72rem",
+                            padding: "4px 8px", borderRadius: 6,
+                          }}
+                          title="Reset filter tanggal"
+                        >
+                          ✕ Reset
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* MODE 1: HARI INI */}
+                {dailyMode === "today" && !customDate && (
+                  hariianPeriods.today.length === 0 ? (
+                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>☀️</div>
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
+                        Belum Ada Tap Masuk Hari Ini
+                      </h3>
+                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 18px", lineHeight: 1.5 }}>
+                        Pelanggan belum men-tap kartu NFC atau scan QR toko hari ini ({formatDateIndo(new Date())}).
+                        Tap baru akan otomatis terdeteksi via live auto-refresh.
+                      </p>
+                      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                        {hariianPeriods.yest.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setDailyMode("yesterday")}
+                            className="btn btn-ghost"
+                            style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#F59E0B", borderColor: "rgba(245,158,11,0.3)" }}
+                          >
+                            ⏱️ Lihat Tap Kemarin ({hariianPeriods.yest.length} tap)
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setDailyMode("all")}
+                          className="btn btn-ghost"
+                          style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
+                        >
+                          📑 Lihat Semua Riwayat ({filtered.length} tap)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div style={{
+                        padding: "12px 16px", background: "#13131C", borderLeft: "4px solid #10B981",
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                      }}>
+                        <span style={{ fontWeight: 800, fontSize: "0.84rem", color: "#34D399", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                          ☀️ Tap Masuk Hari Ini — {formatDateIndo(new Date())}
+                        </span>
+                        <span style={{
+                          fontSize: "0.75rem", fontWeight: 800, color: "#34D399",
+                          background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.35)",
+                          padding: "3px 10px", borderRadius: 999,
+                        }}>
+                          {hariianPeriods.today.length} TAP
+                        </span>
+                      </div>
+                      <div>
+                        {hariianPeriods.today.map((log, i) => (
+                          <TapItem
+                            key={`${log.code}-${log.tappedAt}-${i}`}
+                            log={log}
+                            reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
+                            accentColor="#10B981"
+                            timeAgo={timeAgo}
+                            formatFull={formatFull}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {/* MODE 2: KEMARIN */}
+                {dailyMode === "yesterday" && !customDate && (
+                  hariianPeriods.yest.length === 0 ? (
+                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>⏱️</div>
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
+                        Tidak Ada Tap Kemarin
+                      </h3>
+                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 400, margin: "0 auto 16px" }}>
+                        Tidak ada aktivitas tap kartu yang tercatat pada hari kemarin.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setDailyMode("today")}
+                        className="btn btn-ghost"
+                        style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#10B981", borderColor: "rgba(16,185,129,0.3)" }}
+                      >
+                        Kembali ke Hari Ini
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div style={{
+                        padding: "12px 16px", background: "#13131C", borderLeft: "4px solid #F59E0B",
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                      }}>
+                        <span style={{ fontWeight: 800, fontSize: "0.84rem", color: "#FCD34D", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                          ⏱️ Tap Kemarin ({hariianPeriods.yest.length} tap)
+                        </span>
+                        <span style={{
+                          fontSize: "0.75rem", fontWeight: 800, color: "#FCD34D",
+                          background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.35)",
+                          padding: "3px 10px", borderRadius: 999,
+                        }}>
+                          {hariianPeriods.yest.length} TAP
+                        </span>
+                      </div>
+                      <div>
+                        {hariianPeriods.yest.map((log, i) => (
+                          <TapItem
+                            key={`${log.code}-${log.tappedAt}-${i}`}
+                            log={log}
+                            reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
+                            accentColor="#F59E0B"
+                            timeAgo={timeAgo}
+                            formatFull={formatFull}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {/* MODE 3: 7 HARI TERAKHIR */}
+                {dailyMode === "last7" && !customDate && (
+                  <div>
+                    <PeriodSection
+                      title="Hari Ini"
+                      entries={hariianPeriods.today}
+                      defaultOpen={true}
+                      accentColor="#10B981"
+                      cardUrlMap={cardUrlMap}
+                      formatFull={formatFull}
+                      timeAgo={timeAgo}
+                    />
+                    <PeriodSection
+                      title="Kemarin"
+                      entries={hariianPeriods.yest}
+                      defaultOpen={true}
+                      accentColor="#F59E0B"
+                      cardUrlMap={cardUrlMap}
+                      formatFull={formatFull}
+                      timeAgo={timeAgo}
+                    />
+                    <PeriodSection
+                      title="2 – 7 Hari Terakhir"
+                      entries={hariianPeriods.last7}
+                      defaultOpen={true}
+                      accentColor="#6366F1"
+                      cardUrlMap={cardUrlMap}
+                      formatFull={formatFull}
+                      timeAgo={timeAgo}
+                    />
+                  </div>
+                )}
+
+                {/* MODE 4: SEMUA RIWAYAT */}
+                {dailyMode === "all" && !customDate && (
+                  <div>
+                    <PeriodSection
+                      title="Hari Ini"
+                      entries={hariianPeriods.today}
+                      defaultOpen={true}
+                      accentColor="#10B981"
+                      cardUrlMap={cardUrlMap}
+                      formatFull={formatFull}
+                      timeAgo={timeAgo}
+                    />
+                    <PeriodSection
+                      title="Kemarin"
+                      entries={hariianPeriods.yest}
+                      defaultOpen={hariianPeriods.today.length === 0}
+                      accentColor="#F59E0B"
+                      cardUrlMap={cardUrlMap}
+                      formatFull={formatFull}
+                      timeAgo={timeAgo}
+                    />
+                    <PeriodSection
+                      title="7 Hari Terakhir"
+                      entries={hariianPeriods.last7}
+                      defaultOpen={false}
+                      accentColor="#6366F1"
+                      cardUrlMap={cardUrlMap}
+                      formatFull={formatFull}
+                      timeAgo={timeAgo}
+                    />
+                    <PeriodSection
+                      title="Lebih Lama"
+                      entries={hariianPeriods.older}
+                      defaultOpen={false}
+                      accentColor="#6B7280"
+                      cardUrlMap={cardUrlMap}
+                      formatFull={formatFull}
+                      timeAgo={timeAgo}
+                    />
+                  </div>
+                )}
+
+                {/* MODE 5: PILIH TANGGAL SPESIFIK */}
+                {customDate && (
+                  customDateEntries.length === 0 ? (
+                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>📅</div>
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
+                        Tidak Ada Data Tap
+                      </h3>
+                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 16px" }}>
+                        Tidak ada aktivitas tap kartu pada tanggal <strong>{formatDateIndo(customDate)}</strong>.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setCustomDate(""); setDailyMode("today"); }}
+                        className="btn btn-ghost"
+                        style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#34D399", borderColor: "rgba(16,185,129,0.3)" }}
+                      >
+                        Kembali ke Hari Ini
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div style={{
+                        padding: "12px 16px", background: "#13131C", borderLeft: "4px solid #6366F1",
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                      }}>
+                        <span style={{ fontWeight: 800, fontSize: "0.84rem", color: "#A5B4FC", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                          🗓️ Riwayat Tap: {formatDateIndo(customDate)}
+                        </span>
+                        <span style={{
+                          fontSize: "0.75rem", fontWeight: 800, color: "#A5B4FC",
+                          background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)",
+                          padding: "3px 10px", borderRadius: 999,
+                        }}>
+                          {customDateEntries.length} TAP
+                        </span>
+                      </div>
+                      <div>
+                        {customDateEntries.map((log, i) => (
+                          <TapItem
+                            key={`${log.code}-${log.tappedAt}-${i}`}
+                            log={log}
+                            reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
+                            accentColor="#6366F1"
+                            timeAgo={timeAgo}
+                            formatFull={formatFull}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )
+          )}
+
+          {/* ═════════ TAB 2: REKAP BULANAN & PERINGKAT TOKO ═════════ */}
           {activeTab === "bulanan" && (
             loading ? (
               <div style={{ textAlign: "center", padding: "60px 0" }}>
@@ -857,15 +1293,64 @@ export default function TapsPage() {
                 </p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {filteredMonthly.map((mg) => {
-                  const isOpen = expandedMonth === mg.monthKey;
+              <div>
+                {/* Selector Pemilih Bulan */}
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  gap: 12, marginBottom: 18, flexWrap: "wrap",
+                  background: "#111118", padding: "12px 16px",
+                  borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)",
+                }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#E0E0F0" }}>
+                      Pilih Bulan:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMonth(thisMonthKey)}
+                      className={`btn ${selectedMonthKey === thisMonthKey ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "6px 14px", fontSize: "0.8rem", borderRadius: 8 }}
+                    >
+                      🌟 Bulan Ini ({formatMonthLabel(thisMonthKey)})
+                    </button>
+                  </div>
+
+                  {pastMonths.length > 0 && (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <label htmlFor="past-month-select" style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                        Bulan Sebelumnya:
+                      </label>
+                      <select
+                        id="past-month-select"
+                        value={selectedMonthKey !== thisMonthKey ? selectedMonthKey : ""}
+                        onChange={(e) => {
+                          if (e.target.value) setSelectedMonth(e.target.value);
+                        }}
+                        style={{
+                          background: "#13131C", border: "1px solid rgba(255,255,255,0.15)",
+                          color: "#F0F0FF", padding: "6px 12px", borderRadius: 8,
+                          fontSize: "0.8rem", fontWeight: 600, outline: "none", cursor: "pointer",
+                        }}
+                      >
+                        <option value="" disabled>-- Pilih Bulan Lalu --</option>
+                        {pastMonths.map(pm => (
+                          <option key={pm.monthKey} value={pm.monthKey} style={{ background: "#111118" }}>
+                            {pm.label} ({pm.total} Tap)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tampilan Rekap Bulan Terpilih */}
+                {selectedMonthGroup ? (() => {
+                  const mg = selectedMonthGroup;
                   const isThisMonth = mg.monthKey === thisMonthKey;
                   const maxCount = Math.max(...mg.byStore.map(s => s.count), 1);
 
                   return (
                     <div
-                      key={mg.monthKey}
                       className="card"
                       style={{
                         padding: 0,
@@ -874,20 +1359,20 @@ export default function TapsPage() {
                         background: "#111118",
                       }}
                     >
-                      {/* Month Header Accordion */}
+                      {/* Month Header Banner */}
                       <div
-                        onClick={() => { setExpandedMonth(isOpen ? null : mg.monthKey); setExpandedStore(null); }}
                         style={{
                           display: "flex", justifyContent: "space-between", alignItems: "center",
-                          padding: "16px 20px", cursor: "pointer", userSelect: "none",
+                          padding: "16px 20px",
                           background: isThisMonth ? "rgba(245,158,11,0.06)" : "transparent",
-                          borderBottom: isOpen ? "1px solid rgba(255,255,255,0.06)" : "none",
+                          borderBottom: "1px solid rgba(255,255,255,0.06)",
+                          flexWrap: "wrap", gap: 10,
                         }}
                       >
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#F0F0FF" }}>
-                              {mg.label}
+                            <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#F0F0FF" }}>
+                              🏆 Rekap {mg.label}
                             </span>
                             {isThisMonth && (
                               <span style={{
@@ -901,265 +1386,185 @@ export default function TapsPage() {
                             )}
                           </div>
                           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4 }}>
-                            {mg.byStore.length} Toko Terdaftar Aktif · Total {mg.total} Tap
+                            {mg.byStore.length} Toko Terdaftar Aktif · Total {mg.total} Tap Pelanggan
                           </div>
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FCD34D" }}>
+                        <div style={{ textAlign: "right" }}>
+                          <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#FCD34D" }}>
                             {mg.total}×
                           </span>
-                          <span style={{
-                            fontSize: "0.8rem", color: "var(--text-muted)",
-                            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                            transition: "transform 0.2s",
-                          }}>▼</span>
+                          <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)" }}>Total Tap</span>
                         </div>
                       </div>
 
                       {/* Store Rankings List */}
-                      {isOpen && (
-                        <div style={{ padding: "8px 14px 16px" }}>
-                          {mg.byStore.map((s, idx) => {
-                            const delta = s.lastMonthCount > 0 ? s.count - s.lastMonthCount : null;
-                            const storeKey = `${mg.monthKey}::${s.storeName}`;
-                            const isStoreOpen = expandedStore === storeKey;
-                            const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
-                            const percent = Math.round((s.count / maxCount) * 100);
-                            const storeReviewUrl = cardUrlMap.get(s.code) || (s.storeName ? getPublicGoogleReviewUrl("", s.storeName) : "");
+                      <div style={{ padding: "8px 14px 16px" }}>
+                        {mg.byStore.map((s, idx) => {
+                          const delta = s.lastMonthCount > 0 ? s.count - s.lastMonthCount : null;
+                          const storeKey = `${mg.monthKey}::${s.storeName}`;
+                          const isStoreOpen = expandedStore === storeKey;
+                          const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
+                          const percent = Math.round((s.count / maxCount) * 100);
+                          const storeReviewUrl = cardUrlMap.get(s.code) || (s.storeName ? getPublicGoogleReviewUrl("", s.storeName) : "");
 
-                            const rankMedal =
-                              idx === 0 ? "🥇" :
-                              idx === 1 ? "🥈" :
-                              idx === 2 ? "🥉" : `#${idx + 1}`;
+                          const rankMedal =
+                            idx === 0 ? "🥇" :
+                            idx === 1 ? "🥈" :
+                            idx === 2 ? "🥉" : `#${idx + 1}`;
 
-                            return (
-                              <div key={s.storeName} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                                <div
-                                  style={{
-                                    padding: "12px 6px",
-                                    borderRadius: 8,
-                                    background: isStoreOpen ? "rgba(99,102,241,0.05)" : "transparent",
-                                    transition: "background 0.15s",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 8,
-                                  }}
-                                >
-                                  {/* Top row: Rank, Store Name, Count, Delta */}
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-                                      <span style={{
-                                        fontSize: idx < 3 ? "1.2rem" : "0.85rem",
-                                        fontWeight: 800,
-                                        width: 28,
-                                        textAlign: "center",
-                                        flexShrink: 0,
-                                        color: idx < 3 ? undefined : "var(--text-muted)",
-                                      }}>
-                                        {rankMedal}
-                                      </span>
+                          return (
+                            <div key={s.storeName} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                              <div
+                                style={{
+                                  padding: "12px 6px",
+                                  borderRadius: 8,
+                                  background: isStoreOpen ? "rgba(99,102,241,0.05)" : "transparent",
+                                  transition: "background 0.15s",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 8,
+                                }}
+                              >
+                                {/* Top row: Rank, Store Name, Count, Delta */}
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                                    <span style={{
+                                      fontSize: idx < 3 ? "1.2rem" : "0.85rem",
+                                      fontWeight: 800,
+                                      width: 28,
+                                      textAlign: "center",
+                                      flexShrink: 0,
+                                      color: idx < 3 ? undefined : "var(--text-muted)",
+                                    }}>
+                                      {rankMedal}
+                                    </span>
 
-                                      <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF", wordBreak: "break-word" }}>
-                                          {s.storeName}
-                                        </div>
-                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
-                                          <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{s.code}</span>
-                                        </div>
+                                    <div style={{ minWidth: 0 }}>
+                                      <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF", wordBreak: "break-word" }}>
+                                        {s.storeName}
+                                      </div>
+                                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                                        <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{s.code}</span>
                                       </div>
                                     </div>
+                                  </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                                      <span style={{ fontWeight: 800, fontSize: "1.05rem", color: idx === 0 ? "#FCD34D" : "#E0E0F0" }}>
-                                        {s.count}×
-                                      </span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                    <span style={{ fontWeight: 800, fontSize: "1.05rem", color: idx === 0 ? "#FCD34D" : "#E0E0F0" }}>
+                                      {s.count}×
+                                    </span>
 
-                                      {isThisMonth ? (
-                                        delta === null ? (
-                                          <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                            baru
-                                          </span>
-                                        ) : delta > 0 ? (
-                                          <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                            +{delta}
-                                          </span>
-                                        ) : delta < 0 ? (
-                                          <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#FCA5A5", background: "rgba(239,68,68,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                            {delta}
-                                          </span>
-                                        ) : (
-                                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>±0</span>
-                                        )
+                                    {isThisMonth ? (
+                                      delta === null ? (
+                                        <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                          baru
+                                        </span>
+                                      ) : delta > 0 ? (
+                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                          +{delta}
+                                        </span>
+                                      ) : delta < 0 ? (
+                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#FCA5A5", background: "rgba(239,68,68,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                          {delta}
+                                        </span>
                                       ) : (
-                                        <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>selesai</span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Middle row: Progress bar */}
-                                  <div style={{ background: "rgba(255,255,255,0.06)", height: 6, borderRadius: 999, overflow: "hidden", margin: "2px 0" }}>
-                                    <div
-                                      style={{
-                                        width: `${percent}%`,
-                                        height: "100%",
-                                        background: idx === 0
-                                          ? "linear-gradient(90deg, #F59E0B, #FCD34D)"
-                                          : "linear-gradient(90deg, #4F46E5, #818CF8)",
-                                        borderRadius: 999,
-                                      }}
-                                    />
-                                  </div>
-
-                                  {/* Bottom row: Actions (Detail tap + Google Review link) */}
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "0.72rem" }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
-                                      style={{
-                                        background: "none", border: "none", color: "#A5B4FC",
-                                        cursor: "pointer", fontSize: "0.72rem", padding: "4px 0",
-                                        display: "flex", alignItems: "center", gap: 4,
-                                      }}
-                                    >
-                                      {isStoreOpen ? "▲ Tutup riwayat jam" : `▼ Lihat detail ${s.count} tap`}
-                                    </button>
-
-                                    {storeReviewUrl && (
-                                      <a
-                                        href={storeReviewUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        style={{
-                                          color: "#34D399", textDecoration: "none", fontWeight: 600,
-                                          display: "inline-flex", alignItems: "center", gap: 4,
-                                          background: "rgba(16,185,129,0.08)", padding: "3px 8px", borderRadius: 6,
-                                          border: "1px solid rgba(16,185,129,0.25)",
-                                        }}
-                                        title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
-                                      >
-                                        ⭐ Buka Menu Ulasan ↗
-                                      </a>
+                                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>±0</span>
+                                      )
+                                    ) : (
+                                      <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>selesai</span>
                                     )}
                                   </div>
                                 </div>
 
-                                {/* Expanded Store Tap Drilldown */}
-                                {isStoreOpen && (
-                                  <div style={{
-                                    margin: "4px 0 12px 10px",
-                                    padding: "12px 14px",
-                                    background: "rgba(0,0,0,0.3)",
-                                    border: "1px solid rgba(255,255,255,0.06)",
-                                    borderRadius: 10,
-                                  }}>
-                                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8 }}>
-                                      📋 Riwayat {storeTaps.length} Tap — {s.storeName}
-                                    </div>
+                                {/* Middle row: Progress bar */}
+                                <div style={{ background: "rgba(255,255,255,0.06)", height: 6, borderRadius: 999, overflow: "hidden", margin: "2px 0" }}>
+                                  <div
+                                    style={{
+                                      width: `${percent}%`,
+                                      height: "100%",
+                                      background: idx === 0
+                                        ? "linear-gradient(90deg, #F59E0B, #FCD34D)"
+                                        : "linear-gradient(90deg, #4F46E5, #818CF8)",
+                                      borderRadius: 999,
+                                    }}
+                                  />
+                                </div>
 
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
-                                      {storeTaps.map((t, ti) => (
-                                        <div key={`${t.tappedAt}-${ti}`} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#C0C0D8", borderBottom: "1px solid rgba(255,255,255,0.03)", paddingBottom: 4 }}>
-                                          <span>
-                                            <strong style={{ color: "#7A7A95", marginRight: 6 }}>#{ti + 1}</strong>
-                                            {formatFull(t.tappedAt)}
-                                          </span>
-                                          <span style={{ color: "#34D399", fontWeight: 600 }}>{timeAgo(t.tappedAt)}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
+                                {/* Bottom row: Actions (Detail tap + Google Review link) */}
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "0.72rem" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
+                                    style={{
+                                      background: "none", border: "none", color: "#A5B4FC",
+                                      cursor: "pointer", fontSize: "0.72rem", padding: "4px 0",
+                                      display: "flex", alignItems: "center", gap: 4,
+                                    }}
+                                  >
+                                    {isStoreOpen ? "▲ Tutup rincian jam" : `▼ Lihat detail ${s.count} tap`}
+                                  </button>
+
+                                  {storeReviewUrl && (
+                                    <a
+                                      href={storeReviewUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{
+                                        color: "#FCD34D", textDecoration: "none", fontWeight: 600,
+                                        display: "inline-flex", alignItems: "center", gap: 4,
+                                        background: "rgba(245,158,11,0.08)", padding: "3px 8px", borderRadius: 6,
+                                        border: "1px solid rgba(245,158,11,0.25)",
+                                      }}
+                                      title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
+                                    >
+                                      ⭐ Menu Ulasan ↗
+                                    </a>
+                                  )}
+                                </div>
                               </div>
-                            );
-                          })}
 
-                          {isThisMonth && mg.byStore.some(s => s.lastMonthCount > 0) && (
-                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 12, paddingLeft: 6 }}>
-                              * Delta (+/−) menunjukkan perbandingan aktivitas tap dibanding bulan lalu ({formatMonthLabel(lastMonthKey)}).
+                              {/* Expanded Store Tap Drilldown */}
+                              {isStoreOpen && (
+                                <div style={{
+                                  margin: "4px 0 12px 10px",
+                                  padding: "12px 14px",
+                                  background: "rgba(0,0,0,0.3)",
+                                  border: "1px solid rgba(255,255,255,0.06)",
+                                  borderRadius: 10,
+                                }}>
+                                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8 }}>
+                                    📋 Riwayat {storeTaps.length} Tap — {s.storeName}
+                                  </div>
+
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
+                                    {storeTaps.map((t, ti) => (
+                                      <div key={`${t.tappedAt}-${ti}`} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#C0C0D8", borderBottom: "1px solid rgba(255,255,255,0.03)", paddingBottom: 4 }}>
+                                        <span>
+                                          <strong style={{ color: "#7A7A95", marginRight: 6 }}>#{ti + 1}</strong>
+                                          {formatFull(t.tappedAt)}
+                                        </span>
+                                        <span style={{ color: "#34D399", fontWeight: 600 }}>{timeAgo(t.tappedAt)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      )}
+                          );
+                        })}
+
+                        {isThisMonth && mg.byStore.some(s => s.lastMonthCount > 0) && (
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 12, paddingLeft: 6 }}>
+                            * Delta (+/−) menunjukkan perbandingan aktivitas tap dibanding bulan lalu ({formatMonthLabel(lastMonthKey)}).
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
-                })}
-              </div>
-            )
-          )}
-
-          {/* ═════════ TAB 2: HARIAN ═════════ */}
-          {activeTab === "harian" && (
-            loading ? (
-              <div style={{ textAlign: "center", padding: "60px 0" }}>
-                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
-                <p style={{ color: "var(--text-muted)" }}>Memuat aktivitas harian...</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>📲</div>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Tidak Ada Data</h3>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                  {search ? `Tidak ditemukan tap untuk "${search}".` : "Belum ada aktivitas tap yang tercatat."}
-                </p>
-              </div>
-            ) : (
-              <div>
-                <PeriodSection
-                  title="Hari Ini"
-                  entries={hariianPeriods.today}
-                  defaultOpen={true}
-                  accentColor="#10B981"
-                  cardUrlMap={cardUrlMap}
-                  formatFull={formatFull}
-                  timeAgo={timeAgo}
-                />
-                <PeriodSection
-                  title="Kemarin"
-                  entries={hariianPeriods.yest}
-                  defaultOpen={false}
-                  accentColor="#F59E0B"
-                  cardUrlMap={cardUrlMap}
-                  formatFull={formatFull}
-                  timeAgo={timeAgo}
-                />
-                <PeriodSection
-                  title="7 Hari Terakhir"
-                  entries={hariianPeriods.last7}
-                  defaultOpen={false}
-                  accentColor="#6366F1"
-                  cardUrlMap={cardUrlMap}
-                  formatFull={formatFull}
-                  timeAgo={timeAgo}
-                />
-                <PeriodSection
-                  title="Bulan Ini"
-                  entries={hariianPeriods.thisMonth}
-                  defaultOpen={false}
-                  accentColor="#3B82F6"
-                  cardUrlMap={cardUrlMap}
-                  formatFull={formatFull}
-                  timeAgo={timeAgo}
-                />
-                <PeriodSection
-                  title="Lebih Lama"
-                  entries={hariianPeriods.older}
-                  defaultOpen={false}
-                  accentColor="#6B7280"
-                  cardUrlMap={cardUrlMap}
-                  formatFull={formatFull}
-                  timeAgo={timeAgo}
-                />
-
-                {hariianPeriods.today.length === 0 && filtered.length > 0 && (
-                  <div style={{
-                    padding: "14px 18px", marginTop: 10,
-                    background: "rgba(16,185,129,0.04)", border: "1px dashed rgba(16,185,129,0.2)",
-                    borderRadius: 12, color: "#9A9AB0", fontSize: "0.82rem",
-                    display: "flex", alignItems: "center", gap: 8,
-                  }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981", opacity: 0.5 }} />
-                    Belum ada tap yang masuk hari ini. Tap akan otomatis muncul di bagian teratas.
+                })() : (
+                  <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                    <p style={{ color: "var(--text-muted)" }}>Tidak ada data aktivitas tap untuk bulan yang dipilih.</p>
                   </div>
                 )}
               </div>
