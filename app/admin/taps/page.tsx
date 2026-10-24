@@ -408,6 +408,7 @@ export default function TapsPage() {
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
   const [newTapAlert, setNewTapAlert] = useState<TapLogEntry | null>(null);
   const [trendRange, setTrendRange] = useState<7 | 30>(7);
+  const [trenView, setTrenView] = useState<"jam" | "harian">("jam");
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
   const lastKnownTapRef = useRef<string | null>(null);
 
@@ -1752,191 +1753,254 @@ export default function TapsPage() {
                 </p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {/* Trend Chart (7 Hari / 30 Hari Toggle) */}
-                <div className="card" style={{ padding: "20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-                    <div>
-                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>
-                        📈 Tren Aktivitas {trendRange === 7 ? "7 Hari" : "30 Hari"} Terakhir
-                      </h3>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                        Jumlah tap per hari pada semua kartu aktif (dilengkapi skala Sumbu Y & Sumbu X).
-                      </p>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      {/* Range Switcher */}
-                      <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 3, borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
-                        <button
-                          type="button"
-                          onClick={() => setTrendRange(7)}
-                          style={{
-                            padding: "4px 10px",
-                            fontSize: "0.74rem",
-                            fontWeight: 600,
-                            borderRadius: 6,
-                            background: trendRange === 7 ? "#F59E0B" : "transparent",
-                            color: trendRange === 7 ? "#000" : "#94A3B8",
-                            border: "none",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          7 Hari
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTrendRange(30)}
-                          style={{
-                            padding: "4px 10px",
-                            fontSize: "0.74rem",
-                            fontWeight: 600,
-                            borderRadius: 6,
-                            background: trendRange === 30 ? "#F59E0B" : "transparent",
-                            color: trendRange === 30 ? "#000" : "#94A3B8",
-                            border: "none",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          30 Hari
-                        </button>
+              <div className="card" style={{ padding: "20px" }}>
+                {/* ── Header Card dengan Mode Switcher Terpadu ── */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+                  <div>
+                    <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F0F0FF" }}>
+                      {trenView === "jam"
+                        ? `⏱️ Distribusi Jam Masuk ${hourPeriod === "today" ? "(Hari Ini)" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}`
+                        : `📈 Tren Aktivitas Harian (${trendRange} Hari Terakhir)`}
+                    </h3>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      {trenView === "jam"
+                        ? (hourPeriod === "today"
+                            ? `Analisis jam berapa pelanggan men-tap kartu khusus hari ini (${formatDateIndo(new Date())}).`
+                            : hourPeriod === "last7"
+                            ? "Analisis jam sibuk pelanggan men-tap kartu dalam 7 hari terakhir."
+                            : hourPeriod === "last30"
+                            ? "Analisis jam sibuk pelanggan men-tap kartu dalam 1 bulan terakhir."
+                            : "Analisis jam sibuk pelanggan men-tap kartu dari seluruh riwayat tap yang tercatat.")
+                        : "Jumlah tap per hari pada semua kartu aktif untuk melihat tren dan pola pertumbuhan kunjungan."}
+                    </p>
+                  </div>
+
+                  {/* Mode Switcher: Distribusi Jam Masuk vs Tren Harian */}
+                  <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 4, borderRadius: 10, border: "1px solid var(--border-subtle)" }}>
+                    <button
+                      type="button"
+                      onClick={() => setTrenView("jam")}
+                      style={{
+                        padding: "6px 14px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        borderRadius: 8,
+                        background: trenView === "jam" ? "#6366F1" : "transparent",
+                        color: trenView === "jam" ? "#FFF" : "var(--text-muted)",
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        transition: "all 0.15s ease",
+                        boxShadow: trenView === "jam" ? "0 2px 8px rgba(99,102,241,0.35)" : "none",
+                      }}
+                    >
+                      <span>⏱️</span>
+                      <span>Distribusi Jam Masuk</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTrenView("harian")}
+                      style={{
+                        padding: "6px 14px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        borderRadius: 8,
+                        background: trenView === "harian" ? "#F59E0B" : "transparent",
+                        color: trenView === "harian" ? "#000" : "var(--text-muted)",
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        transition: "all 0.15s ease",
+                        boxShadow: trenView === "harian" ? "0 2px 8px rgba(245,158,11,0.35)" : "none",
+                      }}
+                    >
+                      <span>📅</span>
+                      <span>Tren Harian ({trendRange} Hari)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* ── View 1: Distribusi Jam Masuk ── */}
+                {trenView === "jam" && (
+                  <div>
+                    {/* Badges Info */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <span className="badge badge-indigo" style={{ background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
+                          Total: {hourFilteredLogs.length} tap
+                        </span>
+                        {peakHour ? (
+                          <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            🏆 Jam Puncak {hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}: <strong>{peakHour.label}</strong> ({peakHour.count} tap)
+                          </span>
+                        ) : (
+                          <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
+                            Belum ada aktivitas
+                          </span>
+                        )}
                       </div>
-
-                      <span className="badge badge-orange">
-                        Total {trendRange} Hari: {(trendRange === 7 ? trendData7 : trendData30).reduce((s, d) => s + d.value, 0)} tap
-                      </span>
                     </div>
+
+                    {/* Filter Periode & Ringkasan Jam Puncak per Periode */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: 16 }}>
+                      {(
+                        [
+                          { id: "today", icon: "☀️", label: "Hari Ini" },
+                          { id: "last7", icon: "📅", label: "7 Hari Terakhir" },
+                          { id: "last30", icon: "🗓️", label: "1 Bulan Terakhir" },
+                          { id: "all", icon: "📑", label: "Semua Riwayat" },
+                        ] as const
+                      ).map(p => {
+                        const isAct = hourPeriod === p.id;
+                        const count = hourPeriodCounts[p.id];
+                        const peak = peakByPeriod[p.id];
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setHourPeriod(p.id)}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "flex-start",
+                              padding: "10px 14px",
+                              borderRadius: 10,
+                              background: isAct ? "rgba(99, 102, 241, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                              border: isAct ? "1.5px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.08)",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              transition: "all 0.15s ease",
+                              boxShadow: isAct ? "0 0 14px rgba(99,102,241,0.25)" : "none",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isAct ? "#A5B4FC" : "#E2E8F0" }}>
+                                {p.icon} {p.label}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  padding: "2px 7px",
+                                  borderRadius: 6,
+                                  background: isAct ? "#6366F1" : "rgba(255,255,255,0.08)",
+                                  color: "#FFF",
+                                }}
+                              >
+                                {count} tap
+                              </span>
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: isAct ? "#CBD5E1" : "var(--text-muted)", marginTop: 5, display: "flex", alignItems: "center", gap: 5 }}>
+                              <span>🏆 Puncak:</span>
+                              <strong style={{ color: isAct ? "#34D399" : "#94A3B8" }}>
+                                {peak ? `${peak.label} (${peak.count} tap)` : "Belum ada"}
+                              </strong>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <BarChart
+                      data={hourData}
+                      color="#6366F1"
+                      yAxisUnit="Tap"
+                      xAxisTitle="Jam"
+                      showValue={true}
+                    />
+
+                    {hourFilteredLogs.length === 0 && (
+                      <div style={{
+                        textAlign: "center",
+                        padding: "16px",
+                        marginTop: "12px",
+                        background: "rgba(255,255,255,0.03)",
+                        borderRadius: "8px",
+                        border: "1px dashed rgba(255,255,255,0.1)",
+                        color: "var(--text-muted)",
+                        fontSize: "0.8rem",
+                      }}>
+                        ℹ️ Belum ada tap yang masuk pada periode ini. Jika ada pelanggan men-tap kartu, tap baru akan otomatis terhitung via live auto-refresh.
+                      </div>
+                    )}
                   </div>
+                )}
 
-                  <BarChart
-                    data={trendRange === 7 ? trendData7 : trendData30}
-                    color="#F59E0B"
-                    yAxisUnit="Tap"
-                    xAxisTitle="Tanggal"
-                    showValue={true}
-                  />
+                {/* ── View 2: Tren Harian (7 / 30 Hari) ── */}
+                {trenView === "harian" && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        {/* Range Switcher (7 Hari vs 30 Hari) */}
+                        <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 3, borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+                          <button
+                            type="button"
+                            onClick={() => setTrendRange(7)}
+                            style={{
+                              padding: "4px 10px",
+                              fontSize: "0.74rem",
+                              fontWeight: 600,
+                              borderRadius: 6,
+                              background: trendRange === 7 ? "#F59E0B" : "transparent",
+                              color: trendRange === 7 ? "#000" : "#94A3B8",
+                              border: "none",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            7 Hari
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTrendRange(30)}
+                            style={{
+                              padding: "4px 10px",
+                              fontSize: "0.74rem",
+                              fontWeight: 600,
+                              borderRadius: 6,
+                              background: trendRange === 30 ? "#F59E0B" : "transparent",
+                              color: trendRange === 30 ? "#000" : "#94A3B8",
+                              border: "none",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            30 Hari
+                          </button>
+                        </div>
 
-                </div>
-
-                {/* Peak Hours with Period Filter (Hari Ini, 7 Hari Terakhir, 1 Bulan Terakhir, Semua) */}
-                <div className="card" style={{ padding: "20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-                    <div>
-                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>
-                        🕐 Distribusi Jam Masuk {hourPeriod === "today" ? "(Hari Ini)" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}
-                      </h3>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                        {hourPeriod === "today"
-                          ? `Analisis jam berapa pelanggan men-tap kartu khusus hari ini (${formatDateIndo(new Date())}).`
-                          : hourPeriod === "last7"
-                          ? "Analisis jam sibuk pelanggan men-tap kartu dalam 7 hari terakhir."
-                          : hourPeriod === "last30"
-                          ? "Analisis jam sibuk pelanggan men-tap kartu dalam 1 bulan terakhir."
-                          : "Analisis jam sibuk pelanggan men-tap kartu dari seluruh riwayat tap yang tercatat."}
-                      </p>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <span className="badge badge-indigo" style={{ background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
-                        Total: {hourFilteredLogs.length} tap
-                      </span>
-                      {peakHour ? (
-                        <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                          🏆 Jam Puncak {hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}: <strong>{peakHour.label}</strong> ({peakHour.count} tap)
+                        <span className="badge badge-orange">
+                          Total {trendRange} Hari: {(trendRange === 7 ? trendData7 : trendData30).reduce((s, d) => s + d.value, 0)} tap
                         </span>
-                      ) : (
-                        <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
-                          Belum ada aktivitas
-                        </span>
-                      )}
+
+                        {(() => {
+                          const currentData = trendRange === 7 ? trendData7 : trendData30;
+                          const maxDay = currentData.reduce((prev, cur) => (cur.value > prev.value ? cur : prev), currentData[0]);
+                          if (maxDay && maxDay.value > 0) {
+                            return (
+                              <span className="badge badge-green">
+                                🏆 Hari Teramai: {maxDay.label || maxDay.subLabel} ({maxDay.value} tap)
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                     </div>
+
+                    <BarChart
+                      data={trendRange === 7 ? trendData7 : trendData30}
+                      color="#F59E0B"
+                      yAxisUnit="Tap"
+                      xAxisTitle="Tanggal"
+                      showValue={true}
+                    />
                   </div>
-
-                  {/* Filter Periode & Ringkasan Jam Puncak per Periode */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: 16 }}>
-                    {(
-                      [
-                        { id: "today", icon: "☀️", label: "Hari Ini" },
-                        { id: "last7", icon: "📅", label: "7 Hari Terakhir" },
-                        { id: "last30", icon: "🗓️", label: "1 Bulan Terakhir" },
-                        { id: "all", icon: "📑", label: "Semua Riwayat" },
-                      ] as const
-                    ).map(p => {
-                      const isAct = hourPeriod === p.id;
-                      const count = hourPeriodCounts[p.id];
-                      const peak = peakByPeriod[p.id];
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setHourPeriod(p.id)}
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                            padding: "10px 14px",
-                            borderRadius: 10,
-                            background: isAct ? "rgba(99, 102, 241, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                            border: isAct ? "1.5px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.08)",
-                            cursor: "pointer",
-                            textAlign: "left",
-                            transition: "all 0.15s ease",
-                            boxShadow: isAct ? "0 0 14px rgba(99,102,241,0.25)" : "none",
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
-                            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isAct ? "#A5B4FC" : "#E2E8F0" }}>
-                              {p.icon} {p.label}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "0.72rem",
-                                fontWeight: 700,
-                                padding: "2px 7px",
-                                borderRadius: 6,
-                                background: isAct ? "#6366F1" : "rgba(255,255,255,0.08)",
-                                color: "#FFF",
-                              }}
-                            >
-                              {count} tap
-                            </span>
-                          </div>
-                          <div style={{ fontSize: "0.72rem", color: isAct ? "#CBD5E1" : "var(--text-muted)", marginTop: 5, display: "flex", alignItems: "center", gap: 5 }}>
-                            <span>🏆 Puncak:</span>
-                            <strong style={{ color: isAct ? "#34D399" : "#94A3B8" }}>
-                              {peak ? `${peak.label} (${peak.count} tap)` : "Belum ada"}
-                            </strong>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <BarChart
-                    data={hourData}
-                    color="#6366F1"
-                    yAxisUnit="Tap"
-                    xAxisTitle="Jam"
-                    showValue={true}
-                  />
-
-                  {hourFilteredLogs.length === 0 && (
-                    <div style={{
-                      textAlign: "center",
-                      padding: "16px",
-                      marginTop: "12px",
-                      background: "rgba(255,255,255,0.03)",
-                      borderRadius: "8px",
-                      border: "1px dashed rgba(255,255,255,0.1)",
-                      color: "var(--text-muted)",
-                      fontSize: "0.8rem",
-                    }}>
-                      ℹ️ Belum ada tap yang masuk pada periode ini. Jika ada pelanggan men-tap kartu, tap baru akan otomatis terhitung via live auto-refresh.
-                    </div>
-                  )}
-
-                </div>
+                )}
               </div>
             )
           )}
