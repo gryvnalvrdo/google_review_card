@@ -494,29 +494,6 @@ export default function TapsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function exportCSV() {
-    const rows = [
-      ["Kode Kartu", "Nama Toko", "Waktu Tap (ISO)", "Tanggal", "Jam"],
-      ...validLogs.map(l => {
-        const d = new Date(l.tappedAt);
-        return [
-          l.code,
-          `"${l.storeName.replace(/"/g, '""')}"`,
-          l.tappedAt,
-          d.toLocaleDateString("id-ID"),
-          d.toLocaleTimeString("id-ID"),
-        ];
-      })
-    ];
-    const csvContent = "\uFEFF" + rows.map(r => r.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Laporan_Tap_Google_Review_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
 
   // ── Helpers ──────────────────────────────────────────────────────────
   function getMonthKey(iso: string) {
@@ -1059,21 +1036,6 @@ export default function TapsPage() {
                 </select>
               </div>
 
-              {/* Unduh CSV Button */}
-              {validLogs.length > 0 && (
-                <button
-                  onClick={exportCSV}
-                  className="btn btn-ghost"
-                  style={{
-                    padding: "6px 12px", fontSize: "0.78rem",
-                    color: "#A5B4FC", borderColor: "rgba(99,102,241,0.25)",
-                    background: "rgba(99,102,241,0.06)",
-                  }}
-                  title="Unduh seluruh data tap ke file Excel/CSV"
-                >
-                  📥 CSV
-                </button>
-              )}
 
               <button
                 onClick={() => fetchData(false)}
