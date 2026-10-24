@@ -1397,6 +1397,70 @@ export default function TapsPage() {
   // ── Tab: Kartu Tidur (Belum Pernah Tap) ──────────────────────────────
   const tappedCodes = useMemo(() => new Set(validLogs.map(l => l.code)), [validLogs]);
 
+  // ── Tanggal Awal Kartu Ditugaskan (Earliest Card Assignment Date) ──────
+  // Membatasi fitur navigasi mundur ("◄ Lalu") agar tidak tembus ke tanggal sebelum kartu didaftarkan/di-assign
+  const earliestAssignedDate = useMemo(() => {
+    const targetCards = selectedStoreFilters.length > 0
+      ? cards.filter(c => selectedStoreFilters.includes(c.storeName))
+      : cards;
+
+    const timestamps: number[] = [];
+
+    targetCards.forEach(c => {
+      if (c.createdAt) {
+        const t = new Date(c.createdAt).getTime();
+        if (!isNaN(t)) timestamps.push(t);
+      }
+    });
+
+    storeFilteredLogs.forEach(l => {
+      if (l.tappedAt) {
+        const t = new Date(l.tappedAt).getTime();
+        if (!isNaN(t)) timestamps.push(t);
+      }
+    });
+
+    if (timestamps.length === 0) return null;
+    return new Date(Math.min(...timestamps));
+  }, [cards, storeFilteredLogs, selectedStoreFilters]);
+
+  const earliestWeekRange = useMemo(() => {
+    if (!earliestAssignedDate) return null;
+    return getWeekRange(earliestAssignedDate);
+  }, [earliestAssignedDate]);
+
+  // Validasi apakah halaman berikutnya di masa lalu masih memiliki data setelah tanggal kartu di-assign
+  const canGoPreviousWeeks = useMemo(() => {
+    if (!earliestWeekRange) return false;
+    const now = new Date();
+    const currentWeekInfo = getWeekRange(now);
+    const pageSize = weeklyPeriodType === "12w" ? 12 : 8;
+
+    // Halaman berikutnya di masa lalu dimulai dari index (weekPageOffset + 1) * pageSize
+    const nextPageEndIdx = (weekPageOffset + 1) * pageSize;
+    const refDate = new Date(currentWeekInfo.start);
+    refDate.setDate(refDate.getDate() - (nextPageEndIdx * 7));
+    const nextPageLatestWeek = getWeekRange(refDate);
+
+    // Jika minggu paling baru pada halaman berikutnya sudah berakhir sebelum kartu pertama kali di-assign,
+    // maka halaman tersebut kosong -> tombol "◄ Lalu" dibatasi (disabled)
+    return nextPageLatestWeek.end.getTime() >= earliestWeekRange.start.getTime();
+  }, [earliestWeekRange, weeklyPeriodType, weekPageOffset]);
+
+  // Otomatis batasi weekPageOffset jika berada di luar batas valid
+  useEffect(() => {
+    if (earliestWeekRange && !canGoPreviousWeeks && weekPageOffset > 0) {
+      const now = new Date();
+      const currentWeekInfo = getWeekRange(now);
+      const pageSize = weeklyPeriodType === "12w" ? 12 : 8;
+      const diffMs = currentWeekInfo.start.getTime() - earliestWeekRange.start.getTime();
+      const maxOffset = diffMs > 0 ? Math.floor(Math.floor(diffMs / (7 * 86400000)) / pageSize) : 0;
+      if (weekPageOffset > maxOffset) {
+        setWeekPageOffset(maxOffset);
+      }
+    }
+  }, [earliestWeekRange, canGoPreviousWeeks, weekPageOffset, weeklyPeriodType]);
+
   // ── Tren Mingguan (8 Minggu Terakhir) & Drilldown ─────────────────────
   // ── Tren Mingguan (Paginasi Fleksibel, Arsip Bulanan & Sepanjang Tahun) ─
   const weeklyTrendData = useMemo(() => {
@@ -1423,6 +1487,11 @@ export default function TapsPage() {
         const refDate = new Date(currentWeekInfo.start);
         refDate.setDate(refDate.getDate() - (i * 7));
         const wInfo = getWeekRange(refDate);
+
+        // Batasi dari tanggal paling awal kartu di-assign (jangan tampilkan minggu yang selesai sebelum kartu ada)
+        if (earliestWeekRange && wInfo.end.getTime() < earliestWeekRange.start.getTime()) {
+          continue;
+        }
 
         const wLogs = storeFilteredLogs.filter(l => {
           const t = new Date(l.tappedAt).getTime();
@@ -1493,7 +1562,16 @@ export default function TapsPage() {
       const startWeek = getWeekRange(firstDay);
       const endLimit = isThisYear ? currentWeekInfo.start : getWeekRange(new Date(targetYear, 11, 31)).start;
 
-      const cur = new Date(startWeek.start);
+      // Batasi tanggal mulai: jika tahun target adalah tahun kartu pertama kali di-assign,
+      // jangan mulai dari awal tahun sebelum kartu ada
+      let effectiveStart = startWeek.start;
+      if (earliestWeekRange && earliestWeekRange.start.getFullYear() === targetYear) {
+        if (earliestWeekRange.start.getTime() > effectiveStart.getTime()) {
+          effectiveStart = earliestWeekRange.start;
+        }
+      }
+
+      const cur = new Date(effectiveStart);
       while (cur.getTime() <= endLimit.getTime()) {
         const wInfo = getWeekRange(cur);
         const wLogs = storeFilteredLogs.filter(l => {
@@ -1523,21 +1601,27 @@ export default function TapsPage() {
     }
 
     return weeks;
-  }, [storeFilteredLogs, weeklyPeriodType, weekPageOffset, selectedWeeklyMonth, selectedWeeklyYear, thisMonthKey]);
+  }, [storeFilteredLogs, weeklyPeriodType, weekPageOffset, selectedWeeklyMonth, selectedWeeklyYear, thisMonthKey, earliestWeekRange]);
 
   const weeklyPeriodLabel = useMemo(() => {
     if (weeklyTrendData.length === 0) return "Tren Mingguan";
     const earliest = weeklyTrendData[0].start;
     const latest = weeklyTrendData[weeklyTrendData.length - 1].end;
     if (weeklyPeriodType === "8w") {
-      return weekPageOffset === 0
-        ? "8 Minggu Terakhir"
-        : `${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)} (8 Minggu)`;
+      if (weekPageOffset === 0) {
+        return weeklyTrendData.length < 8 && weeklyTrendData.length > 0
+          ? `${weeklyTrendData.length} Minggu (${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)})`
+          : "8 Minggu Terakhir";
+      }
+      return `${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)}`;
     }
     if (weeklyPeriodType === "12w") {
-      return weekPageOffset === 0
-        ? "12 Minggu Terakhir"
-        : `${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)} (12 Minggu)`;
+      if (weekPageOffset === 0) {
+        return weeklyTrendData.length < 12 && weeklyTrendData.length > 0
+          ? `${weeklyTrendData.length} Minggu (${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)})`
+          : "12 Minggu Terakhir";
+      }
+      return `${formatDateShortIndo(earliest)} – ${formatDateShortIndo(latest)}`;
     }
     if (weeklyPeriodType === "month") {
       return `Bulan ${formatMonthLabel(selectedWeeklyMonth || thisMonthKey)}`;
@@ -2078,6 +2162,8 @@ export default function TapsPage() {
                       id="custom-date-picker"
                       type="date"
                       value={customDate}
+                      min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
+                      max={toDateInputValue(new Date())}
                       onChange={(e) => {
                         setCustomDate(e.target.value);
                         if (e.target.value) setDailyMode("custom");
@@ -3183,6 +3269,8 @@ export default function TapsPage() {
                               <input
                                 type="date"
                                 value={customStartDate}
+                                min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
+                                max={customEndDate || toDateInputValue(new Date())}
                                 onChange={(e) => setCustomStartDate(e.target.value)}
                                 style={{
                                   background: "#161622",
@@ -3199,6 +3287,8 @@ export default function TapsPage() {
                               <input
                                 type="date"
                                 value={customEndDate}
+                                min={customStartDate || (earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined)}
+                                max={toDateInputValue(new Date())}
                                 onChange={(e) => setCustomEndDate(e.target.value)}
                                 style={{
                                   background: "#161622",
@@ -3510,19 +3600,32 @@ export default function TapsPage() {
                                   <div style={{ display: "inline-flex", gap: 3, alignItems: "center", flexShrink: 0 }}>
                                     <button
                                       type="button"
-                                      onClick={() => setWeekPageOffset(o => o + 1)}
+                                      onClick={() => {
+                                        if (canGoPreviousWeeks) {
+                                          setWeekPageOffset(o => o + 1);
+                                        }
+                                      }}
+                                      disabled={!canGoPreviousWeeks}
                                       style={{
-                                        background: "rgba(139,92,246,0.15)",
-                                        border: "1px solid rgba(139,92,246,0.35)",
-                                        color: "#C4B5FD",
+                                        background: !canGoPreviousWeeks ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.15)",
+                                        border: !canGoPreviousWeeks ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.35)",
+                                        color: !canGoPreviousWeeks ? "var(--text-muted)" : "#C4B5FD",
                                         padding: "4px 7px",
                                         borderRadius: 6,
                                         fontSize: "0.7rem",
                                         fontWeight: 700,
-                                        cursor: "pointer",
+                                        cursor: !canGoPreviousWeeks ? "not-allowed" : "pointer",
+                                        opacity: !canGoPreviousWeeks ? 0.35 : 1,
                                         whiteSpace: "nowrap",
+                                        transition: "all 0.15s ease",
                                       }}
-                                      title="Lihat minggu-minggu sebelumnya di masa lalu"
+                                      title={
+                                        !canGoPreviousWeeks
+                                          ? earliestAssignedDate
+                                            ? `Batas awal penugasan kartu tercapai (${formatDateShortIndo(earliestAssignedDate)})`
+                                            : "Tidak ada riwayat sebelum ini"
+                                          : "Lihat minggu-minggu sebelumnya di masa lalu"
+                                      }
                                     >
                                       ◄ Lalu
                                     </button>
@@ -3539,10 +3642,11 @@ export default function TapsPage() {
                                         fontSize: "0.7rem",
                                         fontWeight: 700,
                                         cursor: weekPageOffset === 0 ? "not-allowed" : "pointer",
-                                        opacity: weekPageOffset === 0 ? 0.4 : 1,
+                                        opacity: weekPageOffset === 0 ? 0.35 : 1,
                                         whiteSpace: "nowrap",
+                                        transition: "all 0.15s ease",
                                       }}
-                                      title="Lihat minggu-minggu berikutnya"
+                                      title={weekPageOffset === 0 ? "Sudah berada di minggu terbaru" : "Lihat minggu-minggu berikutnya"}
                                     >
                                       Maju ►
                                     </button>
