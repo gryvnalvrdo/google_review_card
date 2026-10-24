@@ -423,7 +423,6 @@ export default function TapsPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
-  const [newTapAlert, setNewTapAlert] = useState<TapLogEntry | null>(null);
   const [trendRange, setTrendRange] = useState<7 | 30>(7);
   const [trenView, setTrenView] = useState<"jam" | "harian">("jam");
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
@@ -446,12 +445,6 @@ export default function TapsPage() {
         // Check if there is a brand new tap arrived during background auto-refresh
         if (incomingLogs.length > 0) {
           const newest = incomingLogs[0];
-          if (isBackground && lastKnownTapRef.current && newest.tappedAt !== lastKnownTapRef.current) {
-            setNewTapAlert(newest);
-            try {
-              if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([60, 40, 60]);
-            } catch {}
-          }
           lastKnownTapRef.current = newest.tappedAt;
         }
       }
@@ -1048,90 +1041,7 @@ export default function TapsPage() {
             </div>
           </div>
 
-          {/* Live Alert Banner: Tap Baru Masuk Secara Realtime (Sebelum Manual Refresh) */}
-          {newTapAlert && (
-            <div style={{
-              background: "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(99,102,241,0.18))",
-              border: "2px solid #10B981",
-              borderRadius: 14,
-              padding: "14px 16px",
-              marginBottom: 18,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-              boxShadow: "0 8px 30px rgba(16,185,129,0.25)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 240px" }}>
-                <div style={{
-                  width: 42, height: 42, borderRadius: 12,
-                  background: "#10B981", color: "#FFF",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "1.3rem", flexShrink: 0,
-                  boxShadow: "0 0 16px rgba(16,185,129,0.6)",
-                }}>
-                  ⚡
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{
-                      fontSize: "0.68rem", fontWeight: 800, color: "#10B981",
-                      background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.35)",
-                      padding: "2px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.05em",
-                    }}>
-                      Tap Baru Masuk Live!
-                    </span>
-                    <strong style={{ color: "#F0F0FF", fontSize: "0.95rem" }}>
-                      {newTapAlert.storeName}
-                    </strong>
-                    <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#A5B4FC" }}>
-                      ({newTapAlert.code})
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "#C0C0D8", marginTop: 3 }}>
-                    {formatFull(newTapAlert.tappedAt)} · <span style={{ color: "#34D399", fontWeight: 700 }}>{timeAgo(newTapAlert.tappedAt)}</span>
-                  </div>
-                </div>
-              </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                {cardUrlMap.get(newTapAlert.code) ? (
-                  <a
-                    href={cardUrlMap.get(newTapAlert.code)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-primary"
-                    style={{
-                      fontSize: "0.82rem",
-                      padding: "9px 16px",
-                      background: "linear-gradient(135deg, #10B981, #059669)",
-                      border: "none",
-                      boxShadow: "0 4px 16px rgba(16,185,129,0.4)",
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      textDecoration: "none",
-                    }}
-                    title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
-                  >
-                    <span>⭐</span> Buka Menu Ulasan Toko ↗
-                  </a>
-                ) : (
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                    (Link ulasan belum terisi)
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setNewTapAlert(null)}
-                  className="btn btn-ghost"
-                  style={{ padding: "8px 12px", fontSize: "0.78rem" }}
-                  title="Tutup notifikasi"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          )}
 
 
 
