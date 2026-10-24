@@ -91,6 +91,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadCards();
     loadTapLogs();
+
+    // Auto-refresh data quietly in background every 30 seconds
+    const interval = setInterval(() => {
+      loadCards();
+      loadTapLogs();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [loadTapLogs]);
 
   // Handle URL query ?code=... to immediately prefill form and open sheet/modal!

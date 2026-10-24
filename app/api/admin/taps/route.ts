@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(Number(searchParams.get("limit") ?? 50), 200);
+  const limit = Math.min(Number(searchParams.get("limit") ?? 100), 5000);
 
   const logs = await getTapLogs(limit);
   return NextResponse.json({ logs });

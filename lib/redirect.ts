@@ -3,7 +3,15 @@
 // Dipakai di DUA tempat: saat admin menyimpan data, dan saat redirect
 // benar-benar dieksekusi (safety net kedua, jangan dihapus salah satunya).
 
-const ALLOWED_HOSTS = ["search.google.com", "www.google.com", "google.com"];
+const ALLOWED_HOSTS = [
+  "search.google.com",
+  "www.google.com",
+  "google.com",
+  "g.page",
+  "maps.app.goo.gl",
+  "maps.google.com",
+  "goo.gl",
+];
 
 export function isAllowedReviewUrl(url: string): boolean {
   try {

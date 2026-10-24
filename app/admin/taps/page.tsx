@@ -208,17 +208,21 @@ export default function TapsPage() {
   const [logs, setLogs] = useState<TapLogEntry[]>([]);
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [autoRefreshSec, setAutoRefreshSec] = useState<number>(30);
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<"bulanan" | "harian" | "tren" | "tidur">("bulanan");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
 
-  async function fetchData() {
-    setLoading(true);
+  async function fetchData(isBackground = false) {
+    if (!isBackground) setLoading(true);
+    else setIsUpdating(true);
+
     try {
       const [tapRes, cardRes] = await Promise.all([
-        fetch("/api/admin/taps?limit=200"),
+        fetch("/api/admin/taps?limit=5000"),
         fetch("/api/admin/codes"),
       ]);
       if (tapRes.ok) setLogs((await tapRes.json()).logs ?? []);
@@ -226,10 +230,45 @@ export default function TapsPage() {
       setLastRefresh(new Date());
     } finally {
       setLoading(false);
+      setIsUpdating(false);
     }
   }
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData(false);
+  }, []);
+
+  useEffect(() => {
+    if (autoRefreshSec <= 0) return;
+    const timer = setInterval(() => {
+      fetchData(true);
+    }, autoRefreshSec * 1000);
+    return () => clearInterval(timer);
+  }, [autoRefreshSec]);
+
+  function exportCSV() {
+    const rows = [
+      ["Kode Kartu", "Nama Toko", "Waktu Tap (ISO)", "Tanggal", "Jam"],
+      ...validLogs.map(l => {
+        const d = new Date(l.tappedAt);
+        return [
+          l.code,
+          `"${l.storeName.replace(/"/g, '""')}"`,
+          l.tappedAt,
+          d.toLocaleDateString("id-ID"),
+          d.toLocaleTimeString("id-ID"),
+        ];
+      })
+    ];
+    const csvContent = "\uFEFF" + rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Laporan_Tap_Google_Review_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────
   function getMonthKey(iso: string) {
@@ -458,17 +497,66 @@ export default function TapsPage() {
                 Pantau performa kartu pelanggan, leaderboard terbanyak per bulan, dan tren aktivitas jam ramai.
               </p>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {/* Auto-Refresh Toggle Pill */}
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "5px 10px",
+                background: autoRefreshSec > 0 ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.04)",
+                border: autoRefreshSec > 0 ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 8, fontSize: "0.75rem",
+              }}>
+                <span style={{
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: autoRefreshSec > 0 ? "#10B981" : "#7A7A95",
+                  boxShadow: autoRefreshSec > 0 ? "0 0 8px #10B981" : "none",
+                  animation: autoRefreshSec > 0 ? "pulseDot 2s infinite" : "none",
+                }} />
+                <span style={{ color: autoRefreshSec > 0 ? "#34D399" : "#7A7A95", fontWeight: 700 }}>
+                  {isUpdating ? "Sinkron..." : "Live:"}
+                </span>
+                <select
+                  value={autoRefreshSec}
+                  onChange={(e) => setAutoRefreshSec(Number(e.target.value))}
+                  style={{
+                    background: "transparent", border: "none", color: "#F0F0FF",
+                    fontSize: "0.75rem", fontWeight: 700, outline: "none", cursor: "pointer",
+                  }}
+                >
+                  <option value={15} style={{ background: "#111118" }}>15 detik</option>
+                  <option value={30} style={{ background: "#111118" }}>30 detik</option>
+                  <option value={60} style={{ background: "#111118" }}>60 detik</option>
+                  <option value={0} style={{ background: "#111118" }}>Mati</option>
+                </select>
+              </div>
+
+              {/* Unduh CSV Button */}
+              {validLogs.length > 0 && (
+                <button
+                  onClick={exportCSV}
+                  className="btn btn-ghost"
+                  style={{
+                    padding: "6px 12px", fontSize: "0.78rem",
+                    color: "#A5B4FC", borderColor: "rgba(99,102,241,0.25)",
+                    background: "rgba(99,102,241,0.06)",
+                  }}
+                  title="Unduh seluruh data tap ke file Excel/CSV"
+                >
+                  📥 Unduh CSV
+                </button>
+              )}
+
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                Update: {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
               </span>
+
               <button
-                onClick={fetchData}
+                onClick={() => fetchData(false)}
                 disabled={loading}
                 className="btn btn-ghost"
                 style={{ padding: "6px 12px", fontSize: "0.78rem" }}
               >
-                {loading ? "⏳" : "🔄"} Refresh
+                {loading || isUpdating ? "⏳" : "🔄"} Refresh
               </button>
             </div>
           </div>
