@@ -21,6 +21,28 @@ type TapLogEntry = {
   tappedAt: string;
 };
 
+function TrashIcon({ size = 15, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ display: "inline-block", verticalAlign: "middle" }}
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+}
+
 export default function AdminDashboard() {
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [code, setCode] = useState("");
@@ -456,7 +478,14 @@ export default function AdminDashboard() {
             width: "min(92vw, 380px)", textAlign: "center",
             boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
           }}>
-            <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>🗑️</div>
+            <div style={{
+              width: 54, height: 54, borderRadius: 16,
+              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px", color: "#F87171",
+            }}>
+              <TrashIcon size={26} color="#F87171" />
+            </div>
             <h3 style={{ fontWeight: 800, fontSize: "1.15rem", marginBottom: 8, color: "#F0F0FF" }}>Hapus Kartu Ini?</h3>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 22, lineHeight: 1.5 }}>
               Kode <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteConfirm}</strong> akan dihapus permanen.

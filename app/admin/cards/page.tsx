@@ -8,14 +8,46 @@ import { getPublicGoogleReviewUrl } from "../../../lib/redirect";
 
 const QR_EXPORT_SIZE = 1000; // ukuran QR PNG yang di-download (px)
 
-const CARD_W  = 638;
-const CARD_H  = 1004;
-const QR_SIZE = 280;
-const QR_PAD  = 22;
-const BOX_SIZE = QR_SIZE + QR_PAD * 2;
-const BOX_X   = Math.round((CARD_W - BOX_SIZE) / 2);
-const BOX_Y   = 438;
-const RADIUS  = 18;
+function TrashIcon({ size = 15, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ display: "inline-block", verticalAlign: "middle" }}
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+}
+
+function EditIcon({ size = 15, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ display: "inline-block", verticalAlign: "middle" }}
+    >
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}
 
 interface CardData {
   code: string;
@@ -33,21 +65,14 @@ export default function CardsPage() {
   const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price">("date");
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
-  const [downloadingCode, setDownloadingCode] = useState<string | null>(null);
   const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [bgImg, setBgImg] = useState<HTMLImageElement | null>(null);
-  const qrRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const qrOnlyRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const [baseUrl, setBaseUrl] = useState("");
 
   useEffect(() => {
     setBaseUrl(window.location.origin);
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = "/Beri Kami Ulasan.png";
-    img.onload = () => setBgImg(img);
   }, []);
 
   async function fetchCards() {
@@ -97,44 +122,6 @@ export default function CardsPage() {
     }
   }
 
-  async function downloadCard(card: CardData) {
-    setDownloadingCode(card.code);
-    await new Promise(r => setTimeout(r, 400));
-    const qrCanvas = qrRefs.current[card.code];
-    if (!qrCanvas || !bgImg) {
-      alert("Template sedang disiapkan, silakan klik lagi.");
-      setDownloadingCode(null);
-      return;
-    }
-    const out = document.createElement("canvas");
-    out.width = CARD_W; out.height = CARD_H;
-    const ctx = out.getContext("2d")!;
-    ctx.drawImage(bgImg, 0, 0, CARD_W, CARD_H);
-    ctx.fillStyle = "#FFFFFF";
-    ctx.beginPath();
-    ctx.moveTo(BOX_X + RADIUS, BOX_Y);
-    ctx.lineTo(BOX_X + BOX_SIZE - RADIUS, BOX_Y);
-    ctx.arcTo(BOX_X + BOX_SIZE, BOX_Y, BOX_X + BOX_SIZE, BOX_Y + RADIUS, RADIUS);
-    ctx.lineTo(BOX_X + BOX_SIZE, BOX_Y + BOX_SIZE - RADIUS);
-    ctx.arcTo(BOX_X + BOX_SIZE, BOX_Y + BOX_SIZE, BOX_X + BOX_SIZE - RADIUS, BOX_Y + BOX_SIZE, RADIUS);
-    ctx.lineTo(BOX_X + RADIUS, BOX_Y + BOX_SIZE);
-    ctx.arcTo(BOX_X, BOX_Y + BOX_SIZE, BOX_X, BOX_Y + BOX_SIZE - RADIUS, RADIUS);
-    ctx.lineTo(BOX_X, BOX_Y + RADIUS);
-    ctx.arcTo(BOX_X, BOX_Y, BOX_X + RADIUS, BOX_Y, RADIUS);
-    ctx.closePath();
-    ctx.fill();
-    ctx.drawImage(qrCanvas, BOX_X + QR_PAD, BOX_Y + QR_PAD, QR_SIZE, QR_SIZE);
-    out.toBlob(blob => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `kartu-${card.code}-${card.storeName.replace(/\s+/g, "_")}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }, "image/png");
-    setDownloadingCode(null);
-  }
 
   async function downloadQrOnly(card: CardData) {
     setDownloadingQrCode(card.code);
@@ -198,16 +185,6 @@ export default function CardsPage() {
 
       {/* Hidden QR canvases for PNG export */}
       <div style={{ position: "fixed", left: -9999, top: -9999, pointerEvents: "none" }} aria-hidden="true">
-        {cards.map(card => (
-          <QRCodeCanvas
-            key={`full-${card.code}`}
-            value={card.googleReviewUrl}
-            size={QR_SIZE}
-            ref={(el: HTMLCanvasElement | null) => { qrRefs.current[card.code] = el; }}
-            level="H"
-            includeMargin={false}
-          />
-        ))}
         {baseUrl && cards.map(card => (
           <QRCodeCanvas
             key={`only-${card.code}`}
@@ -235,7 +212,14 @@ export default function CardsPage() {
             width: "min(92vw, 380px)", textAlign: "center",
             boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
           }}>
-            <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>🗑️</div>
+            <div style={{
+              width: 54, height: 54, borderRadius: 16,
+              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px", color: "#F87171",
+            }}>
+              <TrashIcon size={26} color="#F87171" />
+            </div>
             <h3 style={{ fontWeight: 800, fontSize: "1.15rem", marginBottom: 8, color: "#F0F0FF" }}>Hapus Kartu Ini?</h3>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 22, lineHeight: 1.5 }}>
               Kode <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteConfirmCode}</strong> akan dihapus permanen.
@@ -411,26 +395,26 @@ export default function CardsPage() {
                             </div>
                           </div>
 
-                          {/* Action Buttons: Anchored top-right so trash can never overflows */}
+                          {/* Action Buttons: Anchored top-right with clean standard app icons */}
                           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
                             <button
                               type="button"
                               onClick={() => setEditingCard(card)}
                               className="btn btn-ghost"
-                              style={{ padding: "6px 10px", fontSize: "0.85rem", borderRadius: 8 }}
+                              style={{ padding: "7px 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
                               title="Edit Toko"
                             >
-                              ✏️
+                              <EditIcon size={14} color="#A5B4FC" />
                             </button>
 
                             <button
                               type="button"
                               onClick={() => setDeleteConfirmCode(card.code)}
                               className="btn btn-danger"
-                              style={{ padding: "6px 10px", fontSize: "0.85rem", borderRadius: 8 }}
+                              style={{ padding: "7px 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
                               title="Hapus Kartu"
                             >
-                              🗑️
+                              <TrashIcon size={14} color="#F87171" />
                             </button>
                           </div>
                         </div>
@@ -467,36 +451,22 @@ export default function CardsPage() {
                           </div>
                         </div>
 
-                        {/* Row 3: Action Buttons (Responsive flex row) */}
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        {/* Row 3: Action Buttons (High-Res QR Download) */}
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <button
                             type="button"
                             onClick={() => downloadQrOnly(card)}
                             disabled={downloadingQrCode === card.code || !baseUrl}
                             className="btn btn-ghost"
                             style={{
-                              flex: "1 1 130px", justifyContent: "center",
-                              padding: "8px 12px", fontSize: "0.78rem",
-                              color: "#34D399", borderColor: "rgba(16,185,129,0.25)", background: "rgba(16,185,129,0.06)",
+                              width: "100%", justifyContent: "center",
+                              padding: "9px 14px", fontSize: "0.82rem", fontWeight: 700,
+                              color: "#34D399", borderColor: "rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)",
+                              display: "inline-flex", alignItems: "center", gap: 6,
                             }}
-                            title="Download QR Code resolusi tinggi untuk cetak besar"
+                            title="Download QR Code resolusi tinggi (1000px PNG) untuk cetak fisik"
                           >
-                            {downloadingQrCode === card.code ? "⏳ Mengunduh..." : "📷 Unduh QR High-Res"}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => downloadCard(card)}
-                            disabled={downloadingCode === card.code || !bgImg}
-                            className="btn btn-ghost"
-                            style={{
-                              flex: "1 1 130px", justifyContent: "center",
-                              padding: "8px 12px", fontSize: "0.78rem",
-                              color: "#A5B4FC", borderColor: "rgba(99,102,241,0.25)", background: "rgba(99,102,241,0.06)",
-                            }}
-                            title="Download kartu PNG utuh dengan desain template"
-                          >
-                            {downloadingCode === card.code ? "⏳ Menyiapkan..." : "🖼️ Unduh Kartu PNG"}
+                            {downloadingQrCode === card.code ? "⏳ Mengunduh QR..." : "📷 Unduh QR Code High-Res (PNG)"}
                           </button>
                         </div>
                       </div>
