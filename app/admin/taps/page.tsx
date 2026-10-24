@@ -1598,7 +1598,7 @@ export default function TapsPage() {
 
     return {
       monthKey: "all",
-      label: "Sepanjang Masa (All-Time)",
+      label: "Sepanjang Masa",
       total: byStore.reduce((s, x) => s + x.count, 0),
       byStore,
     };
@@ -3248,7 +3248,7 @@ export default function TapsPage() {
                             value="all"
                             style={{ background: "#181824", color: "#FCD34D", fontWeight: 700 }}
                           >
-                            🌐 Sepanjang Masa (All-Time) · {validLogs.length} Tap
+                            🌐 Sepanjang Masa · {validLogs.length} Tap
                           </option>
                         </optgroup>
 
@@ -3353,11 +3353,7 @@ export default function TapsPage() {
                             <span className="leaderboard-title-text">
                               🏆 Rekap {mg.label}
                             </span>
-                            {selectedMonthKey === "all" ? (
-                              <span className="leaderboard-pill-alltime">
-                                All-Time
-                              </span>
-                            ) : isThisMonth ? (
+                            {selectedMonthKey === "all" ? null : isThisMonth ? (
                               <span className="leaderboard-pill-current">
                                 Bulan Berjalan
                               </span>
@@ -3439,11 +3435,7 @@ export default function TapsPage() {
                                       {s.count}×
                                     </span>
 
-                                    {selectedMonthKey === "all" ? (
-                                      <span style={{ fontSize: "0.65rem", color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999, fontWeight: 700 }}>
-                                        all-time
-                                      </span>
-                                    ) : isThisMonth ? (
+                                    {selectedMonthKey === "all" ? null : isThisMonth ? (
                                       delta === null ? (
                                         <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
                                           baru
