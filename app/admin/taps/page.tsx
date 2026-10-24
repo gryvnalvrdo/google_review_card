@@ -560,6 +560,259 @@ function CafeBreakdownCard({
   );
 }
 
+// ── HourlyCafeBreakdownCard — Rincian kontribusi outlet pada jam tertentu ───
+function HourlyCafeBreakdownCard({
+  hour,
+  peakHour,
+  logs,
+  allHourCounts,
+  onSelectHour,
+  cardUrlMap,
+  periodName,
+}: {
+  hour: number;
+  peakHour: { hour: number; count: number; label: string } | null;
+  logs: TapLogEntry[];
+  allHourCounts: number[];
+  onSelectHour: (h: number) => void;
+  cardUrlMap: Map<string, string>;
+  periodName: string;
+}) {
+  const [showAll, setShowAll] = useState(false);
+
+  const startHourStr = String(hour).padStart(2, "0");
+  const nextHourStr = String((hour + 1) % 24).padStart(2, "0");
+  const hourLabel = `${startHourStr}.00 – ${nextHourStr}.00`;
+  const isPeak = peakHour && peakHour.hour === hour;
+
+  // Breakdown cafe khusus jam ini
+  const countsByStore = useMemo(() => {
+    const map = new Map<string, { count: number; code: string; storeName: string }>();
+    for (const log of logs) {
+      const name = log.storeName || "Toko Tanpa Nama";
+      const existing = map.get(name);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(name, { count: 1, code: log.code, storeName: name });
+      }
+    }
+    const arr = Array.from(map.values());
+    arr.sort((a, b) => b.count - a.count);
+    return arr;
+  }, [logs]);
+
+  const totalHourTaps = logs.length;
+  const max = countsByStore.length > 0 ? countsByStore[0].count : 1;
+  const visibleStores = showAll ? countsByStore : countsByStore.slice(0, 5);
+  const medals = ["🥇", "🥈", "🥉"];
+
+  return (
+    <div className="cafe-breakdown-card" style={{ marginTop: 22 }}>
+      {/* Header dengan Dropdown Pilihan Jam */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h4 style={{ fontSize: "0.98rem", fontWeight: 700, color: "#F0F0FF", display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
+              <span>🏪</span> Kontribusi Outlet pada Jam {hourLabel}
+            </h4>
+            {isPeak && (
+              <span style={{ fontSize: "0.7rem", fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: "rgba(16, 185, 129, 0.15)", color: "#34D399", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
+                🏆 Jam Puncak
+              </span>
+            )}
+          </div>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 3, marginBottom: 0 }}>
+            Rincian outlet yang menerima tap pelanggan pada pukul {hourLabel} ({periodName}).
+          </p>
+        </div>
+
+        {/* Dropdown Pilihan Jam */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <label htmlFor="hourly-breakdown-select" style={{ fontSize: "0.76rem", color: "#94A3B8", fontWeight: 600, whiteSpace: "nowrap" }}>
+            Pilih Jam:
+          </label>
+          <div style={{ position: "relative" }}>
+            <select
+              id="hourly-breakdown-select"
+              value={hour}
+              onChange={(e) => onSelectHour(Number(e.target.value))}
+              style={{
+                background: "#181824",
+                border: "1px solid rgba(99, 102, 241, 0.35)",
+                color: "#EDE9FE",
+                padding: "6px 28px 6px 12px",
+                borderRadius: 8,
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                appearance: "none",
+                WebkitAppearance: "none",
+                outline: "none",
+                minWidth: 195,
+              }}
+            >
+              {Array.from({ length: 24 }).map((_, h) => {
+                const sH = String(h).padStart(2, "0");
+                const eH = String((h + 1) % 24).padStart(2, "0");
+                const count = allHourCounts[h] || 0;
+                const isThisPeak = peakHour && peakHour.hour === h;
+                return (
+                  <option key={h} value={h}>
+                    {sH}.00 – {eH}.00 {isThisPeak ? "🏆 (Puncak) " : ""}— {count} tap
+                  </option>
+                );
+              })}
+            </select>
+            <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: "0.6rem", color: "#A5B4FC", pointerEvents: "none" }}>
+              ▼
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Konten Rincian Outlet */}
+      {countsByStore.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "28px 16px", background: "rgba(255,255,255,0.02)", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.08)" }}>
+          <div style={{ fontSize: "1.8rem", marginBottom: 6 }}>☕</div>
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "#CBD5E1", fontWeight: 600 }}>
+            Tidak ada aktivitas tap pada pukul {hourLabel}
+          </p>
+          <p style={{ margin: "4px 0 12px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+            Belum ada pelanggan yang men-tap kartu toko di jam ini pada {periodName}.
+          </p>
+          {peakHour && peakHour.hour !== hour && (
+            <button
+              type="button"
+              onClick={() => onSelectHour(peakHour.hour)}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 8,
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                color: "#34D399",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Lihat Jam Puncak ({peakHour.label} · {peakHour.count} tap) →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {visibleStores.map((store, i) => {
+            const percentOfHour = totalHourTaps > 0 ? Math.round((store.count / totalHourTaps) * 100) : 0;
+            const relativePercent = Math.round((store.count / max) * 100);
+            const reviewUrl = cardUrlMap.get(store.code) || (store.storeName ? getPublicGoogleReviewUrl("", store.storeName) : "");
+
+            return (
+              <div
+                key={store.code || store.storeName}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: "rgba(255, 255, 255, 0.025)",
+                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: "0.85rem", width: 22, textAlign: "center", fontWeight: 700, color: "#94A3B8" }}>
+                      {medals[i] || `#${i + 1}`}
+                    </span>
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#F8FAFC", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {store.storeName}
+                    </span>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 600, color: "#94A3B8", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", padding: "1px 6px", borderRadius: 4, fontFamily: "monospace" }}>
+                      {store.code}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#EDE9FE" }}>
+                      {store.count} tap <span style={{ color: "#64748B", fontWeight: 500 }}>({percentOfHour}%)</span>
+                    </span>
+                    {reviewUrl && (
+                      <a
+                        href={reviewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="cafe-review-link"
+                        title="Buka menu ulasan toko ini"
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          color: "#FCD34D",
+                          background: "rgba(245, 158, 11, 0.08)",
+                          border: "1px solid rgba(245, 158, 11, 0.25)",
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          textDecoration: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
+                        <span>⭐</span> ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress bar porsi tap di jam ini */}
+                <div style={{ background: "rgba(255,255,255,0.06)", height: 5, borderRadius: 999, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${relativePercent}%`,
+                      height: "100%",
+                      background: i === 0
+                        ? "linear-gradient(90deg, #F59E0B, #FCD34D)"
+                        : "linear-gradient(90deg, #6366F1, #818CF8)",
+                      borderRadius: 999,
+                      transition: "width 0.3s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+
+          {countsByStore.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAll(!showAll)}
+              style={{
+                marginTop: 6,
+                padding: "8px 12px",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                borderRadius: 8,
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.09)",
+                color: "#CBD5E1",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                width: "100%",
+              }}
+            >
+              <span>{showAll ? "▴ Ciutkan (Tampilkan Top 5 Saja)" : `▾ Tampilkan Semua (${countsByStore.length} Toko di Jam Ini)`}</span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Cafe Monogram Initials Helper ────────────────────────────────────
 function getStoreInitials(name?: string): string {
   if (!name || !name.trim()) return "☕";
@@ -677,6 +930,7 @@ export default function TapsPage() {
   const [selectedWeeklyMonth, setSelectedWeeklyMonth] = useState<string>("");
   const [selectedWeeklyYear, setSelectedWeeklyYear] = useState<number>(() => new Date().getFullYear());
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showAllSidebarStores, setShowAllSidebarStores] = useState(false);
   const [tapDisplayLimit, setTapDisplayLimit] = useState(25);
@@ -1532,25 +1786,38 @@ export default function TapsPage() {
   const hourFilteredLogs = periodLogsMap[hourPeriod];
   const peakHour = peakByPeriod[hourPeriod];
 
-  const hourData = useMemo(() => {
+  // Hitung jumlah tap untuk tiap jam (0..23) pada periode yang dipilih
+  const allHourCounts = useMemo(() => {
     const counts = Array(24).fill(0);
     hourFilteredLogs.forEach(l => {
       const h = new Date(l.tappedAt).getHours();
       if (h >= 0 && h < 24) counts[h]++;
     });
-    const maxH = Math.max(...counts);
-    return counts.map((v, i) => {
+    return counts;
+  }, [hourFilteredLogs]);
+
+  // Jam aktif yang sedang dipilih (otomatis default ke Jam Puncak jika belum ada pilihan manual)
+  const activeHour = selectedHour !== null ? selectedHour : (peakHour ? peakHour.hour : 17);
+
+  // Filter logs khusus jam yang dipilih
+  const selectedHourLogs = useMemo(() => {
+    return hourFilteredLogs.filter(l => new Date(l.tappedAt).getHours() === activeHour);
+  }, [hourFilteredLogs, activeHour]);
+
+  const hourData = useMemo(() => {
+    const maxH = Math.max(...allHourCounts);
+    return allHourCounts.map((v, i) => {
       const isLabeled = i % 4 === 0 || i === 23;
       const hourStr = String(i).padStart(2, "0");
       const nextHourStr = String((i + 1) % 24).padStart(2, "0");
       return {
         label: isLabeled ? `${hourStr}.00` : "",
         value: v,
-        highlight: v === maxH && maxH > 0,
-        tooltip: `Pukul ${hourStr}.00 - ${nextHourStr}.00: ${v} tap`,
+        highlight: i === activeHour || (v === maxH && maxH > 0),
+        tooltip: `Pukul ${hourStr}.00 - ${nextHourStr}.00: ${v} tap (Klik untuk rincian cafe)`,
       };
     });
-  }, [hourFilteredLogs]);
+  }, [allHourCounts, activeHour]);
 
   // ── Drill-Down: Rincian Jam Spesifik Tanggal (Saat Batang Tanggal Diklik) ───
   const [selectedDrilldownDate, setSelectedDrilldownDate] = useState<string | null>(null);
@@ -3551,7 +3818,7 @@ export default function TapsPage() {
                               <button
                                 key={p.id}
                                 type="button"
-                                onClick={() => setHourPeriod(p.id)}
+                                onClick={() => { setHourPeriod(p.id); setSelectedHour(null); }}
                                 style={{
                                   display: "flex",
                                   flexDirection: "column",
@@ -3600,6 +3867,8 @@ export default function TapsPage() {
                           yAxisUnit="Tap"
                           xAxisTitle="Jam"
                           showValue={true}
+                          selectedIndex={activeHour}
+                          onBarClick={(i) => setSelectedHour(i)}
                         />
 
                         {hourFilteredLogs.length === 0 && (
@@ -3617,13 +3886,16 @@ export default function TapsPage() {
                           </div>
                         )}
 
-                        {/* Breakdown Cafe Periode Jam — sembunyikan jika hanya 1 outlet difilter */}
+                        {/* Rincian Cafe Khusus Jam Terpilih — Terhubung langsung dengan grafik jam & dropdown */}
                         {!isSingleOutletFilter && (
-                          <CafeBreakdownCard
-                            title={`Peringkat Cafe Teraktif (${hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"})`}
-                            subtitle="Outlet yang menerima tap pelanggan pada rentang waktu terpilih."
-                            logs={hourFilteredLogs}
+                          <HourlyCafeBreakdownCard
+                            hour={activeHour}
+                            peakHour={peakHour}
+                            logs={selectedHourLogs}
+                            allHourCounts={allHourCounts}
+                            onSelectHour={(h) => setSelectedHour(h)}
                             cardUrlMap={cardUrlMap}
+                            periodName={hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"}
                           />
                         )}
                       </div>
