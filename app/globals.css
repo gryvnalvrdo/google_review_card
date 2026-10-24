@@ -973,19 +973,20 @@ html, body {
   white-space: nowrap;
 }
 
-/* === MAIN VIEW SWITCHER (Unified Modern Segmented Nav) === */
+/* === MAIN VIEW SWITCHER (Unified Full-Width Modern Segmented Nav) === */
 .main-view-switcher {
   display: flex;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(18, 20, 32, 0.7);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 4px;
-  border-radius: 12px;
-  gap: 4px;
+  padding: 5px;
+  border-radius: 14px;
+  gap: 6px;
   margin-bottom: 20px;
   overflow-x: auto;
   scrollbar-width: none;
-  width: fit-content;
-  max-width: 100%;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .main-view-switcher::-webkit-scrollbar {
@@ -993,20 +994,21 @@ html, body {
 }
 
 .main-view-btn {
-  border-radius: 8px;
-  padding: 9px 18px;
-  font-size: 0.84rem;
-  font-weight: 600;
+  border-radius: 10px;
+  padding: 11px 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
   border: 1px solid transparent;
   color: #94A3B8;
   background: transparent;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
-  flex-shrink: 0;
+  flex: 1;
   outline: none;
   font-family: inherit;
 }
@@ -1017,16 +1019,120 @@ html, body {
 }
 
 .main-view-btn.active {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.5);
   color: #FFFFFF;
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.25);
 }
 
 .main-view-btn.danger.active {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.4);
   color: #FCA5A5;
+}
+
+/* === UNIFIED DASHBOARD TOOLBAR (Full Width Balance) === */
+.dashboard-unified-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(18, 20, 32, 0.65);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 22px;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  width: 100%;
+}
+
+.toolbar-left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.toolbar-right-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .dashboard-unified-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+  }
+  .toolbar-left-group {
+    width: 100%;
+  }
+  .toolbar-right-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* === DESKTOP 2-COLUMN WORKSPACE LAYOUT === */
+.dashboard-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 390px;
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+}
+
+.dashboard-grid-main {
+  min-width: 0;
+  width: 100%;
+}
+
+.dashboard-grid-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 80px;
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid-2col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .dashboard-grid-sidebar {
+    order: -1;
+    position: static;
+  }
+}
+
+/* === ANALYTICS CANVAS CARD === */
+.analytics-canvas-card {
+  background: rgba(18, 20, 32, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+/* === PEAK INSIGHT WIDGET === */
+.peak-insight-box {
+  background: #111118;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 /* === SMART SEARCH & OUTLET FILTER ROW === */

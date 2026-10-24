@@ -1974,220 +1974,304 @@ export default function TapsPage() {
             </button>
           </div>
 
-          {/* ═════════ 3. SEARCH & OUTLET FILTER ROW ═════════ */}
-          <div className="smart-search-row">
-            <div className="smart-search-input-wrap">
-              <span className="smart-search-icon">🔍</span>
-              <input
-                type="text"
-                className="smart-search-input"
-                placeholder="Cari nama cafe, resto, atau kode kartu..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {search && (
+          {/* ═════════ 3. UNIFIED COMMAND TOOLBAR (Full Width Balanced Controls) ═════════ */}
+          <div className="dashboard-unified-toolbar">
+            {/* Sisi Kiri: Search Input & Outlet Dropdown Filter */}
+            <div className="toolbar-left-group">
+              <div className="smart-search-input-wrap">
+                <span className="smart-search-icon">🔍</span>
+                <input
+                  type="text"
+                  className="smart-search-input"
+                  placeholder="Cari nama cafe, resto, atau kode kartu..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="smart-search-clear"
+                    title="Hapus pencarian"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Outlet Filter Button with Dropdown Trigger */}
+              <div id="store-filter-dropdown-wrapper" style={{ position: "relative" }}>
                 <button
                   type="button"
-                  onClick={() => setSearch("")}
-                  className="smart-search-clear"
-                  title="Hapus pencarian"
+                  onClick={() => setStoreFilterOpen(o => !o)}
+                  style={{
+                    height: 42,
+                    padding: "0 14px",
+                    borderRadius: 10,
+                    background: selectedStoreFilters.length > 0 ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.03)",
+                    border: selectedStoreFilters.length > 0 ? "1px solid rgba(99,102,241,0.45)" : "1px solid rgba(255,255,255,0.08)",
+                    color: selectedStoreFilters.length > 0 ? "#EDE9FE" : "#94A3B8",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    transition: "all 0.15s ease",
+                    whiteSpace: "nowrap",
+                  }}
                 >
-                  ✕
+                  <span>🏪</span>
+                  <span>
+                    {selectedStoreFilters.length === 0
+                      ? "Semua Outlet"
+                      : `${selectedStoreFilters.length} Outlet Terpilih`}
+                  </span>
+                  <span style={{ fontSize: "0.6rem", opacity: 0.7 }}>
+                    {storeFilterOpen ? "▲" : "▼"}
+                  </span>
+                </button>
+
+                {storeFilterOpen && (
+                  <>
+                    <div
+                      onClick={() => setStoreFilterOpen(false)}
+                      style={{
+                        position: "fixed",
+                        inset: 0,
+                        zIndex: 998,
+                        background: "rgba(0,0,0,0.45)",
+                        backdropFilter: "blur(2px)",
+                      }}
+                    />
+                    <div
+                      className="outlet-filter-menu"
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 6px)",
+                        right: 0,
+                        zIndex: 999,
+                        background: "#141522",
+                        border: "1px solid rgba(99,102,241,0.35)",
+                        borderRadius: 14,
+                        boxShadow: "0 16px 40px rgba(0,0,0,0.75)",
+                        minWidth: 260,
+                        maxHeight: 340,
+                        overflowY: "auto",
+                        padding: "10px",
+                      }}
+                    >
+                      {/* Mobile Sheet Drag Indicator & Header */}
+                      <div className="outlet-sheet-header" style={{ flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                        <div style={{ width: 38, height: 4, background: "rgba(255,255,255,0.25)", borderRadius: 999, margin: "0 auto 6px" }} />
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                          <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                            <span>🏪</span> Filter Outlet Toko
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setStoreFilterOpen(false)}
+                            style={{
+                              background: "rgba(255,255,255,0.08)",
+                              border: "none",
+                              color: "#94A3B8",
+                              width: 26,
+                              height: 26,
+                              borderRadius: "50%",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "0.8rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
+                          background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span style={{
+                          width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                          border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
+                          background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 9, color: "#FFF",
+                        }}>✓</span>
+                        Semua Outlet ({availableStores.length})
+                      </button>
+
+                      <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+
+                      {availableStores.map(store => {
+                        const checked = selectedStoreFilters.includes(store);
+                        return (
+                          <button
+                            key={store}
+                            type="button"
+                            onClick={() => toggleStoreFilter(store)}
+                            style={{
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "7px 10px",
+                              borderRadius: 7,
+                              fontSize: "0.76rem",
+                              fontWeight: 600,
+                              color: checked ? "#F8FAFC" : "#CBD5E1",
+                              background: checked ? "rgba(99, 102, 241, 0.14)" : "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <span style={{
+                              width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                              border: checked ? "2px solid #6366F1" : "2px solid #475569",
+                              background: checked ? "#6366F1" : "transparent",
+                              display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 9, color: "#FFF",
+                            }}>{checked ? "✓" : ""}</span>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {store}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {selectedStoreFilters.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedStoreFilters([])}
+                  style={{
+                    height: 42,
+                    padding: "0 12px",
+                    borderRadius: 10,
+                    background: "rgba(239, 68, 68, 0.12)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    color: "#FCA5A5",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    whiteSpace: "nowrap",
+                  }}
+                  title="Reset filter outlet"
+                >
+                  <span>✕</span> Reset Filter
                 </button>
               )}
             </div>
 
-            {/* Outlet Filter Button with Dropdown Trigger */}
-            <div id="store-filter-dropdown-wrapper" style={{ position: "relative" }}>
-              <button
-                type="button"
-                onClick={() => setStoreFilterOpen(o => !o)}
-                style={{
-                  height: 42,
-                  padding: "0 14px",
-                  borderRadius: 10,
-                  background: selectedStoreFilters.length > 0 ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.03)",
-                  border: selectedStoreFilters.length > 0 ? "1px solid rgba(99,102,241,0.45)" : "1px solid rgba(255,255,255,0.08)",
-                  color: selectedStoreFilters.length > 0 ? "#EDE9FE" : "#94A3B8",
-                  fontSize: "0.82rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  transition: "all 0.15s ease",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span>🏪</span>
-                <span>
-                  {selectedStoreFilters.length === 0
-                    ? "Semua Outlet"
-                    : `${selectedStoreFilters.length} Outlet Terpilih`}
-                </span>
-                <span style={{ fontSize: "0.6rem", opacity: 0.7 }}>
-                  {storeFilterOpen ? "▲" : "▼"}
-                </span>
-              </button>
+            {/* Sisi Kanan: Period Selector Pills & Date Picker Row (Tampil di Tab Ringkasan) */}
+            {activeTab === "harian" && (
+              <div className="toolbar-right-group">
+                <div className="clean-period-row" style={{ marginBottom: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => { setDailyMode("today"); setCustomDate(""); }}
+                    className={`clean-period-pill ${dailyMode === "today" && !customDate ? "active" : ""}`}
+                  >
+                    ☀️ Hari Ini ({hariianPeriods.todayTotal})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDailyMode("last7"); setCustomDate(""); }}
+                    className={`clean-period-pill ${dailyMode === "last7" && !customDate ? "active" : ""}`}
+                  >
+                    📅 7 Hari Terakhir ({hariianPeriods.last7Total})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDailyMode("last30"); setCustomDate(""); }}
+                    className={`clean-period-pill ${dailyMode === "last30" && !customDate ? "active" : ""}`}
+                  >
+                    🗓️ 30 Hari Terakhir ({hariianPeriods.last30Total})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDailyMode("all"); setCustomDate(""); }}
+                    className={`clean-period-pill ${dailyMode === "all" && !customDate ? "active" : ""}`}
+                  >
+                    📑 Semua ({filtered.length})
+                  </button>
+                </div>
 
-              {storeFilterOpen && (
-                <>
-                  <div
-                    onClick={() => setStoreFilterOpen(false)}
+                {/* Clean Date Picker */}
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    id="custom-date-picker"
+                    type="date"
+                    value={customDate}
+                    min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
+                    max={toDateInputValue(new Date())}
+                    onChange={(e) => {
+                      setCustomDate(e.target.value);
+                      if (e.target.value) setDailyMode("custom");
+                    }}
                     style={{
-                      position: "fixed",
-                      inset: 0,
-                      zIndex: 998,
-                      background: "rgba(0,0,0,0.45)",
-                      backdropFilter: "blur(2px)",
+                      background: customDate ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.03)",
+                      border: customDate ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.09)",
+                      color: "#F0F0FF",
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      fontSize: "0.76rem",
+                      fontWeight: 600,
+                      outline: "none",
+                      cursor: "pointer",
                     }}
                   />
-                  <div
-                    className="outlet-filter-menu"
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 6px)",
-                      right: 0,
-                      zIndex: 999,
-                      background: "#141522",
-                      border: "1px solid rgba(99,102,241,0.35)",
-                      borderRadius: 14,
-                      boxShadow: "0 16px 40px rgba(0,0,0,0.75)",
-                      minWidth: 260,
-                      maxHeight: 340,
-                      overflowY: "auto",
-                      padding: "10px",
-                    }}
-                  >
-                    {/* Mobile Sheet Drag Indicator & Header */}
-                    <div className="outlet-sheet-header" style={{ flexDirection: "column", gap: 8, marginBottom: 10 }}>
-                      <div style={{ width: 38, height: 4, background: "rgba(255,255,255,0.25)", borderRadius: 999, margin: "0 auto 6px" }} />
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                        <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
-                          <span>🏪</span> Filter Outlet Toko
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setStoreFilterOpen(false)}
-                          style={{
-                            background: "rgba(255,255,255,0.08)",
-                            border: "none",
-                            color: "#94A3B8",
-                            width: 26,
-                            height: 26,
-                            borderRadius: "50%",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "0.8rem",
-                            fontWeight: 700,
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
+                  {customDate && (
                     <button
                       type="button"
-                      onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
+                      onClick={() => { setCustomDate(""); setDailyMode("today"); }}
                       style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "8px 10px",
-                        borderRadius: 8,
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
-                        background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
-                        border: "none",
+                        background: "rgba(239,68,68,0.15)",
+                        border: "1px solid rgba(239,68,68,0.3)",
+                        color: "#FCA5A5",
                         cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 4,
+                        fontWeight: 700,
+                        fontSize: "0.72rem",
+                        padding: "6px 10px",
+                        borderRadius: 8,
                       }}
+                      title="Reset tanggal"
                     >
-                      <span style={{
-                        width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                        border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
-                        background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
-                        display: "inline-flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 9, color: "#FFF",
-                      }}>✓</span>
-                      Semua Outlet ({availableStores.length})
+                      ✕
                     </button>
-
-                    <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
-
-                    {availableStores.map(store => {
-                      const checked = selectedStoreFilters.includes(store);
-                      return (
-                        <button
-                          key={store}
-                          type="button"
-                          onClick={() => toggleStoreFilter(store)}
-                          style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "7px 10px",
-                            borderRadius: 7,
-                            fontSize: "0.76rem",
-                            fontWeight: 600,
-                            color: checked ? "#F8FAFC" : "#CBD5E1",
-                            background: checked ? "rgba(99, 102, 241, 0.14)" : "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <span style={{
-                            width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                            border: checked ? "2px solid #6366F1" : "2px solid #475569",
-                            background: checked ? "#6366F1" : "transparent",
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 9, color: "#FFF",
-                          }}>{checked ? "✓" : ""}</span>
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {store}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {selectedStoreFilters.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setSelectedStoreFilters([])}
-                style={{
-                  height: 42,
-                  padding: "0 12px",
-                  borderRadius: 10,
-                  background: "rgba(239, 68, 68, 0.12)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  color: "#FCA5A5",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  whiteSpace: "nowrap",
-                }}
-                title="Reset filter outlet"
-              >
-                <span>✕</span> Reset Filter
-              </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
-          {/* ═════════ TAB 1: RIWAYAT TAP (CLEAN NATIVE FEED) ═════════ */}
+          {/* ═════════ TAB 1: RIWAYAT TAP (CLEAN NATIVE 2-COLUMN WORKSPACE) ═════════ */}
           {activeTab === "harian" && (
             loading ? (
               <div style={{ textAlign: "center", padding: "60px 0" }}>
@@ -2203,255 +2287,272 @@ export default function TapsPage() {
                 </p>
               </div>
             ) : (
-              <div>
-                {/* Period Selector Pills & Date Picker Row */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-                  <div className="clean-period-row" style={{ marginBottom: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => { setDailyMode("today"); setCustomDate(""); }}
-                      className={`clean-period-pill ${dailyMode === "today" && !customDate ? "active" : ""}`}
-                    >
-                      ☀️ Hari Ini ({hariianPeriods.todayTotal})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setDailyMode("last7"); setCustomDate(""); }}
-                      className={`clean-period-pill ${dailyMode === "last7" && !customDate ? "active" : ""}`}
-                    >
-                      📅 7 Hari Terakhir ({hariianPeriods.last7Total})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setDailyMode("last30"); setCustomDate(""); }}
-                      className={`clean-period-pill ${dailyMode === "last30" && !customDate ? "active" : ""}`}
-                    >
-                      🗓️ 30 Hari Terakhir ({hariianPeriods.last30Total})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setDailyMode("all"); setCustomDate(""); }}
-                      className={`clean-period-pill ${dailyMode === "all" && !customDate ? "active" : ""}`}
-                    >
-                      📑 Semua ({filtered.length})
-                    </button>
+              <div className="dashboard-grid-2col">
+                {/* ── KOLOM UTAMA: FEED RIWAYAT TAP ── */}
+                <div className="dashboard-grid-main">
+                  {activePeriodInfo.entries.length === 0 ? (
+                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>
+                        {dailyMode === "today" ? "☀️" : dailyMode === "last7" ? "📅" : dailyMode === "last30" ? "🗓️" : "📑"}
+                      </div>
+                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
+                        Tidak Ada Data Tap
+                      </h3>
+                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 18px", lineHeight: 1.5 }}>
+                        {activePeriodInfo.emptyMsg}
+                      </p>
+                      {dailyMode !== "all" && filtered.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => { setDailyMode("all"); setCustomDate(""); }}
+                          className="btn btn-ghost"
+                          style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
+                        >
+                          📑 Lihat Semua Riwayat ({filtered.length} tap)
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="tap-group-box">
+                      <div className="tap-group-header">
+                        <div className="tap-group-title">
+                          <span>{activePeriodInfo.title}</span>
+                        </div>
+                        <span className="tap-group-badge">
+                          {activePeriodInfo.entries.length} TAP
+                        </span>
+                      </div>
+
+                      <div>
+                        {activePeriodInfo.entries.map((log, i) => {
+                          const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
+                          const d = new Date(log.tappedAt);
+                          const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                          const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+
+                          return (
+                            <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-row-native">
+                              <div className="tap-row-left">
+                                <div className="tap-time-pill" title={formatFull(log.tappedAt)}>
+                                  {timeStr}
+                                </div>
+                                <div className="tap-store-info">
+                                  <div className="tap-store-name">{log.storeName}</div>
+                                  <div className="tap-store-sub">
+                                    <span className="tap-code-badge">{log.code}</span>
+                                    <span>·</span>
+                                    <span>{dateStr}</span>
+                                    <span>·</span>
+                                    <span>{timeAgo(log.tappedAt)}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="tap-row-action">
+                                {reviewUrl && (
+                                  <a
+                                    href={reviewUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="tap-review-btn"
+                                    title="Buka menu ulasan Google publik toko ini"
+                                  >
+                                    <span>⭐</span>
+                                    <span>Ulasan ↗</span>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── KOLOM SAMPING: SCORECARD CAFE & INSIGHT WIDGETS (Sticky di Desktop) ── */}
+                <div className="dashboard-grid-sidebar">
+                  {/* 1. Scorecard Total Tap per Cafe */}
+                  {cafeBreakdownList.length > 0 && (
+                    <div className="cafe-scorecard-box">
+                      <div className="cafe-scorecard-header">
+                        <div className="cafe-scorecard-title">
+                          <span>🏪</span>
+                          <span>
+                            Total Tap per Cafe — {
+                              dailyMode === "today" && !customDate ? "Hari Ini" :
+                              dailyMode === "last7" && !customDate ? "7 Hari Terakhir" :
+                              dailyMode === "last30" && !customDate ? "30 Hari Terakhir" :
+                              customDate ? formatDateShortIndo(customDate) : "Sepanjang Masa"
+                            }
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {selectedStoreFilters.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStoreFilters([])}
+                              style={{
+                                background: "rgba(239, 68, 68, 0.15)",
+                                border: "1px solid rgba(239, 68, 68, 0.3)",
+                                color: "#FCA5A5",
+                                borderRadius: 6,
+                                padding: "2px 8px",
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                              title="Tampilkan semua cafe"
+                            >
+                              ✕ Reset
+                            </button>
+                          )}
+                          <span className="cafe-scorecard-meta">
+                            {activePeriodInfo.entries.length} TAP
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="cafe-scorecard-grid">
+                        {cafeBreakdownList.map((c, idx) => {
+                          const isSelected = selectedStoreFilters.includes(c.storeName);
+                          const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+
+                          return (
+                            <div
+                              key={c.storeName}
+                              onClick={() => toggleStoreFilter(c.storeName)}
+                              className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
+                              title={`Klik untuk filter aktivitas ${c.storeName}`}
+                            >
+                              <div className="cafe-scorecard-left">
+                                <span className="cafe-rank-badge">{rankBadge}</span>
+                                <div className="cafe-name-wrap">
+                                  <div className="cafe-name-text">
+                                    <span>{c.storeName}</span>
+                                    {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
+                                  </div>
+                                  <div className="cafe-sub-text">
+                                    <span className="cafe-code-pill">{c.code}</span>
+                                    {c.count > 0 && <span>· {c.pct}%</span>}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="cafe-scorecard-right">
+                                <div className="cafe-count-wrap">
+                                  <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
+                                    {c.count}
+                                  </span>
+                                  <span className="cafe-count-unit">tap</span>
+                                </div>
+
+                                {c.reviewUrl && (
+                                  <a
+                                    href={c.reviewUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="cafe-review-quick-btn"
+                                    title="Buka menu ulasan Google publik"
+                                  >
+                                    ⭐
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Jam Kunjungan Tersibuk Widget */}
+                  <div className="peak-insight-box">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>⏱️</span> Jam Kunjungan Tersibuk
+                      </span>
+                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
+                        {dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari" : dailyMode === "last30" ? "30 Hari" : "Periode Aktif"}
+                      </span>
+                    </div>
+
+                    {(() => {
+                      const counts = Array(24).fill(0);
+                      activePeriodInfo.entries.forEach(l => {
+                        const h = new Date(l.tappedAt).getHours();
+                        if (h >= 0 && h < 24) counts[h]++;
+                      });
+                      const max = Math.max(...counts);
+                      if (max === 0) {
+                        return (
+                          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
+                            Belum ada riwayat tap yang tercatat pada rentang waktu ini.
+                          </p>
+                        );
+                      }
+                      const h = counts.indexOf(max);
+                      const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
+
+                      return (
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10, marginBottom: 10 }}>
+                            <div style={{ fontSize: "1.3rem" }}>🔥</div>
+                            <div>
+                              <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
+                              <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
+                            </div>
+                          </div>
+                          <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.45 }}>
+                            💡 <strong>Rekomendasi Operasional:</strong> Jam-jam di atas adalah momen terbaik bagi staf / barista untuk mengingatkan pelanggan memberikan ulasan Google Bintang 5.
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  {/* Clean Date Picker */}
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                    <input
-                      id="custom-date-picker"
-                      type="date"
-                      value={customDate}
-                      min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
-                      max={toDateInputValue(new Date())}
-                      onChange={(e) => {
-                        setCustomDate(e.target.value);
-                        if (e.target.value) setDailyMode("custom");
-                      }}
-                      style={{
-                        background: customDate ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.03)",
-                        border: customDate ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.09)",
-                        color: "#F0F0FF",
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        fontSize: "0.76rem",
-                        fontWeight: 600,
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    />
-                    {customDate && (
+                  {/* 3. Ringkasan Status Outlet & Kartu */}
+                  <div className="peak-insight-box">
+                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>📊</span> Status Operasional Kartu
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Toko Aktif</div>
+                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", marginTop: 2 }}>{availableStores.length}</div>
+                      </div>
+                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Kartu Aktif</div>
+                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34D399", marginTop: 2 }}>{cards.length - sleepingCards.length}</div>
+                      </div>
+                    </div>
+                    {sleepingCards.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => { setCustomDate(""); setDailyMode("today"); }}
+                        onClick={() => setActiveTab("tidur")}
                         style={{
-                          background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
-                          color: "#FCA5A5", cursor: "pointer", fontWeight: 700, fontSize: "0.72rem",
-                          padding: "6px 10px", borderRadius: 8,
+                          width: "100%",
+                          marginTop: 10,
+                          padding: "7px 10px",
+                          background: "rgba(239, 68, 68, 0.1)",
+                          border: "1px solid rgba(239, 68, 68, 0.25)",
+                          borderRadius: 8,
+                          color: "#FCA5A5",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
                         }}
-                        title="Reset tanggal"
                       >
-                        ✕
+                        <span>😴</span> {sleepingCards.length} Kartu Belum Ada Tap ↗
                       </button>
                     )}
                   </div>
                 </div>
-
-                {/* ── KARTU RINGKASAN TAP PER CAFE (LANGSUNG KELIHATAN TANPA RIBET) ── */}
-                {cafeBreakdownList.length > 0 && (
-                  <div className="cafe-scorecard-box">
-                    <div className="cafe-scorecard-header">
-                      <div className="cafe-scorecard-title">
-                        <span>🏪</span>
-                        <span>
-                          Total Tap per Cafe — {
-                            dailyMode === "today" && !customDate ? "Hari Ini" :
-                            dailyMode === "last7" && !customDate ? "7 Hari Terakhir (Mingguan)" :
-                            dailyMode === "last30" && !customDate ? "30 Hari Terakhir (Bulanan)" :
-                            customDate ? formatDateShortIndo(customDate) : "Sepanjang Masa"
-                          }
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {selectedStoreFilters.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedStoreFilters([])}
-                            style={{
-                              background: "rgba(239, 68, 68, 0.15)",
-                              border: "1px solid rgba(239, 68, 68, 0.3)",
-                              color: "#FCA5A5",
-                              borderRadius: 6,
-                              padding: "2px 8px",
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                            }}
-                            title="Tampilkan semua cafe"
-                          >
-                            ✕ Reset Filter
-                          </button>
-                        )}
-                        <span className="cafe-scorecard-meta">
-                          {activePeriodInfo.entries.length} TAP TOTAL
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="cafe-scorecard-grid">
-                      {cafeBreakdownList.map((c, idx) => {
-                        const isSelected = selectedStoreFilters.includes(c.storeName);
-                        const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
-
-                        return (
-                          <div
-                            key={c.storeName}
-                            onClick={() => toggleStoreFilter(c.storeName)}
-                            className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
-                            title={`Klik untuk filter aktivitas ${c.storeName}`}
-                          >
-                            <div className="cafe-scorecard-left">
-                              <span className="cafe-rank-badge">{rankBadge}</span>
-                              <div className="cafe-name-wrap">
-                                <div className="cafe-name-text">
-                                  <span>{c.storeName}</span>
-                                  {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
-                                </div>
-                                <div className="cafe-sub-text">
-                                  <span className="cafe-code-pill">{c.code}</span>
-                                  {c.count > 0 && <span>· {c.pct}%</span>}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="cafe-scorecard-right">
-                              <div className="cafe-count-wrap">
-                                <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
-                                  {c.count}
-                                </span>
-                                <span className="cafe-count-unit">tap</span>
-                              </div>
-
-                              {c.reviewUrl && (
-                                <a
-                                  href={c.reviewUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="cafe-review-quick-btn"
-                                  title="Buka menu ulasan Google publik"
-                                >
-                                  ⭐
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Native Group Feed */}
-                {activePeriodInfo.entries.length === 0 ? (
-                  <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
-                    <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>
-                      {dailyMode === "today" ? "☀️" : dailyMode === "last7" ? "📅" : dailyMode === "last30" ? "🗓️" : "📑"}
-                    </div>
-                    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
-                      Tidak Ada Data Tap
-                    </h3>
-                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 18px", lineHeight: 1.5 }}>
-                      {activePeriodInfo.emptyMsg}
-                    </p>
-                    {dailyMode !== "all" && filtered.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => { setDailyMode("all"); setCustomDate(""); }}
-                        className="btn btn-ghost"
-                        style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
-                      >
-                        📑 Lihat Semua Riwayat ({filtered.length} tap)
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="tap-group-box">
-                    <div className="tap-group-header">
-                      <div className="tap-group-title">
-                        <span>{activePeriodInfo.title}</span>
-                      </div>
-                      <span className="tap-group-badge">
-                        {activePeriodInfo.entries.length} TAP
-                      </span>
-                    </div>
-
-                    <div>
-                      {activePeriodInfo.entries.map((log, i) => {
-                        const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
-                        const d = new Date(log.tappedAt);
-                        const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                        const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-
-                        return (
-                          <div key={`${log.code}-${log.tappedAt}-${i}`} className="tap-row-native">
-                            <div className="tap-row-left">
-                              <div className="tap-time-pill" title={formatFull(log.tappedAt)}>
-                                {timeStr}
-                              </div>
-                              <div className="tap-store-info">
-                                <div className="tap-store-name">{log.storeName}</div>
-                                <div className="tap-store-sub">
-                                  <span className="tap-code-badge">{log.code}</span>
-                                  <span>·</span>
-                                  <span>{dateStr}</span>
-                                  <span>·</span>
-                                  <span>{timeAgo(log.tappedAt)}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="tap-row-action">
-                              {reviewUrl && (
-                                <a
-                                  href={reviewUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="tap-review-btn"
-                                  title="Buka menu ulasan Google publik toko ini"
-                                >
-                                  <span>⭐</span>
-                                  <span>Ulasan ↗</span>
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
             )
           )}
@@ -2988,7 +3089,7 @@ export default function TapsPage() {
                 </p>
               </div>
             ) : (
-              <div className="card" style={{ padding: "20px" }}>
+              <div className="analytics-canvas-card">
                 {/* ── Tampilan 1: Mode Drill-Down Tanggal Spesifik (Level 3) ── */}
                 {selectedDrilldownDate ? (
                   <div>
