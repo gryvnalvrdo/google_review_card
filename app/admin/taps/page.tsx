@@ -1357,11 +1357,11 @@ export default function TapsPage() {
               <span>📊</span> Rekap Bulanan & Peringkat
             </button>
             <button
-              onClick={() => setActiveTab("tren")}
+              onClick={() => { setActiveTab("tren"); setTrenView("mingguan"); }}
               className={`btn ${activeTab === "tren" ? "btn-primary" : "btn-ghost"}`}
               style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
-              <span>📈</span> Tren & Jam Sibuk
+              <span>📈</span> Tren, Jam & Cafe
             </button>
             <button
               onClick={() => setActiveTab("tidur")}
