@@ -90,23 +90,24 @@ function BarChart({
 
   const isFewBars = data.length <= 8;
   // Grafik selalu fit 100% lebar layar mobile tanpa perlu digeser (zero horizontal scrolling)
-  const W = isMobile ? (isFewBars ? 400 : 480) : 820;
-  const H = isMobile ? 210 : 220;
-  const PAD_L = isMobile ? 24 : 42;
+  // Di desktop, W diperluas hingga 1060px dan barW hingga 44px agar proporsional dan elegan
+  const W = isMobile ? (isFewBars ? 400 : 480) : 1060;
+  const H = isMobile ? 210 : 250;
+  const PAD_L = isMobile ? 24 : 46;
   const PAD_R = isMobile ? 12 : 24;
-  const PAD_T = isMobile ? 24 : 28;
-  const PAD_B = isMobile ? 38 : 36;
+  const PAD_T = isMobile ? 24 : 30;
+  const PAD_B = isMobile ? 38 : 38;
 
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
   const y0 = PAD_T + chartH;
 
   const slotW = data.length > 0 ? chartW / data.length : chartW;
-  const barW = Math.max(Math.min(Math.floor(slotW * 0.7), isMobile ? (isFewBars ? 24 : 13) : 32), 6);
+  const barW = Math.max(Math.min(Math.floor(slotW * 0.65), isMobile ? (isFewBars ? 24 : 13) : (isFewBars ? 46 : 36)), 8);
 
-  const valFontSize = isMobile ? (isFewBars ? 12.5 : 10.5) : (isFewBars ? 13 : 11.5);
-  const xLabelFontSize = isMobile ? (isFewBars ? 10.5 : 9.5) : 10;
-  const xSubLabelFontSize = isMobile ? (isFewBars ? 8.5 : 8) : 8.5;
+  const valFontSize = isMobile ? (isFewBars ? 12.5 : 10.5) : (isFewBars ? 13.5 : 11.5);
+  const xLabelFontSize = isMobile ? (isFewBars ? 10.5 : 9.5) : 11;
+  const xSubLabelFontSize = isMobile ? (isFewBars ? 8.5 : 8) : 9.5;
 
   return (
     <div style={{ width: "100%", overflow: "hidden" }}>
@@ -1671,12 +1672,12 @@ export default function TapsPage() {
       <AdminNav active="taps" />
 
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
-        <div className="mobile-container-pad" style={{ maxWidth: 940, margin: "0 auto", padding: "24px 16px" }}>
+        <div className="mobile-container-pad" style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 24px" }}>
 
           {/* Top Title & Quick Description */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
             <div>
-              <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+              <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.02em" }}>
                 📲 Riwayat &amp; Analitik Tap
               </h1>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
@@ -1690,10 +1691,10 @@ export default function TapsPage() {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 7,
-                  padding: "6px 12px",
+                  padding: "7px 14px",
                   background: "rgba(16,185,129,0.08)",
                   border: "1px solid rgba(16,185,129,0.25)",
-                  borderRadius: 8,
+                  borderRadius: 999,
                   fontSize: "0.75rem",
                 }}
                 title="Data tap otomatis diperbarui setiap 30 detik di latar belakang"
@@ -1715,86 +1716,101 @@ export default function TapsPage() {
             </div>
           </div>
 
-
-
-
-
-          {/* KPI Stat Cards (Grid kiri-kanan seperti di Dashboard) */}
+          {/* KPI Stat Cards (Modern Desktop SaaS Metric Grid) */}
           <div
             className="mobile-kpi-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 14,
-              marginBottom: 20,
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 16,
+              marginBottom: 24,
             }}
           >
             <div
-              className="card stat-card-compact"
+              className="saas-stat-card"
               onClick={() => { setActiveTab("harian"); setDailyMode("today"); setCustomDate(""); }}
-              style={{ borderColor: "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)", cursor: "pointer", transition: "all 0.2s ease" }}
+              style={{ "--card-accent": "#10B981" } as React.CSSProperties}
               title="Klik untuk membuka Riwayat Hari Ini"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span className="stat-card-title" style={{ fontWeight: 700, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Hari Ini</span>
-                <span className="stat-card-icon">☀️</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: "#34D399", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Hari Ini
+                </span>
+                <div className="stat-icon-chip" style={{ color: "#34D399" }}>☀️</div>
               </div>
-              <div className="stat-card-value" style={{ fontWeight: 800, color: "#34D399" }}>{todayCount}</div>
-              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Tap tercatat hari ini</div>
+              <div className="stat-val-huge" style={{ color: "#34D399" }}>{todayCount}</div>
+              <div className="stat-sub-text">
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981", display: "inline-block" }} />
+                <span>Tap tercatat hari ini</span>
+              </div>
             </div>
 
             <div
-              className="card stat-card-compact"
+              className="saas-stat-card"
               onClick={() => { setActiveTab("bulanan"); setSelectedMonth(thisMonthKey); }}
-              style={{ borderColor: "rgba(245,158,11,0.25)", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)", cursor: "pointer", transition: "all 0.2s ease" }}
+              style={{ "--card-accent": "#F59E0B" } as React.CSSProperties}
               title="Klik untuk membuka Rekap Bulanan"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span className="stat-card-title" style={{ fontWeight: 700, color: "#FCD34D", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bulan Ini</span>
-                <span className="stat-card-icon">📅</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: "#FCD34D", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Bulan Ini
+                </span>
+                <div className="stat-icon-chip" style={{ color: "#FCD34D" }}>📅</div>
               </div>
-              <div className="stat-card-value" style={{ fontWeight: 800, color: "#FCD34D" }}>{thisMonthCount}</div>
-              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>{formatMonthLabel(thisMonthKey)}</div>
+              <div className="stat-val-huge" style={{ color: "#FCD34D" }}>{thisMonthCount}</div>
+              <div className="stat-sub-text">
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F59E0B", display: "inline-block" }} />
+                <span>{formatMonthLabel(thisMonthKey)}</span>
+              </div>
             </div>
 
             <div
-              className="card stat-card-compact"
+              className="saas-stat-card"
               onClick={() => setActiveTab("tren")}
-              style={{ borderColor: "rgba(99,102,241,0.25)", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)", cursor: "pointer", transition: "all 0.2s ease" }}
+              style={{ "--card-accent": "#6366F1" } as React.CSSProperties}
               title="Klik untuk membuka Tren & Analitik"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span className="stat-card-title" style={{ fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Tap</span>
-                <span className="stat-card-icon">📲</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: "#A5B4FC", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Total Tap
+                </span>
+                <div className="stat-icon-chip" style={{ color: "#A5B4FC" }}>📲</div>
               </div>
-              <div className="stat-card-value" style={{ fontWeight: 800, color: "#A5B4FC" }}>{validLogs.length}</div>
-              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Kartu aktif terdaftar</div>
+              <div className="stat-val-huge" style={{ color: "#A5B4FC" }}>{validLogs.length}</div>
+              <div className="stat-sub-text">
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366F1", display: "inline-block" }} />
+                <span>Kartu aktif terdaftar</span>
+              </div>
             </div>
 
             <div
-              className="card stat-card-compact"
+              className="saas-stat-card"
               onClick={() => setActiveTab("tidur")}
-              style={{ borderColor: sleepingCards.length > 0 ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(255,255,255,0.02), #111118)", cursor: "pointer", transition: "all 0.2s ease" }}
+              style={{ "--card-accent": sleepingCards.length > 0 ? "#EF4444" : "#10B981" } as React.CSSProperties}
               title="Klik untuk melihat Kartu Belum Ada Tap"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span className="stat-card-title" style={{ fontWeight: 700, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Belum Ada Tap</span>
-                <span className="stat-card-icon">😴</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Belum Ada Tap
+                </span>
+                <div className="stat-icon-chip" style={{ color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399" }}>😴</div>
               </div>
-              <div className="stat-card-value" style={{ fontWeight: 800, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399" }}>
+              <div className="stat-val-huge" style={{ color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399" }}>
                 {sleepingCards.length}
               </div>
-              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Perlu follow up/promosi</div>
+              <div className="stat-sub-text">
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: sleepingCards.length > 0 ? "#EF4444" : "#10B981", display: "inline-block" }} />
+                <span>{sleepingCards.length > 0 ? "Perlu follow up/promosi" : "Semua kartu pernah ditap"}</span>
+              </div>
             </div>
           </div>
 
-          {/* Sub Navigation Tabs (Grid 2x2 di Mobile agar Belum Ada Tap terlihat dan mudah ditekan) */}
+          {/* Sub Navigation Tabs (Integrated Segmented Control on Desktop) */}
           <div className="taps-nav-grid">
             <button
               id="tab-btn-harian"
               onClick={() => setActiveTab("harian")}
               className={`btn ${activeTab === "harian" ? "btn-primary" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
               <span>📋</span> Riwayat Tap Harian
             </button>
@@ -1802,7 +1818,6 @@ export default function TapsPage() {
               id="tab-btn-bulanan"
               onClick={() => setActiveTab("bulanan")}
               className={`btn ${activeTab === "bulanan" ? "btn-primary" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
               <span>📊</span> Rekap Bulanan & Peringkat
             </button>
@@ -1810,7 +1825,6 @@ export default function TapsPage() {
               id="tab-btn-tren"
               onClick={() => { setActiveTab("tren"); setTrenView("mingguan"); }}
               className={`btn ${activeTab === "tren" ? "btn-primary" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
               <span>📈</span> Tren, Jam & Cafe
             </button>
@@ -1818,33 +1832,44 @@ export default function TapsPage() {
               id="tab-btn-tidur"
               onClick={() => setActiveTab("tidur")}
               className={`btn ${activeTab === "tidur" ? "btn-danger" : "btn-ghost"}`}
-              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10, display: "inline-flex", alignItems: "center", gap: 6 }}
             >
               <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
             </button>
           </div>
 
-          {/* Search bar */}
-          <div style={{ position: "relative", marginBottom: 20 }}>
-            <input
-              type="text"
-              className="input"
-              placeholder="🔍 Cari nama cafe, resto, atau kode kartu..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ paddingLeft: 14, paddingRight: search ? 38 : 14, background: "rgba(255,255,255,0.03)" }}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                style={{
-                  position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                  background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.9rem",
-                }}
-              >
-                ✕
-              </button>
-            )}
+          {/* Desktop Modern SaaS Search Toolbar */}
+          <div className="desktop-search-toolbar">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                className="input search-input-native"
+                placeholder="Cari nama cafe, resto, atau kode kartu..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="search-clear-btn"
+                  title="Hapus pencarian"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="search-toolbar-meta">
+              <span className="search-meta-badge">
+                <span>💳</span>
+                <span><strong>{tappedCodes.size}</strong> Toko Aktif</span>
+              </span>
+              <span className="search-meta-badge">
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981", display: "inline-block" }} />
+                <span>{filtered.length} Aktivitas Tap</span>
+              </span>
+            </div>
           </div>
 
           {/* ═════════ TAB 1: RIWAYAT TAP HARIAN (DEFAULT UTAMA) ═════════ */}
