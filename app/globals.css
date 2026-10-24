@@ -1068,6 +1068,216 @@ html, body {
   color: #FCA5A5;
 }
 
+/* === GLANCEABLE CAFE SCORECARD (LANGSUNG KELIHATAN) === */
+.cafe-scorecard-box {
+  margin-bottom: 20px;
+  background: #111118;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.cafe-scorecard-header {
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.cafe-scorecard-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #F1F5F9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cafe-scorecard-meta {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cafe-scorecard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+.cafe-scorecard-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+
+.cafe-scorecard-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-1px);
+}
+
+.cafe-scorecard-item.selected {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+}
+
+.cafe-scorecard-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cafe-rank-badge {
+  font-size: 0.88rem;
+  font-weight: 800;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #94A3B8;
+}
+
+.cafe-name-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cafe-name-text {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #F8FAFC;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cafe-filtered-pill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #818CF8;
+  background: rgba(99, 102, 241, 0.25);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.cafe-sub-text {
+  font-size: 0.7rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.cafe-code-pill {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94A3B8;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cafe-scorecard-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cafe-count-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  text-align: right;
+}
+
+.cafe-count-num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cafe-count-num.has-taps {
+  color: #38BDF8;
+}
+
+.cafe-count-num.zero-taps {
+  color: #64748B;
+  font-weight: 600;
+}
+
+.cafe-count-unit {
+  font-size: 0.7rem;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.cafe-review-quick-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.cafe-review-quick-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  transform: scale(1.08);
+}
+
+@media (max-width: 768px) {
+  .cafe-scorecard-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 10px;
+  }
+  .cafe-scorecard-item {
+    padding: 8px 10px;
+  }
+  .cafe-count-num {
+    font-size: 1.05rem;
+  }
+}
+
 /* === DATE GROUPED TAP FEED === */
 .tap-group-box {
   margin-bottom: 18px;

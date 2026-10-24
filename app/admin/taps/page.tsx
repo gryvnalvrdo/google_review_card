@@ -870,19 +870,61 @@ export default function TapsPage() {
     setExpandedStore(null);
   }, [activeTab, validLogs]);
 
-  // Stats (Using validLogs only)
+  // ── Global Outlet Filter & Perhitungan Dinamis ────────────────────────
+  const availableStores = useMemo(() => {
+    const set = new Set<string>();
+    cards.forEach(c => { if (c.storeName) set.add(c.storeName); });
+    validLogs.forEach(l => { if (l.storeName) set.add(l.storeName); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [cards, validLogs]);
+
+  const storeFilteredLogs = useMemo(() => {
+    let list = validLogs;
+    if (selectedStoreFilters.length > 0) {
+      const filterSet = new Set(selectedStoreFilters);
+      list = list.filter(l => filterSet.has(l.storeName));
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(l => l.storeName.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
+    }
+    return list;
+  }, [validLogs, selectedStoreFilters, search]);
+
+  const isSingleOutletFilter = selectedStoreFilters.length === 1;
+
+  function toggleStoreFilter(store: string) {
+    setSelectedStoreFilters(prev =>
+      prev.includes(store) ? prev.filter(s => s !== store) : [...prev, store]
+    );
+  }
+
+  // Stats (Mengikuti filter outlet & pencarian langsung)
   const todayCount = useMemo(() => {
     const todayStr = new Date().toDateString();
-    return validLogs.filter(l => new Date(l.tappedAt).toDateString() === todayStr).length;
-  }, [validLogs]);
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt).toDateString() === todayStr).length;
+  }, [storeFilteredLogs]);
 
-  const thisMonthCount = useMemo(() => validLogs.filter(l => getMonthKey(l.tappedAt) === thisMonthKey).length, [validLogs, thisMonthKey]);
+  const thisWeekCount = useMemo(() => {
+    const now = new Date();
+    const cutoff7 = new Date(now);
+    cutoff7.setDate(now.getDate() - 7);
+    cutoff7.setHours(0, 0, 0, 0);
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff7).length;
+  }, [storeFilteredLogs]);
+
+  const thisMonthCount = useMemo(() => {
+    const now = new Date();
+    const cutoff30 = new Date(now);
+    cutoff30.setDate(now.getDate() - 30);
+    cutoff30.setHours(0, 0, 0, 0);
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff30).length;
+  }, [storeFilteredLogs]);
+
+  const totalFilteredCount = storeFilteredLogs.length;
 
   // ── Harian: split by period ──────────────────────────────────────────
-  const filtered = useMemo(() => validLogs.filter(l =>
-    l.storeName.toLowerCase().includes(search.toLowerCase()) ||
-    l.code.toLowerCase().includes(search.toLowerCase())
-  ), [validLogs, search]);
+  const filtered = storeFilteredLogs;
 
   const customDateEntries = useMemo(() => {
     if (!customDate) return [];
@@ -973,6 +1015,42 @@ export default function TapsPage() {
       emptyMsg: "Belum ada aktivitas tap yang tercatat.",
     };
   }, [dailyMode, customDate, customDateEntries, hariianPeriods, filtered]);
+
+  // ── Ringkasan Total Tap per Cafe untuk Periode yang Aktif (Langsung Kelihatan) ──
+  type CafeSummary = {
+    storeName: string;
+    code: string;
+    count: number;
+    reviewUrl?: string;
+    pct: number;
+  };
+
+  const cafeBreakdownList = useMemo((): CafeSummary[] => {
+    const countsMap = new Map<string, { count: number; code: string }>();
+
+    // Lacak cafe yang aktif (jika filter outlet aktif, tampilkan outlet tersebut; jika tidak, semua outlet)
+    const storeListToTrack = selectedStoreFilters.length > 0 ? selectedStoreFilters : availableStores;
+    storeListToTrack.forEach(s => {
+      const card = cards.find(c => c.storeName === s);
+      countsMap.set(s, { count: 0, code: card?.code || "" });
+    });
+
+    activePeriodInfo.entries.forEach(l => {
+      const cur = countsMap.get(l.storeName) || { count: 0, code: l.code };
+      countsMap.set(l.storeName, { count: cur.count + 1, code: l.code || cur.code });
+    });
+
+    const total = activePeriodInfo.entries.length;
+    return Array.from(countsMap.entries())
+      .map(([storeName, info]) => ({
+        storeName,
+        code: info.code,
+        count: info.count,
+        reviewUrl: cardUrlMap.get(info.code) || (storeName ? getPublicGoogleReviewUrl("", storeName) : ""),
+        pct: total > 0 ? Math.round((info.count / total) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count || a.storeName.localeCompare(b.storeName));
+  }, [activePeriodInfo.entries, availableStores, cards, cardUrlMap, selectedStoreFilters]);
 
   // ── Tab: Bulanan (Leaderboard Tanpa Kartu Terhapus) ───────────────────
   type MonthGroup = {
@@ -1123,36 +1201,6 @@ export default function TapsPage() {
   }, [selectedMonthKey, allTimeGroup, filteredMonthly, monthlyGroups, search]);
 
   const isCurrentSelected = selectedMonthKey === thisMonthKey;
-
-  // ── Tab: Tren (Global Outlet Filter & Perhitungan Dinamis) ───────────
-  const availableStores = useMemo(() => {
-    const set = new Set<string>();
-    cards.forEach(c => { if (c.storeName) set.add(c.storeName); });
-    validLogs.forEach(l => { if (l.storeName) set.add(l.storeName); });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [cards, validLogs]);
-
-  const storeFilteredLogs = useMemo(() => {
-    let list = validLogs;
-    if (selectedStoreFilters.length > 0) {
-      const filterSet = new Set(selectedStoreFilters);
-      list = list.filter(l => filterSet.has(l.storeName));
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(l => l.storeName.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
-    }
-    return list;
-  }, [validLogs, selectedStoreFilters, search]);
-
-  // Apakah filter aktif dan hanya 1 outlet dipilih → sembunyikan CafeBreakdownCard
-  const isSingleOutletFilter = selectedStoreFilters.length === 1;
-
-  function toggleStoreFilter(store: string) {
-    setSelectedStoreFilters(prev =>
-      prev.includes(store) ? prev.filter(s => s !== store) : [...prev, store]
-    );
-  }
 
   const trendData7 = useMemo(() => {
     const days: { label: string; subLabel?: string; value: number; highlight?: boolean; tooltip: string; dateKey: string }[] = [];
@@ -1826,13 +1874,13 @@ export default function TapsPage() {
               </div>
             </div>
 
-            {/* Glanceable Hero Metric Chips */}
+            {/* Glanceable Hero Metric Chips (Satu Klik Langsung Tampilkan Ringkasan & Riwayat Periode Tersebut) */}
             <div className="hero-metrics-bar">
               <button
                 type="button"
-                className={`hero-chip ${activeTab === "harian" && dailyMode === "today" ? "active" : ""}`}
+                className={`hero-chip ${activeTab === "harian" && dailyMode === "today" && !customDate ? "active" : ""}`}
                 onClick={() => { setActiveTab("harian"); setDailyMode("today"); setCustomDate(""); }}
-                title="Buka riwayat tap hari ini"
+                title="Tampilkan total tap hari ini"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(16,185,129,0.1)", color: "#34D399", border: "1px solid rgba(16,185,129,0.25)" }}>
                   ☀️
@@ -1845,55 +1893,46 @@ export default function TapsPage() {
 
               <button
                 type="button"
-                className={`hero-chip ${activeTab === "bulanan" && selectedMonthKey === thisMonthKey ? "active" : ""}`}
-                onClick={() => { setActiveTab("bulanan"); setSelectedMonth(thisMonthKey); }}
-                title="Buka leaderboard bulan ini"
+                className={`hero-chip ${activeTab === "harian" && dailyMode === "last7" && !customDate ? "active" : ""}`}
+                onClick={() => { setActiveTab("harian"); setDailyMode("last7"); setCustomDate(""); }}
+                title="Tampilkan total tap 7 hari terakhir (mingguan)"
               >
-                <div className="hero-chip-icon" style={{ background: "rgba(245,158,11,0.1)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}>
+                <div className="hero-chip-icon" style={{ background: "rgba(99,102,241,0.1)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.25)" }}>
                   📅
                 </div>
                 <div className="hero-chip-body">
+                  <div className="hero-chip-val" style={{ color: "#A5B4FC" }}>{thisWeekCount}</div>
+                  <div className="hero-chip-label">7 Hari</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`hero-chip ${activeTab === "harian" && dailyMode === "last30" && !customDate ? "active" : ""}`}
+                onClick={() => { setActiveTab("harian"); setDailyMode("last30"); setCustomDate(""); }}
+                title="Tampilkan total tap 30 hari terakhir (bulanan)"
+              >
+                <div className="hero-chip-icon" style={{ background: "rgba(245,158,11,0.1)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}>
+                  🗓️
+                </div>
+                <div className="hero-chip-body">
                   <div className="hero-chip-val" style={{ color: "#FCD34D" }}>{thisMonthCount}</div>
-                  <div className="hero-chip-label">Bulan Ini</div>
+                  <div className="hero-chip-label">30 Hari</div>
                 </div>
               </button>
 
               <button
                 type="button"
-                className={`hero-chip ${activeTab === "tren" ? "active" : ""}`}
-                onClick={() => setActiveTab("tren")}
-                title="Buka grafik tren & jam ramai"
+                className={`hero-chip ${activeTab === "harian" && dailyMode === "all" && !customDate ? "active" : ""}`}
+                onClick={() => { setActiveTab("harian"); setDailyMode("all"); setCustomDate(""); }}
+                title="Tampilkan semua riwayat tap sepanjang masa"
               >
-                <div className="hero-chip-icon" style={{ background: "rgba(99,102,241,0.1)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.25)" }}>
-                  📊
+                <div className="hero-chip-icon" style={{ background: "rgba(139,92,246,0.1)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.25)" }}>
+                  📑
                 </div>
                 <div className="hero-chip-body">
-                  <div className="hero-chip-val" style={{ color: "#A5B4FC" }}>{validLogs.length}</div>
-                  <div className="hero-chip-label">Total Tap</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`hero-chip ${activeTab === "tidur" ? "active" : ""}`}
-                onClick={() => setActiveTab("tidur")}
-                title="Buka daftar kartu belum ada tap"
-              >
-                <div
-                  className="hero-chip-icon"
-                  style={{
-                    background: sleepingCards.length > 0 ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                    color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399",
-                    border: sleepingCards.length > 0 ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(16,185,129,0.25)",
-                  }}
-                >
-                  {sleepingCards.length > 0 ? "😴" : "✨"}
-                </div>
-                <div className="hero-chip-body">
-                  <div className="hero-chip-val" style={{ color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399" }}>
-                    {sleepingCards.length}
-                  </div>
-                  <div className="hero-chip-label">Belum Tap</div>
+                  <div className="hero-chip-val" style={{ color: "#C4B5FD" }}>{totalFilteredCount}</div>
+                  <div className="hero-chip-label">Semua Tap</div>
                 </div>
               </button>
             </div>
@@ -1902,20 +1941,20 @@ export default function TapsPage() {
           {/* ═════════ 2. MAIN VIEW SWITCHER (Segmented Controls) ═════════ */}
           <div className="main-view-switcher">
             <button
-              id="tab-btn-tren"
-              type="button"
-              onClick={() => setActiveTab("tren")}
-              className={`main-view-btn ${activeTab === "tren" ? "active" : ""}`}
-            >
-              <span>📊</span> Tren &amp; Jam
-            </button>
-            <button
               id="tab-btn-harian"
               type="button"
               onClick={() => setActiveTab("harian")}
               className={`main-view-btn ${activeTab === "harian" ? "active" : ""}`}
             >
-              <span>📋</span> Riwayat Tap
+              <span>📋</span> Ringkasan &amp; Riwayat
+            </button>
+            <button
+              id="tab-btn-tren"
+              type="button"
+              onClick={() => setActiveTab("tren")}
+              className={`main-view-btn ${activeTab === "tren" ? "active" : ""}`}
+            >
+              <span>📊</span> Grafik &amp; Jam Sibuk
             </button>
             <button
               id="tab-btn-bulanan"
@@ -1923,7 +1962,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("bulanan")}
               className={`main-view-btn ${activeTab === "bulanan" ? "active" : ""}`}
             >
-              <span>🏆</span> Leaderboard Toko
+              <span>🏆</span> Arsip Bulanan
             </button>
             <button
               id="tab-btn-tidur"
@@ -2196,6 +2235,101 @@ export default function TapsPage() {
                     )}
                   </div>
                 </div>
+
+                {/* ── KARTU RINGKASAN TAP PER CAFE (LANGSUNG KELIHATAN TANPA RIBET) ── */}
+                {cafeBreakdownList.length > 0 && (
+                  <div className="cafe-scorecard-box">
+                    <div className="cafe-scorecard-header">
+                      <div className="cafe-scorecard-title">
+                        <span>🏪</span>
+                        <span>
+                          Total Tap per Cafe — {
+                            dailyMode === "today" && !customDate ? "Hari Ini" :
+                            dailyMode === "last7" && !customDate ? "7 Hari Terakhir (Mingguan)" :
+                            dailyMode === "last30" && !customDate ? "30 Hari Terakhir (Bulanan)" :
+                            customDate ? formatDateShortIndo(customDate) : "Sepanjang Masa"
+                          }
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {selectedStoreFilters.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStoreFilters([])}
+                            style={{
+                              background: "rgba(239, 68, 68, 0.15)",
+                              border: "1px solid rgba(239, 68, 68, 0.3)",
+                              color: "#FCA5A5",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                            title="Tampilkan semua cafe"
+                          >
+                            ✕ Reset Filter
+                          </button>
+                        )}
+                        <span className="cafe-scorecard-meta">
+                          {activePeriodInfo.entries.length} TAP TOTAL
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="cafe-scorecard-grid">
+                      {cafeBreakdownList.map((c, idx) => {
+                        const isSelected = selectedStoreFilters.includes(c.storeName);
+                        const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+
+                        return (
+                          <div
+                            key={c.storeName}
+                            onClick={() => toggleStoreFilter(c.storeName)}
+                            className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
+                            title={`Klik untuk filter aktivitas ${c.storeName}`}
+                          >
+                            <div className="cafe-scorecard-left">
+                              <span className="cafe-rank-badge">{rankBadge}</span>
+                              <div className="cafe-name-wrap">
+                                <div className="cafe-name-text">
+                                  <span>{c.storeName}</span>
+                                  {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
+                                </div>
+                                <div className="cafe-sub-text">
+                                  <span className="cafe-code-pill">{c.code}</span>
+                                  {c.count > 0 && <span>· {c.pct}%</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="cafe-scorecard-right">
+                              <div className="cafe-count-wrap">
+                                <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
+                                  {c.count}
+                                </span>
+                                <span className="cafe-count-unit">tap</span>
+                              </div>
+
+                              {c.reviewUrl && (
+                                <a
+                                  href={c.reviewUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="cafe-review-quick-btn"
+                                  title="Buka menu ulasan Google publik"
+                                >
+                                  ⭐
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Native Group Feed */}
                 {activePeriodInfo.entries.length === 0 ? (
