@@ -3048,17 +3048,29 @@ export default function TapsPage() {
         </div>
       </div>
 
-      {/* Tombol Melayang: Kembali ke Atas (Floating Scroll-to-Top FAB) */}
+      {/* Tombol Melayang: Kembali ke Atas (Floating Circular Scroll-to-Top FAB) */}
       {showScrollTop && (
         <button
           type="button"
           onClick={scrollToTop}
           className="scroll-to-top-btn"
-          aria-label="Kembali ke atas halaman"
+          aria-label="Kembali ke atas"
           title="Kembali ke atas"
         >
-          <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>↑</span>
-          <span>Ke Atas</span>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="19" x2="12" y2="5" />
+            <polyline points="5 12 12 5 19 12" />
+          </svg>
         </button>
       )}
     </>

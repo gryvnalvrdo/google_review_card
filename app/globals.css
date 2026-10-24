@@ -717,42 +717,42 @@ html, body {
   }
 }
 
-/* Floating Back to Top Button */
+/* Floating Back to Top Button (Circular FAB) */
 .scroll-to-top-btn {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 36px;
+  right: 28px;
   z-index: 85;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
+  justify-content: center;
+  padding: 0;
   background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
   color: #FFFFFF;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 9999px;
-  font-size: 0.82rem;
-  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.45), 0 2px 8px rgba(0, 0, 0, 0.35);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   animation: fadeInScrollBtn 0.25s ease-out;
 }
 
 .scroll-to-top-btn:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 6px 22px rgba(99, 102, 241, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  transform: translateY(-3px) scale(1.08);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
   background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
 }
 
 .scroll-to-top-btn:active {
-  transform: translateY(0) scale(0.96);
+  transform: translateY(0) scale(0.94);
 }
 
 @keyframes fadeInScrollBtn {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.85);
+    transform: translateY(12px) scale(0.8);
   }
   to {
     opacity: 1;
@@ -762,11 +762,11 @@ html, body {
 
 @media (max-width: 768px) {
   .scroll-to-top-btn {
-    bottom: 76px; /* Positioned safely above the mobile bottom dock */
-    right: 16px;
-    padding: 8px 12px;
-    font-size: 0.76rem;
-    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.55);
+    bottom: 96px; /* Positioned safely and comfortably above the mobile bottom dock */
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    box-shadow: 0 4px 18px rgba(99, 102, 241, 0.6);
   }
 }
 
