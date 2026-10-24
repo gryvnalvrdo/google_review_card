@@ -3907,12 +3907,12 @@ export default function TapsPage() {
                                 alignItems: "flex-start",
                                 padding: "10px 14px",
                                 borderRadius: 10,
-                                background: trendRange === 7 ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                border: trendRange === 7 ? "1.5px solid #F59E0B" : "1px solid rgba(255, 255, 255, 0.08)",
+                                background: trendRange === 7 ? "rgba(245, 158, 11, 0.14)" : "rgba(255, 255, 255, 0.03)",
+                                border: trendRange === 7 ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
                                 cursor: "pointer",
                                 textAlign: "left",
                                 transition: "all 0.15s ease",
-                                boxShadow: trendRange === 7 ? "0 0 14px rgba(245,158,11,0.25)" : "none",
+                                boxShadow: "none",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
@@ -3944,12 +3944,12 @@ export default function TapsPage() {
                                 alignItems: "flex-start",
                                 padding: "10px 14px",
                                 borderRadius: 10,
-                                background: trendRange === 30 ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                border: trendRange === 30 ? "1.5px solid #F59E0B" : "1px solid rgba(255, 255, 255, 0.08)",
+                                background: trendRange === 30 ? "rgba(245, 158, 11, 0.14)" : "rgba(255, 255, 255, 0.03)",
+                                border: trendRange === 30 ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
                                 cursor: "pointer",
                                 textAlign: "left",
                                 transition: "all 0.15s ease",
-                                boxShadow: trendRange === 30 ? "0 0 14px rgba(245,158,11,0.25)" : "none",
+                                boxShadow: "none",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
@@ -3981,12 +3981,12 @@ export default function TapsPage() {
                                 alignItems: "flex-start",
                                 padding: "10px 14px",
                                 borderRadius: 10,
-                                background: trendRange === "custom" ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                border: trendRange === "custom" ? "1.5px solid #F59E0B" : "1px solid rgba(255, 255, 255, 0.08)",
+                                background: trendRange === "custom" ? "rgba(245, 158, 11, 0.14)" : "rgba(255, 255, 255, 0.03)",
+                                border: trendRange === "custom" ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
                                 cursor: "pointer",
                                 textAlign: "left",
                                 transition: "all 0.15s ease",
-                                boxShadow: trendRange === "custom" ? "0 0 14px rgba(245,158,11,0.25)" : "none",
+                                boxShadow: "none",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
@@ -4007,49 +4007,25 @@ export default function TapsPage() {
                           </div>
 
                           {trendRange === "custom" && (
-                            <div style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                              padding: "10px 14px",
-                              background: "rgba(245, 158, 11, 0.08)",
-                              border: "1px solid rgba(245, 158, 11, 0.28)",
-                              borderRadius: 12,
-                              marginBottom: 16,
-                              flexWrap: "wrap",
-                            }}>
-                              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#FCD34D", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <div className="custom-date-range-bar">
+                              <span className="custom-date-range-label">
                                 <span>📅</span>
                                 <span>Pilih Tanggal:</span>
                               </span>
 
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                              <div className="custom-date-range-inputs">
                                 {/* Tombol Tanggal Mulai */}
-                                <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                                <div className="custom-date-input-wrap">
                                   <button
                                     type="button"
                                     className="date-range-pill-btn"
-                                    style={{
-                                      background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-                                      color: "#0F172A",
-                                      border: "1.5px solid #FEF08A",
-                                      borderRadius: 10,
-                                      padding: "8px 14px",
-                                      fontSize: "0.84rem",
-                                      fontWeight: 800,
-                                      cursor: "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 7,
-                                      boxShadow: "0 3px 12px rgba(245, 158, 11, 0.4)",
-                                      transition: "all 0.15s ease",
-                                      whiteSpace: "nowrap",
-                                    }}
                                     title="Klik untuk memilih tanggal mulai"
                                   >
-                                    <span style={{ fontSize: "0.95rem" }}>📅</span>
-                                    <span>{customStartDate ? formatDateShortIndo(customStartDate) : "Pilih Mulai"}</span>
-                                    <span style={{ fontSize: "0.6rem", opacity: 0.75 }}>▼</span>
+                                    <span style={{ fontSize: "0.82rem" }}>📅</span>
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {customStartDate ? formatDateShortIndo(customStartDate) : "Pilih Mulai"}
+                                    </span>
+                                    <span style={{ fontSize: "0.55rem", opacity: 0.6 }}>▼</span>
                                   </button>
                                   <input
                                     type="date"
@@ -4072,39 +4048,26 @@ export default function TapsPage() {
                                       height: "100%",
                                       cursor: "pointer",
                                       zIndex: 2,
+                                      colorScheme: "dark",
                                     }}
                                     title="Klik untuk memilih tanggal awal"
                                   />
                                 </div>
 
-                                <span style={{ color: "#FCD34D", fontSize: "0.85rem", fontWeight: 800 }}>s/d</span>
+                                <span className="date-range-separator">s/d</span>
 
                                 {/* Tombol Tanggal Akhir */}
-                                <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                                <div className="custom-date-input-wrap">
                                   <button
                                     type="button"
                                     className="date-range-pill-btn"
-                                    style={{
-                                      background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-                                      color: "#0F172A",
-                                      border: "1.5px solid #FEF08A",
-                                      borderRadius: 10,
-                                      padding: "8px 14px",
-                                      fontSize: "0.84rem",
-                                      fontWeight: 800,
-                                      cursor: "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 7,
-                                      boxShadow: "0 3px 12px rgba(245, 158, 11, 0.4)",
-                                      transition: "all 0.15s ease",
-                                      whiteSpace: "nowrap",
-                                    }}
                                     title="Klik untuk memilih tanggal akhir"
                                   >
-                                    <span style={{ fontSize: "0.95rem" }}>📅</span>
-                                    <span>{customEndDate ? formatDateShortIndo(customEndDate) : "Pilih Akhir"}</span>
-                                    <span style={{ fontSize: "0.6rem", opacity: 0.75 }}>▼</span>
+                                    <span style={{ fontSize: "0.82rem" }}>📅</span>
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {customEndDate ? formatDateShortIndo(customEndDate) : "Pilih Akhir"}
+                                    </span>
+                                    <span style={{ fontSize: "0.55rem", opacity: 0.6 }}>▼</span>
                                   </button>
                                   <input
                                     type="date"
@@ -4127,6 +4090,7 @@ export default function TapsPage() {
                                       height: "100%",
                                       cursor: "pointer",
                                       zIndex: 2,
+                                      colorScheme: "dark",
                                     }}
                                     title="Klik untuk memilih tanggal akhir"
                                   />
