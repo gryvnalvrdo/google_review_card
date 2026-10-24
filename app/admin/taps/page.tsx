@@ -401,7 +401,7 @@ function InteractiveBreadcrumb({
       <div className="breadcrumb-trail">
         {items.map((item, idx) => {
           return (
-            <div key={idx} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <div key={idx} className="breadcrumb-item-wrapper">
               {idx > 0 && <span className="breadcrumb-separator">›</span>}
               {item.onClick && !item.active ? (
                 <button
@@ -438,6 +438,7 @@ function CafeBreakdownCard({
   logs: TapLogEntry[];
   cardUrlMap: Map<string, string>;
 }) {
+  const [showAll, setShowAll] = useState(false);
   const countsByStore = useMemo(() => {
     const map = new Map<string, { count: number; code: string; storeName: string }>();
     for (const log of logs) {
@@ -456,6 +457,7 @@ function CafeBreakdownCard({
 
   const total = logs.length;
   const max = countsByStore.length > 0 ? countsByStore[0].count : 1;
+  const visibleStores = showAll ? countsByStore : countsByStore.slice(0, 5);
 
   if (countsByStore.length === 0) {
     return (
@@ -486,7 +488,7 @@ function CafeBreakdownCard({
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {countsByStore.map((store, i) => {
+        {visibleStores.map((store, i) => {
           const relativePercent = Math.round((store.count / max) * 100);
           const reviewUrl = cardUrlMap.get(store.code) || (store.storeName ? getPublicGoogleReviewUrl("", store.storeName) : "");
 
@@ -541,6 +543,32 @@ function CafeBreakdownCard({
           );
         })}
       </div>
+
+      {countsByStore.length > 5 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(!showAll)}
+          style={{
+            marginTop: 10,
+            padding: "8px 12px",
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            borderRadius: 8,
+            background: "rgba(255, 255, 255, 0.04)",
+            border: "1px solid rgba(255, 255, 255, 0.09)",
+            color: "#CBD5E1",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            width: "100%",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <span>{showAll ? "▴ Ciutkan (Tampilkan Top 5 Saja)" : `▾ Tampilkan Semua (${countsByStore.length} Toko)`}</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -636,7 +664,14 @@ export default function TapsPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
-  const [trendRange, setTrendRange] = useState<7 | 30>(7);
+  const [trendRange, setTrendRange] = useState<7 | 30 | "custom">(7);
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return toDateInputValue(d);
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => toDateInputValue(new Date()));
+  const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>("all");
   const [trenView, setTrenView] = useState<"jam" | "harian" | "mingguan">("jam");
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
@@ -757,6 +792,15 @@ export default function TapsPage() {
       weekday: "long",
       day: "numeric",
       month: "long",
+      year: "numeric",
+    });
+  }
+  function formatDateShortIndo(dateInput: string | Date) {
+    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    if (isNaN(d.getTime())) return String(dateInput);
+    return d.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
       year: "numeric",
     });
   }
@@ -1037,7 +1081,26 @@ export default function TapsPage() {
 
   const isCurrentSelected = selectedMonthKey === thisMonthKey;
 
-  // ── Tab: Tren ────────────────────────────────────────────────────────
+  // ── Tab: Tren (Global Outlet Filter & Perhitungan Dinamis) ───────────
+  const availableStores = useMemo(() => {
+    const set = new Set<string>();
+    cards.forEach(c => { if (c.storeName) set.add(c.storeName); });
+    validLogs.forEach(l => { if (l.storeName) set.add(l.storeName); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [cards, validLogs]);
+
+  const storeFilteredLogs = useMemo(() => {
+    let list = validLogs;
+    if (selectedStoreFilter !== "all") {
+      list = list.filter(l => l.storeName === selectedStoreFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(l => l.storeName.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
+    }
+    return list;
+  }, [validLogs, selectedStoreFilter, search]);
+
   const trendData7 = useMemo(() => {
     const days: { label: string; subLabel?: string; value: number; highlight?: boolean; tooltip: string; dateKey: string }[] = [];
     const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -1048,7 +1111,7 @@ export default function TapsPage() {
       const next = new Date(d);
       next.setDate(next.getDate() + 1);
 
-      const count = validLogs.filter(l => {
+      const count = storeFilteredLogs.filter(l => {
         const t = new Date(l.tappedAt);
         return t >= d && t < next;
       }).length;
@@ -1068,7 +1131,7 @@ export default function TapsPage() {
       });
     }
     return days;
-  }, [validLogs]);
+  }, [storeFilteredLogs]);
 
   const trendData30 = useMemo(() => {
     const days: { label: string; subLabel?: string; value: number; highlight?: boolean; tooltip: string; dateKey: string }[] = [];
@@ -1079,7 +1142,7 @@ export default function TapsPage() {
       const next = new Date(d);
       next.setDate(next.getDate() + 1);
 
-      const count = validLogs.filter(l => {
+      const count = storeFilteredLogs.filter(l => {
         const t = new Date(l.tappedAt);
         return t >= d && t < next;
       }).length;
@@ -1105,7 +1168,49 @@ export default function TapsPage() {
       });
     }
     return days;
-  }, [validLogs]);
+  }, [storeFilteredLogs]);
+
+  const customTrendData = useMemo(() => {
+    if (trendRange !== "custom") return [];
+    const start = new Date(customStartDate);
+    const end = new Date(customEndDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return [];
+
+    const days: { label: string; subLabel?: string; value: number; highlight?: boolean; tooltip: string; dateKey: string }[] = [];
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
+    const endLimit = new Date(end);
+    endLimit.setHours(23, 59, 59, 999);
+
+    let stepCount = 0;
+    while (current <= endLimit && stepCount < 90) {
+      const d = new Date(current);
+      const next = new Date(d);
+      next.setDate(next.getDate() + 1);
+
+      const count = storeFilteredLogs.filter(l => {
+        const t = new Date(l.tappedAt);
+        return t >= d && t < next;
+      }).length;
+
+      const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      const fullDate = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      const dateKey = toDateInputValue(d);
+
+      days.push({
+        label: dateStr,
+        subLabel: dateStr,
+        value: count,
+        highlight: false,
+        tooltip: `${fullDate}: ${count} tap (Klik untuk bedah rincian jam)`,
+        dateKey,
+      });
+
+      current.setDate(current.getDate() + 1);
+      stepCount++;
+    }
+    return days;
+  }, [trendRange, customStartDate, customEndDate, storeFilteredLogs]);
 
   // ── Tab: Riwayat Jam Masuk (Hourly Distribution & Jam Puncak per Periode) ───
   const periodLogsMap = useMemo(() => {
@@ -1118,12 +1223,11 @@ export default function TapsPage() {
     cutoff30.setDate(now.getDate() - 30);
     cutoff30.setHours(0, 0, 0, 0);
 
-    const sourceLogs = search.trim() ? filtered : validLogs;
     const todayLogs: TapLogEntry[] = [];
     const last7Logs: TapLogEntry[] = [];
     const last30Logs: TapLogEntry[] = [];
 
-    for (const l of sourceLogs) {
+    for (const l of storeFilteredLogs) {
       const d = new Date(l.tappedAt);
       if (toDateInputValue(d) === todayYmd) todayLogs.push(l);
       if (d >= cutoff7) last7Logs.push(l);
@@ -1134,9 +1238,9 @@ export default function TapsPage() {
       today: todayLogs,
       last7: last7Logs,
       last30: last30Logs,
-      all: sourceLogs,
+      all: storeFilteredLogs,
     };
-  }, [validLogs, filtered, search]);
+  }, [storeFilteredLogs]);
 
   const hourPeriodCounts = useMemo(() => ({
     today: periodLogsMap.today.length,
@@ -1198,9 +1302,8 @@ export default function TapsPage() {
 
   const drilldownLogs = useMemo(() => {
     if (!selectedDrilldownDate) return [];
-    const sourceLogs = search.trim() ? filtered : validLogs;
-    return sourceLogs.filter(l => toDateInputValue(new Date(l.tappedAt)) === selectedDrilldownDate);
-  }, [validLogs, filtered, search, selectedDrilldownDate]);
+    return storeFilteredLogs.filter(l => toDateInputValue(new Date(l.tappedAt)) === selectedDrilldownDate);
+  }, [storeFilteredLogs, selectedDrilldownDate]);
 
   const drilldownHourData = useMemo(() => {
     const counts = Array(24).fill(0);
@@ -1262,7 +1365,7 @@ export default function TapsPage() {
       refDate.setDate(refDate.getDate() - (i * 7));
       const wInfo = getWeekRange(refDate);
 
-      const wLogs = validLogs.filter(l => {
+      const wLogs = storeFilteredLogs.filter(l => {
         const t = new Date(l.tappedAt).getTime();
         return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
       });
@@ -1286,7 +1389,7 @@ export default function TapsPage() {
     }
 
     return weeks;
-  }, [validLogs]);
+  }, [storeFilteredLogs]);
 
   const selectedWeekObj = useMemo(() => {
     if (!selectedWeekKey) return null;
@@ -1355,19 +1458,29 @@ export default function TapsPage() {
     if (weeklyTrendData.length === 0) return [];
     const earliest = weeklyTrendData[0].start.getTime();
     const latest = weeklyTrendData[weeklyTrendData.length - 1].end.getTime();
-    return validLogs.filter(l => {
+    return storeFilteredLogs.filter(l => {
       const t = new Date(l.tappedAt).getTime();
       return t >= earliest && t <= latest;
     });
-  }, [validLogs, weeklyTrendData]);
+  }, [storeFilteredLogs, weeklyTrendData]);
 
   const trendRangeLogs = useMemo(() => {
+    if (trendRange === "custom") {
+      const start = new Date(customStartDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(customEndDate);
+      end.setHours(23, 59, 59, 999);
+      return storeFilteredLogs.filter(l => {
+        const t = new Date(l.tappedAt);
+        return t >= start && t <= end;
+      });
+    }
     const now = new Date();
     const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() - trendRange);
     cutoff.setHours(0, 0, 0, 0);
-    return validLogs.filter(l => new Date(l.tappedAt) >= cutoff);
-  }, [validLogs, trendRange]);
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff);
+  }, [storeFilteredLogs, trendRange, customStartDate, customEndDate]);
   const sleepingCards = useMemo(() =>
     cards.filter(c => !tappedCodes.has(c.code) && (
       c.storeName.toLowerCase().includes(search.toLowerCase()) ||
@@ -2199,6 +2312,76 @@ export default function TapsPage() {
               </div>
             ) : (
               <div className="card" style={{ padding: "20px" }}>
+                {/* ── Global Outlet Filter Bar ── */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  marginBottom: 18,
+                  padding: "10px 14px",
+                  background: selectedStoreFilter !== "all" ? "rgba(99, 102, 241, 0.12)" : "rgba(255, 255, 255, 0.03)",
+                  border: selectedStoreFilter !== "all" ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: 10,
+                  flexWrap: "wrap",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: 1 }}>
+                    <label htmlFor="store-global-filter" style={{ fontSize: "0.82rem", fontWeight: 700, color: selectedStoreFilter !== "all" ? "#A5B4FC" : "#E2E8F0", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span>🏪</span> Filter Outlet:
+                    </label>
+                    <select
+                      id="store-global-filter"
+                      value={selectedStoreFilter}
+                      onChange={(e) => setSelectedStoreFilter(e.target.value)}
+                      style={{
+                        background: "#161622",
+                        color: "#F8FAFC",
+                        border: selectedStoreFilter !== "all" ? "1px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: 8,
+                        padding: "6px 12px",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        outline: "none",
+                        cursor: "pointer",
+                        minWidth: 200,
+                        maxWidth: "100%",
+                      }}
+                    >
+                      <option value="all">Semua Outlet ({availableStores.length} Cafe)</option>
+                      {availableStores.map(store => (
+                        <option key={store} value={store}>{store}</option>
+                      ))}
+                    </select>
+                    {selectedStoreFilter !== "all" && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStoreFilter("all")}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          color: "#FCA5A5",
+                          borderRadius: 6,
+                          padding: "5px 10px",
+                          fontSize: "0.74rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span>✕</span> Reset ke Semua Outlet
+                      </button>
+                    )}
+                  </div>
+                  {selectedStoreFilter !== "all" && (
+                    <div style={{ fontSize: "0.74rem", color: "#A5B4FC", fontWeight: 600 }}>
+                      Menampilkan analitik khusus: <strong style={{ color: "#FFF" }}>{selectedStoreFilter}</strong> ({storeFilteredLogs.length} tap)
+                    </div>
+                  )}
+                </div>
+
                 {/* ── Tampilan 1: Mode Drill-Down Tanggal Spesifik (Level 3) ── */}
                 {selectedDrilldownDate ? (
                   <div>
@@ -2207,10 +2390,10 @@ export default function TapsPage() {
                       items={selectedWeekObj ? [
                         { label: "Semua Minggu", icon: "🏠", onClick: () => { setSelectedDrilldownDate(null); setSelectedWeekKey(null); } },
                         { label: selectedWeekObj.subLabel, icon: "📅", onClick: () => setSelectedDrilldownDate(null) },
-                        { label: formatDateIndo(selectedDrilldownDate), icon: "☀️", active: true },
+                        { label: formatDateShortIndo(selectedDrilldownDate), icon: "☀️", active: true },
                       ] : [
-                        { label: `Tren Harian (${trendRange} Hari)`, icon: "📅", onClick: () => setSelectedDrilldownDate(null) },
-                        { label: formatDateIndo(selectedDrilldownDate), icon: "☀️", active: true },
+                        { label: `Tren Harian (${trendRange === "custom" ? "Kustom" : `${trendRange} Hari`})`, icon: "📅", onClick: () => setSelectedDrilldownDate(null) },
+                        { label: formatDateShortIndo(selectedDrilldownDate), icon: "☀️", active: true },
                       ]}
                       onBack={() => setSelectedDrilldownDate(null)}
                       backLabel={selectedWeekObj ? `Kembali ke ${selectedWeekObj.subLabel}` : "Kembali ke Tren Harian"}
@@ -2489,113 +2672,196 @@ export default function TapsPage() {
                       </div>
                     )}
 
-                    {/* ── View 2: Tren Harian dengan Fitur Drill-Down ── */}
-                    {trenView === "harian" && (
-                      <div>
-                        {/* 1. Breadcrumb Interaktif Navigasi */}
-                        <InteractiveBreadcrumb
-                          items={[
-                            { label: `Tren Aktivitas Harian (${trendRange} Hari)`, icon: "📅", active: true },
-                          ]}
-                        />
+                    {/* ── View 2: Tren Harian dengan Fitur Drill-Down & Kustom Rentang Tanggal ── */}
+                    {trenView === "harian" && (() => {
+                      const activeDailyData = trendRange === 7 ? trendData7 : trendRange === 30 ? trendData30 : customTrendData;
+                      const rangeTitle = trendRange === "custom"
+                        ? `${formatDateShortIndo(customStartDate)} – ${formatDateShortIndo(customEndDate)}`
+                        : `${trendRange} Hari Terakhir`;
 
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                            {/* Range Switcher (7 Hari vs 30 Hari) */}
-                            <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 3, borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
-                              <button
-                                type="button"
-                                onClick={() => setTrendRange(7)}
-                                style={{
-                                  padding: "4px 10px",
-                                  fontSize: "0.74rem",
-                                  fontWeight: 600,
-                                  borderRadius: 6,
-                                  background: trendRange === 7 ? "#F59E0B" : "transparent",
-                                  color: trendRange === 7 ? "#000" : "#94A3B8",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  transition: "all 0.15s ease",
-                                }}
-                              >
-                                7 Hari
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setTrendRange(30)}
-                                style={{
-                                  padding: "4px 10px",
-                                  fontSize: "0.74rem",
-                                  fontWeight: 600,
-                                  borderRadius: 6,
-                                  background: trendRange === 30 ? "#F59E0B" : "transparent",
-                                  color: trendRange === 30 ? "#000" : "#94A3B8",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  transition: "all 0.15s ease",
-                                }}
-                              >
-                                30 Hari
-                              </button>
+                      return (
+                        <div>
+                          {/* 1. Breadcrumb Interaktif Navigasi */}
+                          <InteractiveBreadcrumb
+                            items={[
+                              { label: `Tren Aktivitas Harian (${rangeTitle})`, icon: "📅", active: true },
+                            ]}
+                          />
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                              {/* Range Switcher (7 Hari vs 30 Hari vs Kustom) */}
+                              <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 3, borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setTrendRange(7)}
+                                  style={{
+                                    padding: "4px 10px",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 600,
+                                    borderRadius: 6,
+                                    background: trendRange === 7 ? "#F59E0B" : "transparent",
+                                    color: trendRange === 7 ? "#000" : "#94A3B8",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  7 Hari
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTrendRange(30)}
+                                  style={{
+                                    padding: "4px 10px",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 600,
+                                    borderRadius: 6,
+                                    background: trendRange === 30 ? "#F59E0B" : "transparent",
+                                    color: trendRange === 30 ? "#000" : "#94A3B8",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  30 Hari
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTrendRange("custom")}
+                                  style={{
+                                    padding: "4px 10px",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 600,
+                                    borderRadius: 6,
+                                    background: trendRange === "custom" ? "#F59E0B" : "transparent",
+                                    color: trendRange === "custom" ? "#000" : "#94A3B8",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  🗓️ Kustom
+                                </button>
+                              </div>
+
+                              {trendRange === "custom" && (
+                                <div style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  padding: "4px 8px",
+                                  background: "rgba(245, 158, 11, 0.08)",
+                                  border: "1px solid rgba(245, 158, 11, 0.25)",
+                                  borderRadius: 8,
+                                  fontSize: "0.75rem",
+                                }}>
+                                  <input
+                                    type="date"
+                                    value={customStartDate}
+                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                    style={{
+                                      background: "#161622",
+                                      color: "#F8FAFC",
+                                      border: "1px solid rgba(255,255,255,0.15)",
+                                      borderRadius: 6,
+                                      padding: "3px 7px",
+                                      fontSize: "0.74rem",
+                                      outline: "none",
+                                      cursor: "pointer",
+                                    }}
+                                  />
+                                  <span style={{ color: "var(--text-muted)", fontSize: "0.74rem" }}>s/d</span>
+                                  <input
+                                    type="date"
+                                    value={customEndDate}
+                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                    style={{
+                                      background: "#161622",
+                                      color: "#F8FAFC",
+                                      border: "1px solid rgba(255,255,255,0.15)",
+                                      borderRadius: 6,
+                                      padding: "3px 7px",
+                                      fontSize: "0.74rem",
+                                      outline: "none",
+                                      cursor: "pointer",
+                                    }}
+                                  />
+                                </div>
+                              )}
+
+                              <span className="badge badge-orange">
+                                Total: {activeDailyData.reduce((s, d) => s + d.value, 0)} tap
+                              </span>
+
+                              {(() => {
+                                const maxDay = activeDailyData.reduce((prev, cur) => (cur.value > prev.value ? cur : prev), activeDailyData[0]);
+                                if (maxDay && maxDay.value > 0) {
+                                  return (
+                                    <span className="badge badge-green">
+                                      🏆 Hari Teramai: {maxDay.label || maxDay.subLabel} ({maxDay.value} tap)
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
 
-                            <span className="badge badge-orange">
-                              Total {trendRange} Hari: {(trendRange === 7 ? trendData7 : trendData30).reduce((s, d) => s + d.value, 0)} tap
-                            </span>
+                            {/* Petunjuk Interaktif Drill-Down */}
+                            <div style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "4px 10px",
+                              background: "rgba(56, 189, 248, 0.08)",
+                              border: "1px dashed rgba(56, 189, 248, 0.3)",
+                              borderRadius: 8,
+                              fontSize: "0.72rem",
+                              color: "#7DD3FC",
+                            }}>
+                              <span>👆</span>
+                              <span><strong>Klik batang tanggal</strong> untuk membedah jam sibuk &amp; cafe</span>
+                            </div>
+                          </div>
 
-                            {(() => {
-                              const currentData = trendRange === 7 ? trendData7 : trendData30;
-                              const maxDay = currentData.reduce((prev, cur) => (cur.value > prev.value ? cur : prev), currentData[0]);
-                              if (maxDay && maxDay.value > 0) {
-                                return (
-                                  <span className="badge badge-green">
-                                    🏆 Hari Teramai: {maxDay.label || maxDay.subLabel} ({maxDay.value} tap)
-                                  </span>
-                                );
+                          <BarChart
+                            data={activeDailyData}
+                            color="#F59E0B"
+                            yAxisUnit="Tap"
+                            xAxisTitle="Tanggal"
+                            showValue={true}
+                            onBarClick={(_idx, item: any) => {
+                              if (item.dateKey) {
+                                setSelectedDrilldownDate(item.dateKey);
                               }
-                              return null;
-                            })()}
-                          </div>
+                            }}
+                          />
 
-                          {/* Petunjuk Interaktif Drill-Down */}
-                          <div style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "4px 10px",
-                            background: "rgba(56, 189, 248, 0.08)",
-                            border: "1px dashed rgba(56, 189, 248, 0.3)",
-                            borderRadius: 8,
-                            fontSize: "0.72rem",
-                            color: "#7DD3FC",
-                          }}>
-                            <span>👆</span>
-                            <span><strong>Klik batang tanggal</strong> untuk membedah jam sibuk &amp; cafe</span>
-                          </div>
+                          {activeDailyData.length === 0 && (
+                            <div style={{
+                              textAlign: "center",
+                              padding: "16px",
+                              marginTop: "12px",
+                              background: "rgba(255,255,255,0.03)",
+                              borderRadius: "8px",
+                              border: "1px dashed rgba(255,255,255,0.1)",
+                              color: "var(--text-muted)",
+                              fontSize: "0.8rem",
+                            }}>
+                              ℹ️ Rentang tanggal tidak valid atau belum ada aktivitas tap pada rentang tanggal ini.
+                            </div>
+                          )}
+
+                          {/* Breakdown Cafe Periode Harian Ini */}
+                          <CafeBreakdownCard
+                            title={`Peringkat Cafe Teraktif (${rangeTitle})`}
+                            subtitle={`Akumulasi kontribusi tap per cafe selama rentang waktu ini.`}
+                            logs={trendRangeLogs}
+                            cardUrlMap={cardUrlMap}
+                          />
                         </div>
-
-                        <BarChart
-                          data={trendRange === 7 ? trendData7 : trendData30}
-                          color="#F59E0B"
-                          yAxisUnit="Tap"
-                          xAxisTitle="Tanggal"
-                          showValue={true}
-                          onBarClick={(_idx, item: any) => {
-                            if (item.dateKey) {
-                              setSelectedDrilldownDate(item.dateKey);
-                            }
-                          }}
-                        />
-
-                        {/* Breakdown Cafe Periode Harian Ini */}
-                        <CafeBreakdownCard
-                          title={`Peringkat Cafe Teraktif (${trendRange} Hari Terakhir)`}
-                          subtitle={`Akumulasi kontribusi tap per cafe selama rentang ${trendRange} hari ini.`}
-                          logs={trendRangeLogs}
-                          cardUrlMap={cardUrlMap}
-                        />
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* ── View 3: Tren Mingguan & Drilldown 7 Hari (Level 1 & Level 2) ── */}
                     {trenView === "mingguan" && (

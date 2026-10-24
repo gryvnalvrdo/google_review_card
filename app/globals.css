@@ -1149,14 +1149,22 @@ html, body {
 /* 1. Interactive Breadcrumbs */
 .interactive-breadcrumb-bar {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   margin-bottom: 16px;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 10px;
-  flex-wrap: wrap;
+}
+
+@media (min-width: 769px) {
+  .interactive-breadcrumb-bar {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
 }
 
 .breadcrumb-back-btn {
@@ -1173,6 +1181,7 @@ html, body {
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .breadcrumb-back-btn:hover {
@@ -1184,8 +1193,25 @@ html, body {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
-  font-size: 0.78rem;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+
+.breadcrumb-trail::-webkit-scrollbar {
+  display: none;
+}
+
+.breadcrumb-item-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .breadcrumb-chip {
@@ -1201,6 +1227,8 @@ html, body {
   border: 1px solid transparent;
   text-decoration: none;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .breadcrumb-chip.clickable {
@@ -1227,6 +1255,7 @@ html, body {
   color: #475569;
   font-weight: 700;
   font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 /* 2. Stacked Rainbow Distribution Bar */
