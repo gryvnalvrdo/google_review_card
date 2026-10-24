@@ -383,6 +383,7 @@ export default function TapsPage() {
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
   const [newTapAlert, setNewTapAlert] = useState<TapLogEntry | null>(null);
   const [trendRange, setTrendRange] = useState<7 | 30>(7);
+  const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
   const lastKnownTapRef = useRef<string | null>(null);
 
   async function fetchData(isBackground = false) {
@@ -797,29 +798,99 @@ export default function TapsPage() {
     return days;
   }, [validLogs]);
 
+  // ── Tab: Tren - Distribusi Jam Berdasarkan Filter Periode ──────────
+  const hourPeriodCounts = useMemo(() => {
+    const now = new Date();
+    const todayYmd = toDateInputValue(now);
+    const cutoff7 = new Date(now);
+    cutoff7.setDate(now.getDate() - 7);
+    cutoff7.setHours(0, 0, 0, 0);
+    const cutoff30 = new Date(now);
+    cutoff30.setDate(now.getDate() - 30);
+    cutoff30.setHours(0, 0, 0, 0);
+
+    const sourceLogs = search.trim() ? filtered : validLogs;
+    let today = 0;
+    let last7 = 0;
+    let last30 = 0;
+
+    for (const l of sourceLogs) {
+      const d = new Date(l.tappedAt);
+      if (toDateInputValue(d) === todayYmd) today++;
+      if (d >= cutoff7) last7++;
+      if (d >= cutoff30) last30++;
+    }
+
+    return {
+      today,
+      last7,
+      last30,
+      all: sourceLogs.length,
+    };
+  }, [validLogs, filtered, search]);
+
+  const hourFilteredLogs = useMemo(() => {
+    const now = new Date();
+    const todayYmd = toDateInputValue(now);
+    const cutoff7 = new Date(now);
+    cutoff7.setDate(now.getDate() - 7);
+    cutoff7.setHours(0, 0, 0, 0);
+    const cutoff30 = new Date(now);
+    cutoff30.setDate(now.getDate() - 30);
+    cutoff30.setHours(0, 0, 0, 0);
+
+    const sourceLogs = search.trim() ? filtered : validLogs;
+
+    return sourceLogs.filter(l => {
+      const d = new Date(l.tappedAt);
+      if (hourPeriod === "today") {
+        return toDateInputValue(d) === todayYmd;
+      }
+      if (hourPeriod === "last7") {
+        return d >= cutoff7;
+      }
+      if (hourPeriod === "last30") {
+        return d >= cutoff30;
+      }
+      return true; // "all"
+    });
+  }, [validLogs, filtered, search, hourPeriod]);
+
   const hourData = useMemo(() => {
     const counts = Array(24).fill(0);
-    validLogs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
+    hourFilteredLogs.forEach(l => {
+      const h = new Date(l.tappedAt).getHours();
+      if (h >= 0 && h < 24) counts[h]++;
+    });
     const maxH = Math.max(...counts);
     return counts.map((v, i) => {
       const isLabeled = i % 4 === 0 || i === 23;
+      const hourStr = String(i).padStart(2, "0");
+      const nextHourStr = String((i + 1) % 24).padStart(2, "0");
       return {
-        label: isLabeled ? `${String(i).padStart(2, "0")}.00` : "",
+        label: isLabeled ? `${hourStr}.00` : "",
         value: v,
         highlight: v === maxH && maxH > 0,
-        tooltip: `Pukul ${String(i).padStart(2, "0")}.00 - ${String(i + 1).padStart(2, "0")}.00: ${v} tap`,
+        tooltip: `Pukul ${hourStr}.00 - ${nextHourStr}.00: ${v} tap`,
       };
     });
-  }, [validLogs]);
+  }, [hourFilteredLogs]);
 
   const peakHour = useMemo(() => {
     const counts = Array(24).fill(0);
-    validLogs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
+    hourFilteredLogs.forEach(l => {
+      const h = new Date(l.tappedAt).getHours();
+      if (h >= 0 && h < 24) counts[h]++;
+    });
     const max = Math.max(...counts);
     if (max === 0) return null;
     const h = counts.indexOf(max);
-    return { hour: h, count: max, label: `${String(h).padStart(2, "0")}.00–${String(h + 1).padStart(2, "0")}.00` };
-  }, [validLogs]);
+    return {
+      hour: h,
+      count: max,
+      label: `${String(h).padStart(2, "0")}.00–${String((h + 1) % 24).padStart(2, "0")}.00`,
+    };
+  }, [hourFilteredLogs]);
 
   // ── Tab: Kartu Tidur (Belum Pernah Tap) ──────────────────────────────
   const tappedCodes = useMemo(() => new Set(validLogs.map(l => l.code)), [validLogs]);
@@ -1796,21 +1867,79 @@ export default function TapsPage() {
                   </div>
                 </div>
 
-                {/* Peak Hours */}
+                {/* Peak Hours with Period Filter (Hari Ini, 7 Hari Terakhir, 1 Bulan Terakhir, Semua) */}
                 <div className="card" style={{ padding: "20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                     <div>
-                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>🕐 Distribusi Jam Paling Ramai</h3>
+                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>
+                        🕐 Distribusi Jam Masuk {hourPeriod === "today" ? "(Hari Ini)" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}
+                      </h3>
                       <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                        Analisis jam berapa pelanggan paling sering men-tap kartu / scan QR review (00.00 – 23.00).
+                        {hourPeriod === "today"
+                          ? `Analisis jam berapa pelanggan men-tap kartu khusus hari ini (${formatDateIndo(new Date())}).`
+                          : hourPeriod === "last7"
+                          ? "Analisis jam sibuk pelanggan men-tap kartu dalam 7 hari terakhir."
+                          : hourPeriod === "last30"
+                          ? "Analisis jam sibuk pelanggan men-tap kartu dalam 1 bulan terakhir."
+                          : "Analisis jam sibuk pelanggan men-tap kartu dari seluruh riwayat tap yang tercatat."}
                       </p>
                     </div>
-                    {peakHour && (
-                      <span className="badge badge-green">
-                        🏆 Jam Puncak: {peakHour.label} ({peakHour.count} tap)
+
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <span className="badge badge-indigo" style={{ background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
+                        Total: {hourFilteredLogs.length} tap
                       </span>
-                    )}
+                      {peakHour ? (
+                        <span className="badge badge-green">
+                          🏆 Jam Puncak: {peakHour.label} ({peakHour.count} tap)
+                        </span>
+                      ) : (
+                        <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
+                          Belum ada aktivitas
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Filter Periode Cepat: Hari Ini, 7 Hari Terakhir, 1 Bulan Terakhir, Semua */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, marginRight: 4 }}>
+                      Filter Jam:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHourPeriod("today")}
+                      className={`btn ${hourPeriod === "today" ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
+                    >
+                      ☀️ Hari Ini ({hourPeriodCounts.today})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHourPeriod("last7")}
+                      className={`btn ${hourPeriod === "last7" ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
+                    >
+                      📅 7 Hari Terakhir ({hourPeriodCounts.last7})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHourPeriod("last30")}
+                      className={`btn ${hourPeriod === "last30" ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
+                    >
+                      🗓️ 1 Bulan Terakhir ({hourPeriodCounts.last30})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHourPeriod("all")}
+                      className={`btn ${hourPeriod === "all" ? "btn-primary" : "btn-ghost"}`}
+                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
+                    >
+                      📑 Semua ({hourPeriodCounts.all})
+                    </button>
+                  </div>
+
                   <BarChart
                     data={hourData}
                     color="#6366F1"
@@ -1818,6 +1947,22 @@ export default function TapsPage() {
                     xAxisTitle="Jam"
                     showValue={true}
                   />
+
+                  {hourFilteredLogs.length === 0 && (
+                    <div style={{
+                      textAlign: "center",
+                      padding: "16px",
+                      marginTop: "12px",
+                      background: "rgba(255,255,255,0.03)",
+                      borderRadius: "8px",
+                      border: "1px dashed rgba(255,255,255,0.1)",
+                      color: "var(--text-muted)",
+                      fontSize: "0.8rem",
+                    }}>
+                      ℹ️ Belum ada tap yang masuk pada periode ini. Jika ada pelanggan men-tap kartu, tap baru akan otomatis terhitung via live auto-refresh.
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981" }} />
