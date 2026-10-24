@@ -18,62 +18,260 @@ type CardRecord = {
   createdAt: string;
 };
 
-// ── SVG Bar Chart (pure, high-DPI responsive) ───────────────────────
+// ── Helper to calculate clean, rounded Y-axis ticks ──────────────────
+function getNiceYScale(maxVal: number) {
+  if (maxVal <= 0) return { niceMax: 4, ticks: [0, 1, 2, 3, 4] };
+  if (maxVal <= 4) return { niceMax: 4, ticks: [0, 1, 2, 3, 4] };
+  if (maxVal <= 8) return { niceMax: 8, ticks: [0, 2, 4, 6, 8] };
+  if (maxVal <= 12) return { niceMax: 12, ticks: [0, 3, 6, 9, 12] };
+  if (maxVal <= 20) return { niceMax: 20, ticks: [0, 5, 10, 15, 20] };
+  if (maxVal <= 40) return { niceMax: 40, ticks: [0, 10, 20, 30, 40] };
+  if (maxVal <= 60) return { niceMax: 60, ticks: [0, 15, 30, 45, 60] };
+  if (maxVal <= 100) return { niceMax: 100, ticks: [0, 25, 50, 75, 100] };
+
+  const pow10 = Math.pow(10, Math.floor(Math.log10(maxVal)));
+  const normalized = maxVal / pow10;
+  let mult = 10;
+  if (normalized <= 1.2) mult = 1.2;
+  else if (normalized <= 1.5) mult = 1.5;
+  else if (normalized <= 2) mult = 2;
+  else if (normalized <= 2.5) mult = 2.5;
+  else if (normalized <= 3) mult = 3;
+  else if (normalized <= 4) mult = 4;
+  else if (normalized <= 5) mult = 5;
+  else if (normalized <= 6) mult = 6;
+  else if (normalized <= 8) mult = 8;
+
+  const niceMax = Math.ceil(maxVal / (mult * pow10 / 4)) * (mult * pow10 / 4);
+  const step = niceMax / 4;
+  return {
+    niceMax,
+    ticks: [0, Math.round(step), Math.round(step * 2), Math.round(step * 3), Math.round(niceMax)],
+  };
+}
+
+// ── SVG Bar Chart (explicit X & Y axes, scale numbers, gridlines, values) ─
 function BarChart({
   data,
   color = "#F59E0B",
-  labelEvery = 1,
+  yAxisUnit = "Tap",
+  xAxisTitle = "Waktu",
   showValue = true,
 }: {
-  data: { label: string; value: number; highlight?: boolean }[];
+  data: {
+    label: string;
+    subLabel?: string;
+    value: number;
+    highlight?: boolean;
+    tooltip?: string;
+  }[];
   color?: string;
-  labelEvery?: number;
+  yAxisUnit?: string;
+  xAxisTitle?: string;
   showValue?: boolean;
 }) {
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const W = 800;
-  const H = 190;
-  const PAD_B = 30;
-  const PAD_T = 20;
-  const chartH = H - PAD_B - PAD_T;
-  const totalW = W - 20;
-  const slotW = totalW / data.length;
-  const barW = Math.max(Math.floor(slotW * 0.72), 4);
+  const maxVal = Math.max(...data.map((d) => d.value), 0);
+  const { niceMax, ticks } = getNiceYScale(maxVal);
+
+  const W = 820;
+  const H = 220;
+  const PAD_L = 46;
+  const PAD_R = 24;
+  const PAD_T = 26;
+  const PAD_B = 34;
+
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+  const y0 = PAD_T + chartH; // Baseline Y position
+
+  const slotW = data.length > 0 ? chartW / data.length : chartW;
+  const barW = Math.max(Math.min(Math.floor(slotW * 0.72), 34), 5);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
-      {[0.25, 0.5, 0.75, 1].map((f) => (
+    <div style={{ width: "100%", overflowX: "auto" }}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: "100%", minWidth: 460, height: "auto", display: "block" }}
+        role="img"
+        aria-label="Grafik Batang"
+      >
+        <defs>
+          <filter id="barGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#10B981" floodOpacity="0.4" />
+          </filter>
+        </defs>
+
+        {/* ── Sumbu Y: Horizontal Grid Lines & Tick Labels ── */}
+        {ticks.map((val) => {
+          const y = y0 - (val / niceMax) * chartH;
+          const isBaseline = val === 0;
+          return (
+            <g key={val}>
+              {!isBaseline && (
+                <line
+                  x1={PAD_L}
+                  y1={y}
+                  x2={W - PAD_R}
+                  y2={y}
+                  stroke="rgba(255, 255, 255, 0.08)"
+                  strokeDasharray="3 3"
+                  strokeWidth={1}
+                />
+              )}
+              {/* Tick Mark on Y-axis line */}
+              <line
+                x1={PAD_L - 4}
+                y1={y}
+                x2={PAD_L}
+                y2={y}
+                stroke="#64748B"
+                strokeWidth={1.5}
+              />
+              {/* Tick Number Label on Y-axis */}
+              <text
+                x={PAD_L - 8}
+                y={y + 3.5}
+                fill="#94A3B8"
+                fontSize={10}
+                fontWeight={600}
+                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                textAnchor="end"
+              >
+                {val}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* ── Sumbu Y: Vertical Axis Line & Unit ── */}
         <line
-          key={f}
-          x1={10} y1={PAD_T + chartH * (1 - f)}
-          x2={W - 10} y2={PAD_T + chartH * (1 - f)}
-          stroke="rgba(255,255,255,0.06)" strokeWidth={1}
-          strokeDasharray="4 4"
+          x1={PAD_L}
+          y1={PAD_T - 6}
+          x2={PAD_L}
+          y2={y0}
+          stroke="#64748B"
+          strokeWidth={1.5}
         />
-      ))}
-      {data.map((d, i) => {
-        const barH = Math.max((d.value / max) * chartH, d.value > 0 ? 3 : 0);
-        const x = 10 + i * slotW + (slotW - barW) / 2;
-        const y = PAD_T + chartH - barH;
-        const isHighlight = d.highlight;
-        const barColor = isHighlight ? "#10B981" : d.value === 0 ? "rgba(255,255,255,0.05)" : color;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width={barW} height={barH} rx={4} fill={barColor} />
-            {showValue && d.value > 0 && (
-              <text x={x + barW / 2} y={y - 6} fill="#F0F0FF" fontSize={9.5} fontWeight={700} textAnchor="middle">
-                {d.value}
-              </text>
-            )}
-            {i % labelEvery === 0 && (
-              <text x={x + barW / 2} y={H - 5} fill="#7A7A95" fontSize={9} fontWeight={500} textAnchor="middle">
-                {d.label}
-              </text>
-            )}
-          </g>
-        );
-      })}
-    </svg>
+        <text
+          x={PAD_L - 6}
+          y={PAD_T - 12}
+          fill="#CBD5E1"
+          fontSize={10}
+          fontWeight={700}
+          textAnchor="start"
+        >
+          {yAxisUnit} ↑
+        </text>
+
+        {/* ── Sumbu X: Baseline Line & Direction ── */}
+        <line
+          x1={PAD_L}
+          y1={y0}
+          x2={W - PAD_R + 6}
+          y2={y0}
+          stroke="#64748B"
+          strokeWidth={1.5}
+        />
+        {xAxisTitle && (
+          <text
+            x={W - PAD_R + 10}
+            y={y0 + 3.5}
+            fill="#64748B"
+            fontSize={9.5}
+            fontWeight={600}
+            textAnchor="start"
+          >
+            {xAxisTitle} →
+          </text>
+        )}
+
+        {/* ── Data Bars & Sumbu X Labels ── */}
+        {data.map((d, i) => {
+          const cx = PAD_L + i * slotW + slotW / 2;
+          const bx = cx - barW / 2;
+          const barH = d.value > 0 ? Math.max((d.value / niceMax) * chartH, 4) : 2;
+          const by = y0 - barH;
+          const isHighlight = Boolean(d.highlight);
+          const barFill = isHighlight
+            ? "#10B981"
+            : d.value === 0
+            ? "rgba(255, 255, 255, 0.04)"
+            : color;
+
+          return (
+            <g key={i} style={{ cursor: "pointer" }}>
+              <title>{d.tooltip || `${d.label || "Data"}: ${d.value} ${yAxisUnit.toLowerCase()}`}</title>
+
+              {/* Bar Rect */}
+              <rect
+                x={bx}
+                y={by}
+                width={barW}
+                height={barH}
+                rx={Math.min(barW / 2, 4)}
+                fill={barFill}
+                filter={isHighlight && d.value > 0 ? "url(#barGlow)" : undefined}
+                style={{ transition: "all 0.2s ease" }}
+              />
+
+              {/* Value on top of bar */}
+              {showValue && d.value > 0 && (
+                <text
+                  x={cx}
+                  y={by - 5}
+                  fill={isHighlight ? "#34D399" : "#F8FAFC"}
+                  fontSize={barW < 14 ? 8.5 : 9.5}
+                  fontWeight={700}
+                  textAnchor="middle"
+                >
+                  {d.value}
+                </text>
+              )}
+
+              {/* Sumbu X: Tick Mark on baseline for labeled slots */}
+              {d.label && (
+                <line
+                  x1={cx}
+                  y1={y0}
+                  x2={cx}
+                  y2={y0 + 4}
+                  stroke={isHighlight ? "#10B981" : "#64748B"}
+                  strokeWidth={1.5}
+                />
+              )}
+
+              {/* Sumbu X: Primary Label */}
+              {d.label && (
+                <text
+                  x={cx}
+                  y={y0 + (d.subLabel ? 14 : 17)}
+                  fill={isHighlight ? "#34D399" : "#94A3B8"}
+                  fontSize={9}
+                  fontWeight={isHighlight ? 700 : 500}
+                  textAnchor="middle"
+                >
+                  {d.label}
+                </text>
+              )}
+
+              {/* Sumbu X: Sub-label (e.g. date under day name) */}
+              {d.subLabel && (
+                <text
+                  x={cx}
+                  y={y0 + 26}
+                  fill={isHighlight ? "#A7F3D0" : "#64748B"}
+                  fontSize={8}
+                  fontWeight={isHighlight ? 600 : 400}
+                  textAnchor="middle"
+                >
+                  {d.subLabel}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
@@ -184,6 +382,7 @@ export default function TapsPage() {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
   const [newTapAlert, setNewTapAlert] = useState<TapLogEntry | null>(null);
+  const [trendRange, setTrendRange] = useState<7 | 30>(7);
   const lastKnownTapRef = useRef<string | null>(null);
 
   async function fetchData(isBackground = false) {
@@ -535,14 +734,65 @@ export default function TapsPage() {
   const isCurrentSelected = selectedMonthKey === thisMonthKey;
 
   // ── Tab: Tren ────────────────────────────────────────────────────────
-  const trendData = useMemo(() => {
-    const days: { label: string; value: number }[] = [];
+  const trendData7 = useMemo(() => {
+    const days: { label: string; subLabel?: string; value: number; highlight?: boolean; tooltip: string }[] = [];
+    const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const next = new Date(d);
+      next.setDate(next.getDate() + 1);
+
+      const count = validLogs.filter(l => {
+        const t = new Date(l.tappedAt);
+        return t >= d && t < next;
+      }).length;
+
+      const dayName = i === 0 ? "Hari ini" : dayNames[d.getDay()];
+      const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      const fullDate = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+      days.push({
+        label: dayName,
+        subLabel: dateStr,
+        value: count,
+        highlight: i === 0,
+        tooltip: `${fullDate}: ${count} tap`,
+      });
+    }
+    return days;
+  }, [validLogs]);
+
+  const trendData30 = useMemo(() => {
+    const days: { label: string; subLabel?: string; value: number; highlight?: boolean; tooltip: string }[] = [];
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
-      const next = new Date(d); next.setDate(next.getDate() + 1);
-      const count = validLogs.filter(l => { const t = new Date(l.tappedAt); return t >= d && t < next; }).length;
-      const label = i === 0 ? "Hari ini" : i % 7 === 0 ? d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "";
-      days.push({ label, value: count });
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const next = new Date(d);
+      next.setDate(next.getDate() + 1);
+
+      const count = validLogs.filter(l => {
+        const t = new Date(l.tappedAt);
+        return t >= d && t < next;
+      }).length;
+
+      let label = "";
+      if (i === 0) {
+        label = "Hari ini";
+      } else if (i % 5 === 0 || i === 29) {
+        label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      }
+
+      const fullDate = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+      days.push({
+        label,
+        value: count,
+        highlight: i === 0,
+        tooltip: `${fullDate}: ${count} tap`,
+      });
     }
     return days;
   }, [validLogs]);
@@ -551,11 +801,15 @@ export default function TapsPage() {
     const counts = Array(24).fill(0);
     validLogs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
     const maxH = Math.max(...counts);
-    return counts.map((v, i) => ({
-      label: i % 4 === 0 ? `${String(i).padStart(2, "0")}.00` : "",
-      value: v,
-      highlight: v === maxH && maxH > 0,
-    }));
+    return counts.map((v, i) => {
+      const isLabeled = i % 4 === 0 || i === 23;
+      return {
+        label: isLabeled ? `${String(i).padStart(2, "0")}.00` : "",
+        value: v,
+        highlight: v === maxH && maxH > 0,
+        tooltip: `Pukul ${String(i).padStart(2, "0")}.00 - ${String(i + 1).padStart(2, "0")}.00: ${v} tap`,
+      };
+    });
   }, [validLogs]);
 
   const peakHour = useMemo(() => {
@@ -1457,22 +1711,89 @@ export default function TapsPage() {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {/* 30 Day Trend */}
+                {/* Trend Chart (7 Hari / 30 Hari Toggle) */}
                 <div className="card" style={{ padding: "20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                     <div>
-                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>📈 Tren Aktivitas 30 Hari Terakhir</h3>
+                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>
+                        📈 Tren Aktivitas {trendRange === 7 ? "7 Hari" : "30 Hari"} Terakhir
+                      </h3>
                       <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                        Jumlah tap per hari pada semua kartu aktif.
+                        Jumlah tap per hari pada semua kartu aktif (dilengkapi skala Sumbu Y & Sumbu X).
                       </p>
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      {/* Range Switcher */}
+                      <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 3, borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+                        <button
+                          type="button"
+                          onClick={() => setTrendRange(7)}
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            borderRadius: 6,
+                            background: trendRange === 7 ? "#F59E0B" : "transparent",
+                            color: trendRange === 7 ? "#000" : "#94A3B8",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          7 Hari
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTrendRange(30)}
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            borderRadius: 6,
+                            background: trendRange === 30 ? "#F59E0B" : "transparent",
+                            color: trendRange === 30 ? "#000" : "#94A3B8",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          30 Hari
+                        </button>
+                      </div>
+
                       <span className="badge badge-orange">
-                        Total 30 Hari: {trendData.reduce((s, d) => s + d.value, 0)} tap
+                        Total {trendRange} Hari: {(trendRange === 7 ? trendData7 : trendData30).reduce((s, d) => s + d.value, 0)} tap
                       </span>
                     </div>
                   </div>
-                  <BarChart data={trendData} color="#F59E0B" labelEvery={7} showValue={false} />
+
+                  <BarChart
+                    data={trendRange === 7 ? trendData7 : trendData30}
+                    color="#F59E0B"
+                    yAxisUnit="Tap"
+                    xAxisTitle="Tanggal"
+                    showValue={true}
+                  />
+
+                  {/* Legend & Axis Guide */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981" }} />
+                      <span>Hari ini</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#F59E0B" }} />
+                      <span>Aktivitas harian</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu Y:</span>
+                      <span>Skala jumlah tap</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu X:</span>
+                      <span>Tanggal / Hari</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Peak Hours */}
@@ -1481,7 +1802,7 @@ export default function TapsPage() {
                     <div>
                       <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>🕐 Distribusi Jam Paling Ramai</h3>
                       <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                        Analisis jam berapa pelanggan paling sering men-tap kartu / scan QR review.
+                        Analisis jam berapa pelanggan paling sering men-tap kartu / scan QR review (00.00 – 23.00).
                       </p>
                     </div>
                     {peakHour && (
@@ -1490,18 +1811,29 @@ export default function TapsPage() {
                       </span>
                     )}
                   </div>
-                  <BarChart data={hourData} color="#6366F1" labelEvery={1} showValue={false} />
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 6, padding: "0 10px" }}>
-                    <span>00.00</span><span>06.00</span><span>12.00 (Siang)</span><span>18.00 (Sore)</span><span>23.00</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                  <BarChart
+                    data={hourData}
+                    color="#6366F1"
+                    yAxisUnit="Tap"
+                    xAxisTitle="Jam"
+                    showValue={true}
+                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981" }} />
-                      <span>Jam puncak tertinggi</span>
+                      <span>Jam puncak tertinggi ({peakHour ? `${peakHour.label}: ${peakHour.count} tap` : "-"})</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, background: "#6366F1" }} />
-                      <span>Aktivitas normal</span>
+                      <span>Aktivitas per jam</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu Y:</span>
+                      <span>Skala jumlah tap per jam</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ color: "#CBD5E1", fontWeight: 600 }}>Sumbu X:</span>
+                      <span>Pukul / Jam (00.00 - 23.00)</span>
                     </div>
                   </div>
                 </div>
