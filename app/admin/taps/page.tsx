@@ -475,6 +475,25 @@ export default function TapsPage() {
     return () => clearInterval(timer);
   }, [autoRefreshSec]);
 
+  // ── Tombol Melayang: Scroll Kembali ke Atas ─────────────────────────
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    function handleScroll() {
+      if (window.scrollY > 320) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function exportCSV() {
     const rows = [
       ["Kode Kartu", "Nama Toko", "Waktu Tap (ISO)", "Tanggal", "Jam"],
@@ -2279,6 +2298,20 @@ export default function TapsPage() {
 
         </div>
       </div>
+
+      {/* Tombol Melayang: Kembali ke Atas (Floating Scroll-to-Top FAB) */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          className="scroll-to-top-btn"
+          aria-label="Kembali ke atas halaman"
+          title="Kembali ke atas"
+        >
+          <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>↑</span>
+          <span>Ke Atas</span>
+        </button>
+      )}
     </>
   );
 }
