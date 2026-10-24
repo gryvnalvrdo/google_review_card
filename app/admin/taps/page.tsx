@@ -1053,13 +1053,8 @@ export default function TapsPage() {
                                     border: "1px solid rgba(255,255,255,0.06)",
                                     borderRadius: 10,
                                   }}>
-                                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-                                      <span>📋 Riwayat {storeTaps.length} Tap — {s.storeName}</span>
-                                      {storeReviewUrl && (
-                                        <a href={storeReviewUrl} target="_blank" rel="noreferrer" style={{ color: "#34D399", textDecoration: "none" }} title="Buka menu ulasan Google publik toko ini">
-                                          ⭐ Buka Menu Ulasan Toko ↗
-                                        </a>
-                                      )}
+                                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8 }}>
+                                      📋 Riwayat {storeTaps.length} Tap — {s.storeName}
                                     </div>
 
                                     <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import AdminNav from "./components/AdminNav";
 import QRScanner from "./components/QRScanner";
+import { getPublicGoogleReviewUrl } from "../../lib/redirect";
 
 type CardRecord = {
   code: string;
@@ -193,6 +194,7 @@ export default function AdminDashboard() {
   // Active cards and calculations
   const totalTaps = useMemo(() => cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0), [cards]);
   const totalRevenue = useMemo(() => cards.reduce((sum, c) => sum + (c.price ?? 50000), 0), [cards]);
+  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "")])), [cards]);
 
   const monthlyRevenueObj = useMemo(() => {
     return cards.reduce((acc, card) => {
@@ -721,33 +723,63 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {tapLogs.slice(0, 6).map((log, i) => (
-                      <div
-                        key={`${log.code}-${log.tappedAt}-${i}`}
-                        style={{
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                          padding: "10px 14px", background: "rgba(52,211,153,0.04)",
-                          borderLeft: "3px solid #34D399", borderRadius: "0 8px 8px 0",
-                          gap: 10,
-                        }}
-                      >
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {log.storeName}
+                    {tapLogs.slice(0, 6).map((log, i) => {
+                      const reviewUrl = cardUrlMap.get(log.code);
+                      return (
+                        <div
+                          key={`${log.code}-${log.tappedAt}-${i}`}
+                          style={{
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            padding: "10px 14px", background: "rgba(52,211,153,0.04)",
+                            borderLeft: "3px solid #34D399", borderRadius: "0 8px 8px 0",
+                            gap: 10,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div style={{ minWidth: 0, flex: "1 1 180px" }}>
+                            <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {log.storeName}
+                            </div>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                              <span>{new Date(log.tappedAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
                           </div>
-                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                            <span>{new Date(log.tappedAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: "auto" }}>
+                            {reviewUrl && (
+                              <a
+                                href={reviewUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  color: "#34D399",
+                                  background: "rgba(16,185,129,0.08)",
+                                  border: "1px solid rgba(16,185,129,0.25)",
+                                  padding: "4px 9px",
+                                  borderRadius: 8,
+                                  textDecoration: "none",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                                title="Buka menu ulasan toko ini di Google Maps"
+                              >
+                                ⭐ Menu Ulasan ↗
+                              </a>
+                            )}
+                            <span style={{
+                              fontSize: "0.7rem", fontWeight: 700, color: "#34D399",
+                              background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)",
+                              padding: "3px 8px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0,
+                            }}>
+                              {timeAgo(log.tappedAt)}
+                            </span>
                           </div>
                         </div>
-                        <span style={{
-                          fontSize: "0.7rem", fontWeight: 700, color: "#34D399",
-                          background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)",
-                          padding: "3px 8px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0,
-                        }}>
-                          {timeAgo(log.tappedAt)}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
