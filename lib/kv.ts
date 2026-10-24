@@ -54,6 +54,58 @@ const tapLogStore: TapLogEntry[] = [];          // in-memory tap log fallback
 const hasKv = Boolean(kvUrl && kvToken);
 const vercelKv = hasKv ? createClient({ url: kvUrl!, token: kvToken! }) : null;
 
+// Initial seed data for local dev demonstration (when Vercel KV is not configured)
+if (!hasKv && memoryStore.size === 0) {
+  const sampleStores = [
+    { code: "KPK01", name: "Kopi Kenangan Senopati" },
+    { code: "JJR02", name: "Janji Jiwa Roastery Tebet" },
+    { code: "FRC03", name: "Fore Coffee Cikini" },
+    { code: "KTK04", name: "Kopi Tuku Cipete" },
+    { code: "TNM05", name: "Tanamera Coffee Thamrin" },
+    { code: "ANM06", name: "Anomali Coffee Kemang" },
+  ];
+
+  for (const s of sampleStores) {
+    memoryStore.set(s.code, {
+      code: s.code,
+      storeName: s.name,
+      googleReviewUrl: "https://g.page/r/sample/review",
+      createdAt: new Date(Date.now() - 60 * 86400000).toISOString(),
+      updatedAt: new Date().toISOString(),
+      price: 150000,
+    });
+  }
+
+  const now = Date.now();
+  for (let dayOffset = 55; dayOffset >= 0; dayOffset--) {
+    const dayDate = new Date(now - dayOffset * 86400000);
+    const dayOfWeek = dayDate.getDay();
+    const baseTaps = dayOfWeek === 0 || dayOfWeek === 6 ? 6 : 3;
+    const numTaps = Math.max(1, Math.round(baseTaps + ((dayOffset % 3) - 1)));
+
+    for (let t = 0; t < numTaps; t++) {
+      const storeIdx = Math.floor(Math.pow(Math.random(), 1.6) * sampleStores.length);
+      const store = sampleStores[Math.min(storeIdx, sampleStores.length - 1)];
+
+      const hourRand = Math.random();
+      let hour = 19;
+      if (hourRand < 0.25) hour = 12 + Math.floor(Math.random() * 3);
+      else if (hourRand < 0.7) hour = 18 + Math.floor(Math.random() * 4);
+      else hour = 9 + Math.floor(Math.random() * 12);
+
+      const tapTime = new Date(dayDate);
+      tapTime.setHours(hour, Math.floor(Math.random() * 60), Math.floor(Math.random() * 60));
+
+      tapLogStore.push({
+        code: store.code,
+        storeName: store.name,
+        tappedAt: tapTime.toISOString(),
+      });
+      tapStore.set(store.code, (tapStore.get(store.code) || 0) + 1);
+    }
+  }
+}
+
 export async function getCard(code: string): Promise<CardRecord | null> {
   if (hasKv && vercelKv) {
     // Retry hingga 3x untuk menangani transient error Vercel KV.
