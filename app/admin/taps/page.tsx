@@ -109,6 +109,11 @@ function BarChart({
 
   return (
     <div style={{ width: "100%", overflowX: isMobile && !isFewBars ? "auto" : "hidden", WebkitOverflowScrolling: "touch" }}>
+      {isMobile && !isFewBars && (
+        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
+          <span>↔ Geser grafik untuk melihat 24 jam / hari lainnya</span>
+        </div>
+      )}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         style={{
@@ -453,7 +458,13 @@ function CafeBreakdownCard({
   const max = countsByStore.length > 0 ? countsByStore[0].count : 1;
 
   if (countsByStore.length === 0) {
-    return null;
+    return (
+      <div className="cafe-breakdown-card" style={{ textAlign: "center", padding: "24px 16px" }}>
+        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-muted)" }}>
+          ☕ Belum ada aktivitas tap cafe pada rentang waktu ini.
+        </p>
+      </div>
+    );
   }
 
   const medals = ["🥇", "🥈", "🥉"];
@@ -1073,11 +1084,12 @@ export default function TapsPage() {
         return t >= d && t < next;
       }).length;
 
+      const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
       let label = "";
       if (i === 0) {
         label = "Hari ini";
       } else if (i % 5 === 0 || i === 29) {
-        label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+        label = dateStr;
       }
 
       const fullDate = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -1085,6 +1097,7 @@ export default function TapsPage() {
 
       days.push({
         label,
+        subLabel: dateStr,
         value: count,
         highlight: i === 0,
         tooltip: `${fullDate}: ${count} tap (Klik untuk bedah rincian jam)`,
@@ -1238,8 +1251,6 @@ export default function TapsPage() {
       start: Date;
       end: Date;
       count: number;
-      prevCount?: number;
-      wowGrowth?: number | null;
       logs: TapLogEntry[];
     }[] = [];
 
@@ -1272,19 +1283,6 @@ export default function TapsPage() {
         count: wLogs.length,
         logs: wLogs,
       });
-    }
-
-    for (let i = 0; i < weeks.length; i++) {
-      if (i > 0) {
-        weeks[i].prevCount = weeks[i - 1].count;
-        if (weeks[i - 1].count > 0) {
-          weeks[i].wowGrowth = Math.round(((weeks[i].count - weeks[i - 1].count) / weeks[i - 1].count) * 100);
-        } else if (weeks[i].count > 0) {
-          weeks[i].wowGrowth = 100;
-        } else {
-          weeks[i].wowGrowth = 0;
-        }
-      }
     }
 
     return weeks;
@@ -2674,6 +2672,17 @@ export default function TapsPage() {
                                 <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
                                   Total 8 Minggu: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
                                 </span>
+                                {(() => {
+                                  const maxWeek = weeklyTrendData.reduce((prev, cur) => (cur.count > prev.count ? cur : prev), weeklyTrendData[0]);
+                                  if (maxWeek && maxWeek.count > 0) {
+                                    return (
+                                      <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)" }}>
+                                        🏆 Minggu Teramai: {maxWeek.subLabel} ({maxWeek.count} tap)
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </div>
 
                               <div style={{
