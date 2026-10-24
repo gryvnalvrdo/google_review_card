@@ -617,7 +617,7 @@ export default function AdminDashboard() {
                           }}
                         >
                           <div style={{ minWidth: 0, flex: "1 1 180px" }}>
-                            <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", wordBreak: "break-word", lineHeight: 1.3 }}>
                               {log.storeName}
                             </div>
                             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>

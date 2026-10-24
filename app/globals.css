@@ -770,5 +770,206 @@ html, body {
   }
 }
 
+/* ============================================
+   TAP ITEM ROW REDESIGN (MOBILE-FIRST & DESKTOP)
+   ============================================ */
+.tap-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #111118;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-left: 4px solid #34D399;
+  transition: background 0.15s ease;
+}
+
+.tap-item-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.tap-item-time {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 5px 6px;
+  text-align: center;
+  flex-shrink: 0;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tap-item-clock {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #F0F0FF;
+  font-family: ui-monospace, monospace;
+  line-height: 1.1;
+}
+
+.tap-item-date {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tap-item-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tap-item-main-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tap-item-store-name {
+  font-weight: 700;
+  color: #F8FAFC;
+  font-size: 0.94rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.tap-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.tap-item-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #818CF8;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.tap-item-dot {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.75rem;
+}
+
+.tap-item-ago {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.tap-item-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tap-item-review-btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #FCD34D;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 5px 10px;
+  border-radius: 7px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.tap-item-review-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #FDE68A;
+  transform: translateY(-1px);
+}
+
+.desktop-only-meta {
+  display: flex;
+}
+
+.mobile-only-meta {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .tap-item-row {
+    padding: 10px 12px;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .tap-item-time {
+    margin-top: 1px;
+  }
+
+  .tap-item-body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .tap-item-store-name {
+    font-size: 0.9rem;
+    line-height: 1.25;
+  }
+
+  .desktop-only-meta {
+    display: none !important;
+  }
+
+  .mobile-only-meta {
+    display: flex !important;
+  }
+
+  .tap-item-actions-wrap {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tap-item-review-btn {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    border-radius: 6px;
+  }
+
+  .toko-tidur-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .toko-tidur-actions {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    padding-left: 50px !important;
+  }
+}
+
+
 
 

@@ -308,100 +308,60 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 10,
-        padding: "10px 14px",
-        background: "#111118",
-        borderBottom: "1px solid rgba(255,255,255,0.04)",
-        borderLeft: `4px solid ${accentColor}`,
-        transition: "background 0.15s",
-      }}
+      className="tap-item-row"
+      style={{ borderLeftColor: accentColor }}
     >
-      {/* Kolom Kiri: Jam Tap Box + Info Toko */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-        {/* Time Badge (Clean digital time without spacing) */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 7,
-            padding: "4px 6px",
-            textAlign: "center",
-            flexShrink: 0,
-            width: 52,
-          }}
-          title={formatFull(log.tappedAt)}
-        >
-          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#F0F0FF", fontFamily: "ui-monospace, monospace", lineHeight: 1.1 }}>
-            {timeStr}
-          </div>
-          <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", marginTop: 2, textTransform: "uppercase" }}>
-            {dateStr}
-          </div>
-        </div>
-
-        {/* Info Toko: Nama & Kode di atas, Time Ago di bawah */}
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-            <span style={{
-              fontWeight: 700,
-              color: "#F0F0FF",
-              fontSize: "0.88rem",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}>
-              {log.storeName}
-            </span>
-            <span style={{
-              fontFamily: "ui-monospace, monospace",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              color: "#818CF8",
-              background: "rgba(99,102,241,0.12)",
-              border: "1px solid rgba(99,102,241,0.25)",
-              padding: "1px 5px",
-              borderRadius: 4,
-              flexShrink: 0,
-            }}>
-              {log.code}
-            </span>
-          </div>
-          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-            <span>🕒 {timeAgo(log.tappedAt)}</span>
-          </div>
-        </div>
+      {/* Kolom Kiri: Jam Tap Box */}
+      <div
+        className="tap-item-time"
+        title={formatFull(log.tappedAt)}
+      >
+        <span className="tap-item-clock">{timeStr}</span>
+        <span className="tap-item-date">{dateStr}</span>
       </div>
 
-      {/* Kolom Kanan: Tombol Menu Ulasan */}
-      {reviewUrl && (
-        <a
-          href={reviewUrl}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            fontSize: "0.72rem",
-            fontWeight: 700,
-            color: "#FCD34D",
-            background: "rgba(245,158,11,0.1)",
-            border: "1px solid rgba(245,158,11,0.3)",
-            padding: "5px 10px",
-            borderRadius: 7,
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            flexShrink: 0,
-            whiteSpace: "nowrap",
-          }}
-          title="Buka ulasan Google toko ini di browser"
-        >
-          <span>⭐</span> Menu Ulasan ↗
-        </a>
-      )}
+      {/* Kolom Kanan: Body Toko & Action */}
+      <div className="tap-item-body">
+        {/* Info Toko Utama: Nama Toko Penuh */}
+        <div className="tap-item-main-info">
+          <div className="tap-item-store-name" title={log.storeName}>
+            {log.storeName}
+          </div>
+
+          {/* Desktop Only Meta: Tampil di bawah nama toko saat desktop */}
+          <div className="tap-item-meta desktop-only-meta">
+            <span className="tap-item-code">{log.code}</span>
+            <span className="tap-item-dot">·</span>
+            <span className="tap-item-ago">
+              <span style={{ opacity: 0.8 }}>🕒</span> {timeAgo(log.tappedAt)}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Wrap: Di mobile baris kedua (kiri: meta, kanan: tombol ulasan) */}
+        <div className="tap-item-actions-wrap">
+          {/* Mobile Only Meta: Sejajar dengan tombol ulasan di mobile */}
+          <div className="tap-item-meta mobile-only-meta">
+            <span className="tap-item-code">{log.code}</span>
+            <span className="tap-item-ago">
+              <span style={{ opacity: 0.8 }}>🕒</span> {timeAgo(log.tappedAt)}
+            </span>
+          </div>
+
+          {reviewUrl && (
+            <a
+              href={reviewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="tap-item-review-btn"
+              title="Buka menu ulasan Google publik toko ini"
+            >
+              <span>⭐</span>
+              <span>Menu Ulasan ↗</span>
+            </a>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2077,7 +2037,7 @@ export default function TapsPage() {
                       return (
                         <div
                           key={card.code}
-                          className="card"
+                          className="card toko-tidur-card"
                           onClick={() => {
                             window.open(targetUrl, "_blank");
                           }}
@@ -2114,6 +2074,7 @@ export default function TapsPage() {
                           </div>
 
                           <div
+                            className="toko-tidur-actions"
                             style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
                             onClick={(e) => e.stopPropagation()}
                           >
