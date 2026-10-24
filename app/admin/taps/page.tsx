@@ -655,7 +655,6 @@ export default function TapsPage() {
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [autoRefreshSec, setAutoRefreshSec] = useState<number>(30);
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<"harian" | "bulanan" | "tren" | "tidur">("harian");
@@ -710,12 +709,12 @@ export default function TapsPage() {
   }, []);
 
   useEffect(() => {
-    if (autoRefreshSec <= 0) return;
+    // Sinkronisasi data otomatis di latar belakang setiap 30 detik (default otomatis)
     const timer = setInterval(() => {
       fetchData(true);
-    }, autoRefreshSec * 1000);
+    }, 30000);
     return () => clearInterval(timer);
-  }, [autoRefreshSec]);
+  }, []);
 
   // ── Tombol Melayang: Scroll Kembali ke Atas ─────────────────────────
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -1548,48 +1547,35 @@ export default function TapsPage() {
                 Pantau performa kartu pelanggan, leaderboard terbanyak per bulan, dan verifikasi ulasan Google langsung.
               </p>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {/* Auto-Refresh Toggle Pill */}
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "6px 10px",
-                background: autoRefreshSec > 0 ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.04)",
-                border: autoRefreshSec > 0 ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 8, fontSize: "0.75rem",
-              }}>
-                <span style={{
-                  width: 7, height: 7, borderRadius: "50%",
-                  background: autoRefreshSec > 0 ? "#10B981" : "#7A7A95",
-                  boxShadow: autoRefreshSec > 0 ? "0 0 8px #10B981" : "none",
-                  animation: autoRefreshSec > 0 ? "pulseDot 2s infinite" : "none",
-                }} />
-                <span style={{ color: autoRefreshSec > 0 ? "#34D399" : "#7A7A95", fontWeight: 700 }}>
-                  {isUpdating ? "Sinkron..." : "Live:"}
-                </span>
-                <select
-                  value={autoRefreshSec}
-                  onChange={(e) => setAutoRefreshSec(Number(e.target.value))}
-                  style={{
-                    background: "transparent", border: "none", color: "#F0F0FF",
-                    fontSize: "0.75rem", fontWeight: 700, outline: "none", cursor: "pointer",
-                  }}
-                >
-                  <option value={15} style={{ background: "#111118" }}>15 detik</option>
-                  <option value={30} style={{ background: "#111118" }}>30 detik</option>
-                  <option value={60} style={{ background: "#111118" }}>60 detik</option>
-                  <option value={0} style={{ background: "#111118" }}>Mati</option>
-                </select>
-              </div>
-
-
-              <button
-                onClick={() => fetchData(false)}
-                disabled={loading}
-                className="btn btn-ghost"
-                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* Clean Live Sync Badge (30 detik default) */}
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "6px 12px",
+                  background: "rgba(16,185,129,0.08)",
+                  border: "1px solid rgba(16,185,129,0.25)",
+                  borderRadius: 8,
+                  fontSize: "0.75rem",
+                }}
+                title="Data tap otomatis diperbarui setiap 30 detik di latar belakang"
               >
-                {loading || isUpdating ? "⏳" : "🔄"} Refresh
-              </button>
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "#10B981",
+                    boxShadow: "0 0 8px #10B981",
+                    animation: isUpdating ? "none" : "pulseDot 2s infinite",
+                  }}
+                />
+                <span style={{ color: "#34D399", fontWeight: 700 }}>
+                  {isUpdating ? "Sinkronisasi..." : "Live Auto-Sync (30s)"}
+                </span>
+              </div>
             </div>
           </div>
 
