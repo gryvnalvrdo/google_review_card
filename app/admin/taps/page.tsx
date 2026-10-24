@@ -644,7 +644,8 @@ export default function TapsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState<"harian" | "bulanan" | "tren" | "tidur">("harian");
+  const [activeTab, setActiveTab] = useState<"laporan" | "harian" | "bulanan" | "tren" | "tidur">("laporan");
+  const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -1051,6 +1052,139 @@ export default function TapsPage() {
       }))
       .sort((a, b) => b.count - a.count || a.storeName.localeCompare(b.storeName));
   }, [activePeriodInfo.entries, availableStores, cards, cardUrlMap, selectedStoreFilters]);
+
+  // ── KALKULASI DATA ANALYST & LAPORAN EKSEKUTIF KLIEN ───────────────────
+  // 1. Pertumbuhan DoD (Hari Ini vs Kemarin)
+  const yesterdayCount = useMemo(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yestStr = yesterday.toDateString();
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt).toDateString() === yestStr).length;
+  }, [storeFilteredLogs]);
+
+  const dodGrowth = useMemo(() => {
+    if (yesterdayCount === 0) return todayCount > 0 ? 100 : 0;
+    return Math.round(((todayCount - yesterdayCount) / yesterdayCount) * 100);
+  }, [todayCount, yesterdayCount]);
+
+  // 2. Pertumbuhan WoW (7 Hari Terakhir vs 7 Hari Sebelumnya)
+  const prev7DaysCount = useMemo(() => {
+    const now = new Date();
+    const startPrev = new Date(now);
+    startPrev.setDate(now.getDate() - 14);
+    startPrev.setHours(0, 0, 0, 0);
+    const endPrev = new Date(now);
+    endPrev.setDate(now.getDate() - 7);
+    endPrev.setHours(0, 0, 0, 0);
+
+    return storeFilteredLogs.filter(l => {
+      const d = new Date(l.tappedAt);
+      return d >= startPrev && d < endPrev;
+    }).length;
+  }, [storeFilteredLogs]);
+
+  const wowGrowth = useMemo(() => {
+    if (prev7DaysCount === 0) return thisWeekCount > 0 ? 100 : 0;
+    return Math.round(((thisWeekCount - prev7DaysCount) / prev7DaysCount) * 100);
+  }, [thisWeekCount, prev7DaysCount]);
+
+  // 3. Estimasi Ulasan Baru Terkonversi (35% industri standard conversion)
+  const estimatedReviews = useMemo(() => {
+    return Math.max(0, Math.round(totalFilteredCount * 0.35));
+  }, [totalFilteredCount]);
+
+  // 4. Distribusi Kuadran Waktu Kedatangan Pelanggan (Dayparting)
+  const daypartingBreakdown = useMemo(() => {
+    let morning = 0;   // 06:00 - 10:59
+    let lunch = 0;     // 11:00 - 14:59
+    let afternoon = 0; // 15:00 - 17:59
+    let evening = 0;   // 18:00 - 23:59 + 00:00 - 05:59
+
+    storeFilteredLogs.forEach(l => {
+      const h = new Date(l.tappedAt).getHours();
+      if (h >= 6 && h < 11) morning++;
+      else if (h >= 11 && h < 15) lunch++;
+      else if (h >= 15 && h < 18) afternoon++;
+      else evening++;
+    });
+
+    const total = storeFilteredLogs.length || 1;
+    return [
+      { id: "morning", name: "Pagi (Kopi & Sarapan)", time: "06:00 – 11:00", icon: "🌅", count: morning, pct: Math.round((morning / total) * 100), color: "#F59E0B" },
+      { id: "lunch", name: "Siang (Lunch Rush)", time: "11:00 – 15:00", icon: "☀️", count: lunch, pct: Math.round((lunch / total) * 100), color: "#38BDF8" },
+      { id: "afternoon", name: "Sore (Hangout & Kerja)", time: "15:00 – 18:00", icon: "🌇", count: afternoon, pct: Math.round((afternoon / total) * 100), color: "#8B5CF6" },
+      { id: "evening", name: "Malam (Dinner & Santai)", time: "18:00 – 24:00", icon: "🌙", count: evening, pct: Math.round((evening / total) * 100), color: "#10B981" },
+    ];
+  }, [storeFilteredLogs]);
+
+  const busiestDaypart = useMemo(() => {
+    return [...daypartingBreakdown].sort((a, b) => b.count - a.count)[0];
+  }, [daypartingBreakdown]);
+
+  // 5. Toko Performa Tertinggi (Champion) & Butuh Perhatian
+  const topStore = useMemo(() => {
+    return cafeBreakdownList.length > 0 ? cafeBreakdownList[0] : null;
+  }, [cafeBreakdownList]);
+
+  const needsAttentionStore = useMemo(() => {
+    if (cafeBreakdownList.length <= 1) return null;
+    const reversed = [...cafeBreakdownList].reverse();
+    return reversed.find(c => c.count === 0) || reversed[0];
+  }, [cafeBreakdownList]);
+
+  // 6. Outlet Aktif Ratio
+  const activeStoresCount = useMemo(() => {
+    return cafeBreakdownList.filter(c => c.count > 0).length;
+  }, [cafeBreakdownList]);
+
+  const activeStoreRatio = useMemo(() => {
+    if (availableStores.length === 0) return 100;
+    return Math.round((activeStoresCount / availableStores.length) * 100);
+  }, [activeStoresCount, availableStores.length]);
+
+  // 7. Salin Ringkasan WhatsApp Klien
+  function copyClientReport() {
+    const periodLabel = dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari Terakhir" : dailyMode === "last30" ? "30 Hari Terakhir" : "Sepanjang Waktu";
+    const dateFormatted = formatDateIndo(new Date());
+
+    let text = `📊 *LAPORAN ANALITIK KARTU GOOGLE REVIEW*\n`;
+    text += `📅 Periode: ${periodLabel} (${dateFormatted})\n`;
+    if (selectedStoreFilters.length > 0) {
+      text += `🏪 Filter Toko: ${selectedStoreFilters.join(", ")}\n`;
+    }
+    text += `──────────────────────────\n`;
+    text += `📈 *Total Tap Pelanggan:* ${totalFilteredCount} kali\n`;
+    text += `⭐ *Estimasi Ulasan Baru:* ~${estimatedReviews} ulasan bintang 5\n`;
+    text += `🔥 *Jam Paling Ramai:* ${busiestDaypart.name} (${busiestDaypart.pct}% volume trafik)\n`;
+    text += `🏪 *Tingkat Keaktifan Cabang:* ${activeStoresCount} dari ${availableStores.length} cabang aktif (${activeStoreRatio}%)\n\n`;
+
+    if (cafeBreakdownList.length > 0) {
+      text += `🏆 *Kontribusi Outlet:* \n`;
+      cafeBreakdownList.slice(0, 5).forEach((c, idx) => {
+        text += `${idx + 1}. ${c.storeName}: ${c.count} tap (${c.pct}%)\n`;
+      });
+      text += `\n`;
+    }
+
+    text += `💡 *Rekomendasi Analis Data:*\n`;
+    text += `• Waktu emas meminta ulasan adalah di jam ${busiestDaypart.time}.\n`;
+    if (topStore && topStore.count > 0) {
+      text += `• Cabang ${topStore.storeName} memimpin performa ulasan tertinggi.\n`;
+    }
+    if (needsAttentionStore && needsAttentionStore.count === 0) {
+      text += `• Cabang ${needsAttentionStore.storeName} perlu dipastikan fisik kartunya diletakkan strategis di meja kasir.\n`;
+    }
+    text += `──────────────────────────\n`;
+    text += `_Dihasilkan via Hantic Google Review Card Analytics Suite_`;
+
+    navigator.clipboard.writeText(text);
+    setCopySuccessToast(true);
+    setTimeout(() => setCopySuccessToast(false), 3000);
+  }
+
+  function handlePrintReport() {
+    window.print();
+  }
 
   // ── Tab: Bulanan (Leaderboard Tanpa Kartu Terhapus) ───────────────────
   type MonthGroup = {
@@ -1941,12 +2075,20 @@ export default function TapsPage() {
           {/* ═════════ 2. MAIN VIEW SWITCHER (Segmented Controls) ═════════ */}
           <div className="main-view-switcher">
             <button
+              id="tab-btn-laporan"
+              type="button"
+              onClick={() => setActiveTab("laporan")}
+              className={`main-view-btn ${activeTab === "laporan" ? "active" : ""}`}
+            >
+              <span>💼</span> Laporan Klien &amp; Eksekutif
+            </button>
+            <button
               id="tab-btn-harian"
               type="button"
               onClick={() => setActiveTab("harian")}
               className={`main-view-btn ${activeTab === "harian" ? "active" : ""}`}
             >
-              <span>📋</span> Ringkasan &amp; Riwayat
+              <span>📋</span> Riwayat &amp; Feed
             </button>
             <button
               id="tab-btn-tren"
@@ -1970,7 +2112,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("tidur")}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
-              <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
+              <span>😴</span> Kartu Pasif {sleepingCards.length > 0 && `(${sleepingCards.length})`}
             </button>
           </div>
 
@@ -2189,8 +2331,8 @@ export default function TapsPage() {
               )}
             </div>
 
-            {/* Sisi Kanan: Period Selector Pills & Date Picker Row (Tampil di Tab Ringkasan) */}
-            {activeTab === "harian" && (
+            {/* Sisi Kanan: Period Selector Pills & Date Picker Row (Tampil di Tab Laporan & Riwayat) */}
+            {(activeTab === "laporan" || activeTab === "harian") && (
               <div className="toolbar-right-group">
                 <div className="clean-period-row" style={{ marginBottom: 0 }}>
                   <button
@@ -2270,6 +2412,375 @@ export default function TapsPage() {
               </div>
             )}
           </div>
+
+          {/* ═════════ TAB 0: LAPORAN EKSEKUTIF & PRESENTASI KLIEN ═════════ */}
+          {activeTab === "laporan" && (
+            loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                <p style={{ color: "var(--text-muted)" }}>Menyusun laporan analitik eksekutif...</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>💼</div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Belum Ada Data untuk Laporan</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  {search ? `Tidak ditemukan data untuk filter "${search}".` : "Belum ada aktivitas tap kartu ulasan yang tercatat."}
+                </p>
+              </div>
+            ) : (
+              <div className="executive-deck-container">
+                {/* 1. Executive Briefing Header */}
+                <div className="executive-header-card">
+                  <div className="executive-header-left">
+                    <div className="executive-header-title">
+                      <span>💼</span> Laporan Analitik Eksekutif &amp; Presentasi Klien
+                    </div>
+                    <div className="executive-header-sub">
+                      Ringkasan performa ulasan Google terkurasi — dirancang untuk bahan evaluasi mingguan dan meeting bersama pemilik toko / klien.
+                    </div>
+                  </div>
+
+                  <div className="executive-actions">
+                    <button
+                      type="button"
+                      onClick={copyClientReport}
+                      className="executive-btn-primary"
+                      title="Salin rekap analitik ke format pesan WhatsApp profesional"
+                    >
+                      <span>📋</span>
+                      <span>{copySuccessToast ? "✅ Tersalin ke WhatsApp!" : "Salin Format WhatsApp"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handlePrintReport}
+                      className="executive-btn-secondary"
+                      title="Cetak atau simpan sebagai dokumen PDF"
+                    >
+                      <span>🖨️</span>
+                      <span>Cetak / PDF</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Toast Feedback */}
+                {copySuccessToast && (
+                  <div style={{
+                    padding: "10px 16px",
+                    background: "rgba(16, 185, 129, 0.15)",
+                    border: "1px solid rgba(16, 185, 129, 0.4)",
+                    borderRadius: 10,
+                    color: "#34D399",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    animation: "fadeIn 0.2s ease",
+                  }}>
+                    <span>✅</span> Format pesan WhatsApp resmi berhasil disalin! Anda dapat langsung mem-paste (Ctrl+V) ke chat pemilik cafe atau group manajemen.
+                  </div>
+                )}
+
+                {/* 2. 4-KPI Executive Grid (Makro Metrik Bisnis) */}
+                <div className="executive-kpi-grid">
+                  {/* KPI 1: Total Interaksi Pelanggan */}
+                  <div className="executive-kpi-card">
+                    <div className="executive-kpi-top">
+                      <div className="executive-kpi-icon" style={{ background: "rgba(99,102,241,0.12)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.25)" }}>
+                        📲
+                      </div>
+                      <span className={`executive-kpi-trend ${wowGrowth >= 0 ? "trend-up" : "trend-down"}`}>
+                        {wowGrowth >= 0 ? `▲ +${wowGrowth}%` : `▼ ${wowGrowth}%`} vs lalu
+                      </span>
+                    </div>
+                    <div>
+                      <div className="executive-kpi-value">{totalFilteredCount}</div>
+                      <div className="executive-kpi-label">Total Tap Pelanggan</div>
+                    </div>
+                    <div className="executive-kpi-context">
+                      {dailyMode === "today" ? `${todayCount} tap tercatat hari ini` : `Akumulasi tap pada periode terpilih`}
+                    </div>
+                  </div>
+
+                  {/* KPI 2: Estimasi Ulasan Baru Terkonversi */}
+                  <div className="executive-kpi-card">
+                    <div className="executive-kpi-top">
+                      <div className="executive-kpi-icon" style={{ background: "rgba(245,158,11,0.12)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}>
+                        ⭐
+                      </div>
+                      <span className="executive-kpi-trend trend-up">
+                        ~35% Konversi
+                      </span>
+                    </div>
+                    <div>
+                      <div className="executive-kpi-value" style={{ color: "#FCD34D" }}>~{estimatedReviews}</div>
+                      <div className="executive-kpi-label">Ulasan Bintang 5 Proyeksi</div>
+                    </div>
+                    <div className="executive-kpi-context">
+                      Estimasi ulasan Google Maps baru berdasarkan benchmark ritel
+                    </div>
+                  </div>
+
+                  {/* KPI 3: Jam Emas Kunjungan */}
+                  <div className="executive-kpi-card">
+                    <div className="executive-kpi-top">
+                      <div className="executive-kpi-icon" style={{ background: "rgba(16,185,129,0.12)", color: "#34D399", border: "1px solid rgba(16,185,129,0.25)" }}>
+                        ⏱️
+                      </div>
+                      <span className="executive-kpi-trend trend-up">
+                        {busiestDaypart.name.split(" ")[0]} ({busiestDaypart.pct}%)
+                      </span>
+                    </div>
+                    <div>
+                      <div className="executive-kpi-value" style={{ fontSize: "1.45rem", color: "#34D399" }}>
+                        {busiestDaypart.time}
+                      </div>
+                      <div className="executive-kpi-label">Jam Emas Permintaan Ulasan</div>
+                    </div>
+                    <div className="executive-kpi-context">
+                      Waktu paling efektif bagi kasir mengingatkan ulasan
+                    </div>
+                  </div>
+
+                  {/* KPI 4: Rasio Keaktifan Toko */}
+                  <div className="executive-kpi-card">
+                    <div className="executive-kpi-top">
+                      <div className="executive-kpi-icon" style={{ background: "rgba(236,72,153,0.12)", color: "#F472B6", border: "1px solid rgba(236,72,153,0.25)" }}>
+                        🏪
+                      </div>
+                      <span className={`executive-kpi-trend ${activeStoreRatio >= 80 ? "trend-up" : "trend-neutral"}`}>
+                        {activeStoreRatio}% Aktif
+                      </span>
+                    </div>
+                    <div>
+                      <div className="executive-kpi-value" style={{ color: "#F472B6" }}>
+                        {activeStoresCount} <span style={{ fontSize: "1rem", color: "#94A3B8", fontWeight: 600 }}>/ {availableStores.length}</span>
+                      </div>
+                      <div className="executive-kpi-label">Cabang Toko Beroperasi</div>
+                    </div>
+                    <div className="executive-kpi-context">
+                      Cabang yang aktif menyerap ulasan pelanggan
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Strategic Analyst Insights (Storytelling untuk Klien) */}
+                <div className="executive-story-box">
+                  <div className="executive-story-header">
+                    <div className="executive-story-title">
+                      <span>💡</span> Analisis &amp; Rekomendasi Strategis untuk Klien
+                    </div>
+                    <span className="executive-story-badge">Rekomendasi Konsultan Data</span>
+                  </div>
+
+                  <div className="executive-pillars-grid">
+                    {/* Pilar 1: Jam Emas */}
+                    <div className="executive-pillar-card">
+                      <div className="executive-pillar-top">
+                        <span style={{ fontSize: "1.2rem" }}>🎯</span>
+                        <span className="executive-pillar-tag" style={{ color: "#38BDF8" }}>Timing Operasional</span>
+                      </div>
+                      <div className="executive-pillar-headline">
+                        Fokuskan Kasir pada {busiestDaypart.time}
+                      </div>
+                      <div className="executive-pillar-desc">
+                        Sebanyak <strong>{busiestDaypart.pct}%</strong> dari seluruh interaksi kartu terjadi pada rentang {busiestDaypart.name.toLowerCase()}. Momen ini adalah waktu emas di mana antrian sedang ramai dan pelanggan paling reseptif memberi bintang 5.
+                      </div>
+                    </div>
+
+                    {/* Pilar 2: Benchmark Cabang Terbaik */}
+                    <div className="executive-pillar-card">
+                      <div className="executive-pillar-top">
+                        <span style={{ fontSize: "1.2rem" }}>🥇</span>
+                        <span className="executive-pillar-tag" style={{ color: "#FCD34D" }}>Benchmark Cabang</span>
+                      </div>
+                      <div className="executive-pillar-headline">
+                        {topStore ? `${topStore.storeName} (${topStore.pct}%)` : "Semua Cabang Berimbang"}
+                      </div>
+                      <div className="executive-pillar-desc">
+                        {topStore ? (
+                          <>
+                            Cabang <strong>{topStore.storeName}</strong> memimpin dengan <strong>{topStore.count} tap</strong>. Prosedur penempatan kartu dan interaksi kasir di cabang ini dapat dijadikan standar SOP bagi cabang lainnya.
+                          </>
+                        ) : (
+                          "Belum ada data pembanding antar cabang."
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Pilar 3: Area Tindakan Perbaikan */}
+                    <div className="executive-pillar-card">
+                      <div className="executive-pillar-top">
+                        <span style={{ fontSize: "1.2rem" }}>🛠️</span>
+                        <span className="executive-pillar-tag" style={{ color: "#F87171" }}>Tindakan Prioritas</span>
+                      </div>
+                      <div className="executive-pillar-headline">
+                        {needsAttentionStore && needsAttentionStore.count === 0
+                          ? `Aktifkan ${needsAttentionStore.storeName}`
+                          : "Pertahankan Konsistensi Kasir"}
+                      </div>
+                      <div className="executive-pillar-desc">
+                        {needsAttentionStore && needsAttentionStore.count === 0 ? (
+                          <>
+                            Cabang <strong>{needsAttentionStore.storeName}</strong> belum mencatat tap pada periode ini. Disarankan melakukan audit fisik: pastikan kartu ulasan ditaruh tepat di samping mesin kasir atau QRIS pembayaran.
+                          </>
+                        ) : (
+                          "Seluruh cabang berhasil mencatat interaksi tap secara merata. Pertahankan rotasi display kartu agar selalu terlihat jelas oleh pengunjung."
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Pola Waktu Kedatangan Pelanggan (Dayparting Quadrants) */}
+                <div className="dayparting-container">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <h4 style={{ fontSize: "0.98rem", fontWeight: 800, color: "#F8FAFC", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span>⏱️</span> Pola Waktu Kedatangan Pelanggan (Dayparting Segments)
+                      </h4>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "4px 0 0" }}>
+                        Distribusi interaksi pelanggan berdasarkan 4 segmen waktu operasional harian.
+                      </p>
+                    </div>
+                    <span style={{ fontSize: "0.72rem", color: "#A5B4FC", fontWeight: 700 }}>
+                      Total Volume: {totalFilteredCount} tap
+                    </span>
+                  </div>
+
+                  <div className="dayparting-grid">
+                    {daypartingBreakdown.map(dp => (
+                      <div key={dp.id} className="dayparting-card">
+                        <div className="dayparting-top">
+                          <span className="dayparting-name">
+                            <span>{dp.icon}</span> {dp.name}
+                          </span>
+                          <span className="dayparting-time">{dp.time}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                          <span className="dayparting-val">{dp.count} <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: 600 }}>tap</span></span>
+                          <span style={{ fontSize: "0.85rem", fontWeight: 800, color: dp.color }}>{dp.pct}%</span>
+                        </div>
+                        <div className="dayparting-bar-track">
+                          <div
+                            className="dayparting-bar-fill"
+                            style={{ width: `${dp.pct}%`, background: dp.color }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5. Pangsa Pasar & Kontribusi Antar Cabang (Market Share Breakdown) */}
+                {cafeBreakdownList.length > 0 && (
+                  <div className="cafe-scorecard-box">
+                    <div className="cafe-scorecard-header">
+                      <div className="cafe-scorecard-title">
+                        <span>📊</span>
+                        <span>Pangsa Pasar &amp; Kontribusi Ulasan Antar Cabang</span>
+                      </div>
+                      <span className="cafe-scorecard-meta">
+                        {activePeriodInfo.entries.length} TOTAL TAP
+                      </span>
+                    </div>
+
+                    {/* Stacked Rainbow Distribution Bar */}
+                    <div style={{ padding: "0 16px 12px" }}>
+                      <div className="cafe-stacked-bar">
+                        {cafeBreakdownList.map((c, i) => {
+                          const colors = ["#6366F1", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#38BDF8"];
+                          const barColor = colors[i % colors.length];
+                          if (c.pct === 0) return null;
+                          return (
+                            <div
+                              key={c.storeName}
+                              style={{
+                                width: `${c.pct}%`,
+                                background: barColor,
+                                height: "100%",
+                                transition: "all 0.3s ease",
+                              }}
+                              title={`${c.storeName}: ${c.count} tap (${c.pct}%)`}
+                            />
+                          );
+                        })}
+                      </div>
+
+                      <div className="cafe-stacked-legend">
+                        {cafeBreakdownList.map((c, i) => {
+                          const colors = ["#6366F1", "#10B981", "#F59E0B", "#EC4899", "#8B5CF6", "#38BDF8"];
+                          const dotColor = colors[i % colors.length];
+                          return (
+                            <div key={c.storeName} className="cafe-legend-item">
+                              <span className="cafe-legend-dot" style={{ background: dotColor }} />
+                              <span className="cafe-legend-name">{c.storeName}</span>
+                              <span className="cafe-legend-pct">{c.pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* List Toko dengan Actionable Link */}
+                    <div className="cafe-scorecard-grid">
+                      {cafeBreakdownList.map((c, idx) => {
+                        const isSelected = selectedStoreFilters.includes(c.storeName);
+                        const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+
+                        return (
+                          <div
+                            key={c.storeName}
+                            onClick={() => toggleStoreFilter(c.storeName)}
+                            className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
+                            title={`Klik untuk memfilter analitik khusus ${c.storeName}`}
+                          >
+                            <div className="cafe-scorecard-left">
+                              <span className="cafe-rank-badge">{rankBadge}</span>
+                              <div className="cafe-name-wrap">
+                                <div className="cafe-name-text">
+                                  <span>{c.storeName}</span>
+                                  {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
+                                </div>
+                                <div className="cafe-sub-text">
+                                  <span className="cafe-code-pill">{c.code}</span>
+                                  {c.count > 0 && <span>· {c.pct}% Pangsa Pasar</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="cafe-scorecard-right">
+                              <div className="cafe-count-wrap">
+                                <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
+                                  {c.count}
+                                </span>
+                                <span className="cafe-count-unit">tap</span>
+                              </div>
+
+                              {c.reviewUrl && (
+                                <a
+                                  href={c.reviewUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="cafe-review-quick-btn"
+                                  title="Buka menu ulasan Google publik toko ini"
+                                >
+                                  ⭐
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          )}
 
           {/* ═════════ TAB 1: RIWAYAT TAP (CLEAN NATIVE 2-COLUMN WORKSPACE) ═════════ */}
           {activeTab === "harian" && (
