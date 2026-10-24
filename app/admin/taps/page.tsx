@@ -804,8 +804,16 @@ export default function TapsPage() {
             </div>
           )}
 
-          {/* KPI Stat Cards (2x2 grid on mobile) */}
-          <div className="mobile-kpi-grid" style={{ marginBottom: 20 }}>
+          {/* KPI Stat Cards (Grid kiri-kanan seperti di Dashboard) */}
+          <div
+            className="mobile-kpi-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 14,
+              marginBottom: 20,
+            }}
+          >
             <div className="card" style={{ padding: "14px 16px", borderColor: "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Hari Ini</span>

@@ -279,7 +279,15 @@ export default function CardsPage() {
             </div>
           </div>
               {/* KPI Stats */}
-              <div className="mobile-kpi-grid" style={{ marginBottom: 22 }}>
+              <div
+                className="mobile-kpi-grid"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: 14,
+                  marginBottom: 22,
+                }}
+              >
                 <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
                   <div style={{ fontSize: "0.72rem", color: "#A5B4FC", fontWeight: 700, textTransform: "uppercase" }}>💳 Total Kartu Aktif</div>
                   <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#F0F0FF", marginTop: 4 }}>{cards.length}</div>
