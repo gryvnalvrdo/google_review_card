@@ -1312,7 +1312,8 @@ export default function TapsPage() {
   const activePeriodInfo = useMemo(() => {
     if (customDate) {
       return {
-        title: `🗓️ Riwayat Tap: ${formatDateIndo(customDate)}`,
+        title: "Riwayat Tap Spesifik",
+        subtitle: formatDateIndo(customDate),
         color: "#6366F1",
         entries: customDateEntries,
         emptyMsg: `Tidak ada aktivitas tap kartu pada tanggal ${formatDateIndo(customDate)}.`,
@@ -1320,7 +1321,8 @@ export default function TapsPage() {
     }
     if (dailyMode === "today") {
       return {
-        title: `☀️ Tap Masuk Hari Ini — ${formatDateIndo(new Date())}`,
+        title: "Tap Masuk Hari Ini",
+        subtitle: formatDateIndo(new Date()),
         color: "#10B981",
         entries: hariianPeriods.today,
         emptyMsg: `Pelanggan belum men-tap kartu toko hari ini (${formatDateIndo(new Date())}). Tap baru akan otomatis terdeteksi via live auto-refresh.`,
@@ -1328,7 +1330,8 @@ export default function TapsPage() {
     }
     if (dailyMode === "last7") {
       return {
-        title: "📅 Riwayat Tap 7 Hari Terakhir",
+        title: "Riwayat Tap 7 Hari Terakhir",
+        subtitle: "Akumulasi aktivitas 7 hari ke belakang",
         color: "#6366F1",
         entries: hariianPeriods.last7,
         emptyMsg: "Belum ada aktivitas tap dalam 7 hari terakhir.",
@@ -1336,14 +1339,16 @@ export default function TapsPage() {
     }
     if (dailyMode === "last30") {
       return {
-        title: "🗓️ Riwayat Tap 1 Bulan Terakhir",
+        title: "Riwayat Tap 1 Bulan Terakhir",
+        subtitle: "Akumulasi aktivitas 30 hari ke belakang",
         color: "#EC4899",
         entries: hariianPeriods.last30,
         emptyMsg: "Belum ada aktivitas tap dalam 30 hari terakhir.",
       };
     }
     return {
-      title: "📑 Semua Riwayat Tap",
+      title: "Semua Riwayat Tap",
+      subtitle: "Seluruh aktivitas tap sepanjang masa operasional",
       color: "#8B5CF6",
       entries: filtered,
       emptyMsg: "Belum ada aktivitas tap yang tercatat.",
@@ -2835,8 +2840,16 @@ export default function TapsPage() {
                   ) : (
                     <div className="tap-group-box">
                       <div className="tap-group-header">
-                        <div className="tap-group-title">
-                          <span>{activePeriodInfo.title}</span>
+                        <div className="tap-group-title-wrap">
+                          <div className="tap-group-title-main">
+                            <span className="tap-group-title-icon" style={{ fontSize: "1.1rem" }}>
+                              {dailyMode === "today" ? "☀️" : dailyMode === "last7" ? "📅" : dailyMode === "last30" ? "🗓️" : customDate ? "🗓️" : "📑"}
+                            </span>
+                            <span className="tap-group-title-text">{activePeriodInfo.title}</span>
+                          </div>
+                          {activePeriodInfo.subtitle && (
+                            <div className="tap-group-subtitle">{activePeriodInfo.subtitle}</div>
+                          )}
                         </div>
                         <span className="tap-group-badge">
                           {activePeriodInfo.entries.length} TAP
@@ -2981,17 +2994,12 @@ export default function TapsPage() {
                       const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
 
                       return (
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10, marginBottom: 10 }}>
-                            <div style={{ fontSize: "1.3rem" }}>🔥</div>
-                            <div>
-                              <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
-                              <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
-                            </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10 }}>
+                          <div style={{ fontSize: "1.3rem" }}>🔥</div>
+                          <div>
+                            <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
                           </div>
-                          <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.45 }}>
-                            💡 <strong>Rekomendasi Operasional:</strong> Jam-jam di atas adalah momen terbaik bagi staf / barista untuk mengingatkan pelanggan memberikan ulasan Google Bintang 5.
-                          </p>
                         </div>
                       );
                     })()}
