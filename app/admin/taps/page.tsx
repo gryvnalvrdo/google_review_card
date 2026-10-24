@@ -2118,8 +2118,8 @@ export default function TapsPage() {
 
           {/* ═════════ 3. UNIFIED COMMAND TOOLBAR (Full Width Balanced Controls) ═════════ */}
           <div className="dashboard-unified-toolbar">
-            {/* Sisi Kiri: Search Input & Outlet Dropdown Filter */}
-            <div className="toolbar-left-group">
+            {/* Top Row / Desktop Left: Search Input & Outlet Dropdown (Di Kanan) */}
+            <div className="toolbar-top-row">
               <div className="smart-search-input-wrap">
                 <span className="smart-search-icon">🔍</span>
                 <input
@@ -2141,11 +2141,13 @@ export default function TapsPage() {
                 )}
               </div>
 
-              {/* Outlet Filter Button with Dropdown Trigger */}
-              <div id="store-filter-dropdown-wrapper" style={{ position: "relative" }}>
+              {/* Outlet Filter Button with Dropdown Trigger (Posisikan di Kanan) */}
+              <div id="store-filter-dropdown-wrapper" style={{ position: "relative", flexShrink: 0 }}>
                 <button
                   type="button"
+                  id="store-filter-btn"
                   onClick={() => setStoreFilterOpen(o => !o)}
+                  className="outlet-trigger-btn"
                   style={{
                     height: 42,
                     padding: "0 14px",
@@ -2186,23 +2188,7 @@ export default function TapsPage() {
                         backdropFilter: "blur(2px)",
                       }}
                     />
-                    <div
-                      className="outlet-filter-menu"
-                      style={{
-                        position: "absolute",
-                        top: "calc(100% + 6px)",
-                        right: 0,
-                        zIndex: 999,
-                        background: "#141522",
-                        border: "1px solid rgba(99,102,241,0.35)",
-                        borderRadius: 14,
-                        boxShadow: "0 16px 40px rgba(0,0,0,0.75)",
-                        minWidth: 260,
-                        maxHeight: 340,
-                        overflowY: "auto",
-                        padding: "10px",
-                      }}
-                    >
+                    <div className="outlet-filter-menu">
                       {/* Mobile Sheet Drag Indicator & Header */}
                       <div className="outlet-sheet-header" style={{ flexDirection: "column", gap: 8, marginBottom: 10 }}>
                         <div style={{ width: 38, height: 4, background: "rgba(255,255,255,0.25)", borderRadius: 999, margin: "0 auto 6px" }} />
@@ -2326,12 +2312,12 @@ export default function TapsPage() {
                   }}
                   title="Reset filter outlet"
                 >
-                  <span>✕</span> Reset Filter
+                  <span>✕</span> Reset
                 </button>
               )}
             </div>
 
-            {/* Sisi Kanan: Period Selector Pills & Date Picker Row (Tampil di Tab Laporan & Riwayat) */}
+            {/* Sisi Kanan / Row Bawah: Period Selector Pills & Date Picker Row (Tampil di Tab Laporan & Riwayat) */}
             {(activeTab === "laporan" || activeTab === "harian") && (
               <div className="toolbar-right-group">
                 <div className="clean-period-row" style={{ marginBottom: 0 }}>
@@ -2365,8 +2351,8 @@ export default function TapsPage() {
                   </button>
                 </div>
 
-                {/* Clean Date Picker */}
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                {/* Clean Date Picker (100% Mobile Ready, Zero Horizontal Scroll) */}
+                <div className="toolbar-date-picker-wrap">
                   <input
                     id="custom-date-picker"
                     type="date"
@@ -2377,35 +2363,16 @@ export default function TapsPage() {
                       setCustomDate(e.target.value);
                       if (e.target.value) setDailyMode("custom");
                     }}
-                    style={{
-                      background: customDate ? "rgba(99,102,241,0.18)" : "rgba(255,255,255,0.03)",
-                      border: customDate ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.09)",
-                      color: "#F0F0FF",
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      fontSize: "0.76rem",
-                      fontWeight: 600,
-                      outline: "none",
-                      cursor: "pointer",
-                    }}
+                    className={`toolbar-date-picker-input ${customDate ? "active" : ""}`}
                   />
                   {customDate && (
                     <button
                       type="button"
                       onClick={() => { setCustomDate(""); setDailyMode("today"); }}
-                      style={{
-                        background: "rgba(239,68,68,0.15)",
-                        border: "1px solid rgba(239,68,68,0.3)",
-                        color: "#FCA5A5",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        fontSize: "0.72rem",
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                      }}
-                      title="Reset tanggal"
+                      className="toolbar-date-picker-clear"
+                      title="Kembali ke Hari Ini"
                     >
-                      ✕
+                      ✕ Reset
                     </button>
                   )}
                 </div>
@@ -2852,14 +2819,15 @@ export default function TapsPage() {
                                   <div className="tap-store-sub">
                                     <span className="tap-code-badge">{log.code}</span>
                                     <span>·</span>
-                                    <span>{dateStr}</span>
-                                    <span>·</span>
-                                    <span>{timeAgo(log.tappedAt)}</span>
+                                    <span className="tap-date-label">{dateStr}</span>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="tap-row-action">
+                              <div className="tap-row-right">
+                                <span className="tap-time-ago-badge" title={formatFull(log.tappedAt)}>
+                                  {timeAgo(log.tappedAt)}
+                                </span>
                                 {reviewUrl && (
                                   <a
                                     href={reviewUrl}
@@ -2869,7 +2837,7 @@ export default function TapsPage() {
                                     title="Buka menu ulasan Google publik toko ini"
                                   >
                                     <span>⭐</span>
-                                    <span>Ulasan ↗</span>
+                                    <span className="tap-review-text">Ulasan ↗</span>
                                   </a>
                                 )}
                               </div>

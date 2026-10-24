@@ -1042,9 +1042,22 @@ html, body {
   border-radius: 14px;
   padding: 10px 14px;
   margin-bottom: 22px;
-  gap: 16px;
+  gap: 14px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   width: 100%;
+}
+
+.toolbar-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.toolbar-top-row .smart-search-input-wrap {
+  flex: 1;
+  min-width: 0;
 }
 
 .toolbar-left-group {
@@ -1062,6 +1075,41 @@ html, body {
   flex-wrap: wrap;
 }
 
+.toolbar-date-picker-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar-date-picker-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #F0F0FF;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbar-date-picker-input.active {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: #6366F1;
+}
+
+.toolbar-date-picker-clear {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #FCA5A5;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 @media (max-width: 900px) {
   .dashboard-unified-toolbar {
     flex-direction: column;
@@ -1069,12 +1117,33 @@ html, body {
     gap: 12px;
     padding: 12px;
   }
+  .toolbar-top-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toolbar-top-row .smart-search-input-wrap {
+    flex: 1;
+    min-width: 0;
+  }
   .toolbar-left-group {
     width: 100%;
   }
   .toolbar-right-group {
     width: 100%;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .toolbar-date-picker-wrap {
+    width: 100%;
+    display: flex;
+  }
+  .toolbar-date-picker-input {
+    flex: 1;
+    width: 100%;
+    padding: 9px 12px;
   }
 }
 
@@ -1619,23 +1688,60 @@ html, body {
   .hero-chip-label {
     font-size: 0.65rem;
   }
+
+  /* Redesign NO-SCROLL Main View Switcher on Mobile */
   .main-view-switcher {
-    width: 100%;
-    margin-bottom: 14px;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    overflow-x: visible !important;
+    width: 100% !important;
+    gap: 6px !important;
+    padding: 6px !important;
+    margin-bottom: 14px !important;
+  }
+  .main-view-switcher > button:first-child {
+    grid-column: span 2 !important; /* Laporan Klien & Eksekutif jadi banner lebar di atas */
   }
   .main-view-btn {
-    padding: 7px 14px;
-    font-size: 0.78rem;
+    width: 100% !important;
+    flex: none !important;
+    padding: 9px 8px !important;
+    font-size: 0.76rem !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: normal !important;
   }
+
+  /* Redesign NO-SCROLL Period Selector Pills on Mobile */
+  .clean-period-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    width: 100% !important;
+    overflow-x: visible !important;
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+  .clean-period-pill {
+    width: 100% !important;
+    flex: 1 !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 9px 6px !important;
+    font-size: 0.74rem !important;
+    white-space: normal !important;
+  }
+
   .smart-search-row {
     margin-bottom: 14px;
   }
   .smart-search-input-wrap {
     max-width: 100%;
   }
+
+  /* Sama Rata Tap Rows: Left Store Info, Right Aligned Time-Ago & Action */
   .tap-row-native {
-    padding: 10px 12px;
-    gap: 8px;
+    padding: 10px 12px !important;
+    gap: 10px !important;
   }
   .tap-store-name {
     font-size: 0.84rem;
@@ -2584,7 +2690,7 @@ html, body {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .outlet-filter-menu {
     position: fixed !important;
     bottom: 0 !important;
@@ -2608,15 +2714,59 @@ html, body {
   }
 }
 
-@media (min-width: 641px) {
+@media (min-width: 769px) {
   .outlet-sheet-header {
     display: none !important;
   }
   .outlet-filter-menu {
+    position: absolute !important;
+    top: calc(100% + 6px) !important;
     right: 0 !important;
     left: auto !important;
+    transform-origin: top right !important;
     min-width: 260px !important;
     max-width: 320px !important;
+  }
+}
+
+/* Kolom Kanan Sejajar Sama Rata: Time Ago & Tombol Ulasan */
+.tap-row-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.tap-time-ago-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #34D399;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  min-width: 66px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .tap-review-text {
+    display: none !important;
+  }
+  .tap-review-btn {
+    padding: 5px 8px !important;
+  }
+  .tap-time-ago-badge {
+    min-width: 58px !important;
+    padding: 2px 6px !important;
+    font-size: 0.68rem !important;
   }
 }
 
