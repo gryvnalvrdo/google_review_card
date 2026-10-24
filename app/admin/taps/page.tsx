@@ -2075,12 +2075,12 @@ export default function TapsPage() {
           {/* ═════════ 2. MAIN VIEW SWITCHER (Segmented Controls) ═════════ */}
           <div className="main-view-switcher">
             <button
-              id="tab-btn-laporan"
+              id="tab-btn-tren"
               type="button"
-              onClick={() => setActiveTab("laporan")}
-              className={`main-view-btn ${activeTab === "laporan" ? "active" : ""}`}
+              onClick={() => setActiveTab("tren")}
+              className={`main-view-btn ${activeTab === "tren" ? "active" : ""}`}
             >
-              <span>💼</span> Laporan Klien &amp; Eksekutif
+              <span>📊</span> Tren &amp; Jam
             </button>
             <button
               id="tab-btn-harian"
@@ -2088,15 +2088,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("harian")}
               className={`main-view-btn ${activeTab === "harian" ? "active" : ""}`}
             >
-              <span>📋</span> Riwayat &amp; Feed
-            </button>
-            <button
-              id="tab-btn-tren"
-              type="button"
-              onClick={() => setActiveTab("tren")}
-              className={`main-view-btn ${activeTab === "tren" ? "active" : ""}`}
-            >
-              <span>📊</span> Grafik &amp; Jam Sibuk
+              <span>📋</span> Riwayat Tap
             </button>
             <button
               id="tab-btn-bulanan"
@@ -2104,7 +2096,15 @@ export default function TapsPage() {
               onClick={() => setActiveTab("bulanan")}
               className={`main-view-btn ${activeTab === "bulanan" ? "active" : ""}`}
             >
-              <span>🏆</span> Arsip Bulanan
+              <span>🏆</span> Leaderboard Toko
+            </button>
+            <button
+              id="tab-btn-laporan"
+              type="button"
+              onClick={() => setActiveTab("laporan")}
+              className={`main-view-btn ${activeTab === "laporan" ? "active" : ""}`}
+            >
+              <span>💼</span> Laporan Eksekutif
             </button>
             <button
               id="tab-btn-tidur"
@@ -2112,7 +2112,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("tidur")}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
-              <span>😴</span> Kartu Pasif {sleepingCards.length > 0 && `(${sleepingCards.length})`}
+              <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
             </button>
           </div>
 
