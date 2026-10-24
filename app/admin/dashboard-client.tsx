@@ -497,36 +497,38 @@ export default function AdminDashboard() {
       )}
 
       {/* Main Page Layout */}
-      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
+      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "calc(110px + env(safe-area-inset-bottom, 24px))" }}>
         <main style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
-          {/* Quick Stats Grid (3 cards in 1 row horizontal, responsive on desktop and mobile) */}
-          <div className="stats-grid-3">
+          {/* Quick Stats Grid (Hero Revenue Card on mobile, 3-col on desktop) */}
+          <div className="stats-grid-3" style={{ marginBottom: 22 }}>
             {[
-              { label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#4F46E5", sub: "Terhubung ke Google Review" },
-              { label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString("id-ID")}`, icon: "💰", color: "#10B981", sub: "Penjualan fisik kartu" },
-              { label: "Total Tap Pelanggan", value: totalTaps, icon: "👆", color: "#F59E0B", sub: "Scan QR & tap NFC aktif" },
+              { id: "cards", label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#6366F1", sub: "Terhubung Google Review" },
+              { id: "revenue", label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString("id-ID")}`, icon: "💰", color: "#10B981", sub: "Penjualan fisik kartu" },
+              { id: "taps", label: "Total Tap Pelanggan", value: totalTaps, icon: "👆", color: "#F59E0B", sub: "Scan QR & tap NFC aktif" },
             ].map((s) => (
               <div
-                key={s.label}
-                className="card stat-card-compact"
+                key={s.id}
+                className={`card stat-card-compact stat-card-${s.id}`}
                 style={{
-                  background: "linear-gradient(180deg, rgba(255,255,255,0.03), #111118)",
-                  borderColor: "rgba(255,255,255,0.08)",
+                  background: s.id === "revenue"
+                    ? "linear-gradient(135deg, rgba(16, 185, 129, 0.09), #111118)"
+                    : "linear-gradient(180deg, rgba(255,255,255,0.03), #111118)",
+                  borderColor: s.id === "revenue" ? "rgba(16, 185, 129, 0.25)" : "rgba(255,255,255,0.08)",
                   position: "relative",
-                  overflow: "hidden",
+                  borderRadius: 14,
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span className="stat-card-title" style={{ color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <span className="stat-card-title" style={{ color: s.id === "revenue" ? "#6EE7B7" : "var(--text-muted)", fontWeight: 700 }}>
                     {s.label}
                   </span>
-                  <span className="stat-card-icon">{s.icon}</span>
+                  <span className="stat-card-icon" style={{ fontSize: "1.2rem" }}>{s.icon}</span>
                 </div>
-                <div className="stat-card-value" style={{ fontWeight: 800, color: "var(--text-primary)" }}>
+                <div className="stat-card-value" style={{ fontWeight: 800, color: s.id === "revenue" ? "#34D399" : "var(--text-primary)" }}>
                   {s.value}
                 </div>
-                <div className="mobile-hide-sm" style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 6 }}>
+                <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 5 }}>
                   {s.sub}
                 </div>
               </div>

@@ -268,7 +268,7 @@ export default function CardsPage() {
 
 
       {/* Main Container */}
-      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
+      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "calc(110px + env(safe-area-inset-bottom, 24px))" }}>
         <div className="mobile-container-pad" style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
           {/* Header Title */}
@@ -280,19 +280,28 @@ export default function CardsPage() {
               Kelola kartu toko aktif, cetak ulang QR resolusi tinggi, atau edit data toko.
             </p>
           </div>
-              {/* KPI Stats (3 cards horizontal on desktop and mobile) */}
+              {/* KPI Stats (Hero Omzet on mobile, 3-col on desktop) */}
               <div className="stats-grid-3" style={{ marginBottom: 22 }}>
-                <div className="card stat-card-compact" style={{ background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
-                  <div className="stat-card-title" style={{ color: "#A5B4FC", fontWeight: 700, textTransform: "uppercase" }}>💳 Total Kartu Aktif</div>
-                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#F0F0FF", marginTop: 4 }}>{cards.length}</div>
+                <div className="card stat-card-compact stat-card-cards" style={{ background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)", borderRadius: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span className="stat-card-title" style={{ color: "#A5B4FC", fontWeight: 700 }}>Kartu Toko Aktif</span>
+                    <span className="stat-card-icon" style={{ fontSize: "1.2rem" }}>💳</span>
+                  </div>
+                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#F0F0FF" }}>{cards.length}</div>
                 </div>
-                <div className="card stat-card-compact" style={{ background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
-                  <div className="stat-card-title" style={{ color: "#34D399", fontWeight: 700, textTransform: "uppercase" }}>💰 Total Omzet</div>
-                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#34D399", marginTop: 4 }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
+                <div className="card stat-card-compact stat-card-revenue" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.09), #111118)", borderColor: "rgba(16,185,129,0.25)", borderRadius: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span className="stat-card-title" style={{ color: "#6EE7B7", fontWeight: 700 }}>Total Omzet</span>
+                    <span className="stat-card-icon" style={{ fontSize: "1.2rem" }}>💰</span>
+                  </div>
+                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#34D399" }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
                 </div>
-                <div className="card stat-card-compact" style={{ background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
-                  <div className="stat-card-title" style={{ color: "#FCD34D", fontWeight: 700, textTransform: "uppercase" }}>👆 Total Tap</div>
-                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#FCD34D", marginTop: 4 }}>{totalTaps}×</div>
+                <div className="card stat-card-compact stat-card-taps" style={{ background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)", borderRadius: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span className="stat-card-title" style={{ color: "#FCD34D", fontWeight: 700 }}>Total Tap</span>
+                    <span className="stat-card-icon" style={{ fontSize: "1.2rem" }}>👆</span>
+                  </div>
+                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#FCD34D" }}>{totalTaps}×</div>
                 </div>
               </div>
 

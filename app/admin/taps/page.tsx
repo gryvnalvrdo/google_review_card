@@ -1803,7 +1803,7 @@ export default function TapsPage() {
     <>
       <AdminNav active="taps" />
 
-      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
+      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "calc(110px + env(safe-area-inset-bottom, 24px))" }}>
         <div className="mobile-container-pad" style={{ maxWidth: 1240, margin: "0 auto", padding: "24px 20px" }}>
 
           {/* ═════════ 1. MODERN DASHBOARD HERO (Command Center) ═════════ */}
@@ -2031,91 +2031,133 @@ export default function TapsPage() {
               </button>
 
               {storeFilterOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    right: 0,
-                    zIndex: 999,
-                    background: "#181824",
-                    border: "1px solid rgba(99,102,241,0.35)",
-                    borderRadius: 12,
-                    boxShadow: "0 10px 32px rgba(0,0,0,0.6)",
-                    minWidth: 240,
-                    maxHeight: 280,
-                    overflowY: "auto",
-                    padding: "8px",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
+                <>
+                  <div
+                    onClick={() => setStoreFilterOpen(false)}
                     style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
-                      background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 4,
+                      position: "fixed",
+                      inset: 0,
+                      zIndex: 998,
+                      background: "rgba(0,0,0,0.45)",
+                      backdropFilter: "blur(2px)",
+                    }}
+                  />
+                  <div
+                    className="outlet-filter-menu"
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 6px)",
+                      right: 0,
+                      zIndex: 999,
+                      background: "#141522",
+                      border: "1px solid rgba(99,102,241,0.35)",
+                      borderRadius: 14,
+                      boxShadow: "0 16px 40px rgba(0,0,0,0.75)",
+                      minWidth: 260,
+                      maxHeight: 340,
+                      overflowY: "auto",
+                      padding: "10px",
                     }}
                   >
-                    <span style={{
-                      width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                      border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
-                      background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 9, color: "#FFF",
-                    }}>✓</span>
-                    Semua Outlet ({availableStores.length})
-                  </button>
-
-                  <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
-
-                  {availableStores.map(store => {
-                    const checked = selectedStoreFilters.includes(store);
-                    return (
-                      <button
-                        key={store}
-                        type="button"
-                        onClick={() => toggleStoreFilter(store)}
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "7px 10px",
-                          borderRadius: 7,
-                          fontSize: "0.76rem",
-                          fontWeight: 600,
-                          color: checked ? "#F8FAFC" : "#CBD5E1",
-                          background: checked ? "rgba(99, 102, 241, 0.14)" : "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <span style={{
-                          width: 14, height: 14, borderRadius: 4, flexShrink: 0,
-                          border: checked ? "2px solid #6366F1" : "2px solid #475569",
-                          background: checked ? "#6366F1" : "transparent",
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 9, color: "#FFF",
-                        }}>{checked ? "✓" : ""}</span>
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {store}
+                    {/* Mobile Sheet Drag Indicator & Header */}
+                    <div className="outlet-sheet-header" style={{ flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                      <div style={{ width: 38, height: 4, background: "rgba(255,255,255,0.25)", borderRadius: 999, margin: "0 auto 6px" }} />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span>🏪</span> Filter Outlet Toko
                         </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                        <button
+                          type="button"
+                          onClick={() => setStoreFilterOpen(false)}
+                          style={{
+                            background: "rgba(255,255,255,0.08)",
+                            border: "none",
+                            color: "#94A3B8",
+                            width: 26,
+                            height: 26,
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 10px",
+                        borderRadius: 8,
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
+                        background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <span style={{
+                        width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                        border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
+                        background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 9, color: "#FFF",
+                      }}>✓</span>
+                      Semua Outlet ({availableStores.length})
+                    </button>
+
+                    <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "4px 0" }} />
+
+                    {availableStores.map(store => {
+                      const checked = selectedStoreFilters.includes(store);
+                      return (
+                        <button
+                          key={store}
+                          type="button"
+                          onClick={() => toggleStoreFilter(store)}
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            padding: "7px 10px",
+                            borderRadius: 7,
+                            fontSize: "0.76rem",
+                            fontWeight: 600,
+                            color: checked ? "#F8FAFC" : "#CBD5E1",
+                            background: checked ? "rgba(99, 102, 241, 0.14)" : "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <span style={{
+                            width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                            border: checked ? "2px solid #6366F1" : "2px solid #475569",
+                            background: checked ? "#6366F1" : "transparent",
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 9, color: "#FFF",
+                          }}>{checked ? "✓" : ""}</span>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {store}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
 
@@ -3195,9 +3237,9 @@ export default function TapsPage() {
                                     {count} tap
                                   </span>
                                 </div>
-                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                                  <span style={{ color: isAct ? "#CBD5E1" : "var(--text-muted)" }}>🏆 Puncak:</span>
-                                  <strong style={{ color: "#34D399" }}>
+                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, lineHeight: 1.3 }}>
+                                  <span style={{ color: isAct ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>🏆 Puncak:</span>
+                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>
                                     {peak ? `${peak.label} (${peak.count} tap)` : "Belum ada"}
                                   </strong>
                                 </div>
@@ -3304,9 +3346,9 @@ export default function TapsPage() {
                                   {trendData7.reduce((s, d) => s + d.value, 0)} tap
                                 </span>
                               </div>
-                              <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                                <span style={{ color: trendRange === 7 ? "#CBD5E1" : "var(--text-muted)" }}>🏆 Puncak:</span>
-                                <strong style={{ color: "#34D399" }}>
+                              <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, lineHeight: 1.3 }}>
+                                <span style={{ color: trendRange === 7 ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>🏆 Puncak:</span>
+                                <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>
                                   {(() => {
                                     const m = trendData7.reduce((prev, cur) => cur.value > prev.value ? cur : prev, trendData7[0]);
                                     return m && m.value > 0 ? `${m.label || m.subLabel} (${m.value} tap)` : "Belum ada";
@@ -3341,9 +3383,9 @@ export default function TapsPage() {
                                   {trendData30.reduce((s, d) => s + d.value, 0)} tap
                                 </span>
                               </div>
-                              <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                                <span style={{ color: trendRange === 30 ? "#CBD5E1" : "var(--text-muted)" }}>🏆 Puncak:</span>
-                                <strong style={{ color: "#34D399" }}>
+                              <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, lineHeight: 1.3 }}>
+                                <span style={{ color: trendRange === 30 ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>🏆 Puncak:</span>
+                                <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>
                                   {(() => {
                                     const m = trendData30.reduce((prev, cur) => cur.value > prev.value ? cur : prev, trendData30[0]);
                                     return m && m.value > 0 ? `${m.label || m.subLabel} (${m.value} tap)` : "Belum ada";
@@ -3597,9 +3639,9 @@ export default function TapsPage() {
                                     {eightWeeksCount} tap
                                   </span>
                                 </div>
-                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                                  <span style={{ color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)" }}>Rentang:</span>
-                                  <strong style={{ color: "#34D399" }}>8 pekan berjalan</strong>
+                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, lineHeight: 1.3 }}>
+                                  <span style={{ color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>Rentang:</span>
+                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>8 pekan berjalan</strong>
                                 </div>
                               </button>
 
@@ -3629,9 +3671,9 @@ export default function TapsPage() {
                                     {twelveWeeksCount} tap
                                   </span>
                                 </div>
-                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                                  <span style={{ color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)" }}>Rentang:</span>
-                                  <strong style={{ color: "#34D399" }}>Kuartal 3 bulan terakhir</strong>
+                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, lineHeight: 1.3 }}>
+                                  <span style={{ color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>Rentang:</span>
+                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>Kuartal 3 bulan terakhir</strong>
                                 </div>
                               </button>
 

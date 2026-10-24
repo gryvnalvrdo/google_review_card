@@ -23,10 +23,10 @@ export default function AdminNav({ active }: AdminNavProps) {
   }
 
   const navItems = [
-    { id: "dashboard", label: "Dashboard", href: "/admin", icon: "📊" },
-    { id: "cards", label: "Kartu Toko", href: "/admin/cards", icon: "💳" },
-    { id: "taps", label: "Riwayat Tap", href: "/admin/taps", icon: "📈" },
-    { id: "print", label: "Mesin Cetak QR", href: "/admin/print", icon: "🖨️" },
+    { id: "dashboard", label: "Dashboard", shortLabel: "Dashboard", href: "/admin", icon: "📊" },
+    { id: "cards", label: "Kartu Toko", shortLabel: "Kartu", href: "/admin/cards", icon: "💳" },
+    { id: "taps", label: "Riwayat Tap", shortLabel: "Riwayat", href: "/admin/taps", icon: "📈" },
+    { id: "print", label: "Mesin Cetak QR", shortLabel: "Cetak QR", href: "/admin/print", icon: "🖨️" },
   ];
 
   return (
@@ -91,7 +91,7 @@ export default function AdminNav({ active }: AdminNavProps) {
                 className={`dock-item ${isActive ? "dock-active" : ""}`}
               >
                 <span className="dock-icon">{item.icon}</span>
-                <span className="dock-label">{item.label.split(" ")[0]}</span>
+                <span className="dock-label">{item.shortLabel}</span>
                 {isActive && <span className="dock-dot" />}
               </Link>
             );
