@@ -1196,9 +1196,6 @@ export default function TapsPage() {
                       <span className="badge badge-orange">
                         Total 30 Hari: {trendData.reduce((s, d) => s + d.value, 0)} tap
                       </span>
-                      <span className="badge badge-green">
-                        Rata-rata: {(trendData.reduce((s, d) => s + d.value, 0) / 30).toFixed(1)} tap/hari
-                      </span>
                     </div>
                   </div>
                   <BarChart data={trendData} color="#F59E0B" labelEvery={7} showValue={false} />

@@ -521,7 +521,6 @@ export default function AdminDashboard() {
               { label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#4F46E5", sub: "Terhubung ke Google Review" },
               { label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString("id-ID")}`, icon: "💰", color: "#10B981", sub: "Penjualan fisik kartu" },
               { label: "Total Tap Pelanggan", value: totalTaps, icon: "👆", color: "#F59E0B", sub: "Scan QR & tap NFC aktif" },
-              { label: "Rata-rata Tap/Kartu", value: cards.length > 0 ? (totalTaps / cards.length).toFixed(1) + "×" : "0×", icon: "📊", color: "#06B6D4", sub: "Performa kartu aktif" },
             ].map((s) => (
               <div
                 key={s.label}
