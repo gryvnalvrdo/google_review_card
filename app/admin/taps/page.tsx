@@ -1275,23 +1275,7 @@ export default function TapsPage() {
               </div>
             ) : (
               <div>
-                {/* Banner Pintasan Rekap Bulan Ini */}
-                <div style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "10px 14px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)",
-                  borderRadius: 10, marginBottom: 16, flexWrap: "wrap", gap: 10,
-                }}>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                    Total tap bulan ini ({formatMonthLabel(thisMonthKey)}): <strong style={{ color: "#FCD34D" }}>{thisMonthCount} tap</strong>
-                  </div>
-                  <button
-                    onClick={() => { setActiveTab("bulanan"); setSelectedMonth(thisMonthKey); }}
-                    className="btn btn-ghost"
-                    style={{ padding: "5px 12px", fontSize: "0.75rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
-                  >
-                    📊 Buka Rekap Bulan Ini & Peringkat Toko ↗
-                  </button>
-                </div>
+
 
                 {/* Filter Cepat Periode & Kalender Pemilih Tanggal */}
                 <div style={{
