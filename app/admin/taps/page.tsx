@@ -613,6 +613,20 @@ function HourlyCafeBreakdownCard({
   const visibleStores = showAll ? countsByStore : countsByStore.slice(0, 5);
   const medals = ["🥇", "🥈", "🥉"];
 
+  // Hanya ambil jam-jam yang kartunya memiliki riwayat tap (jam tengah malam/dini hari saat toko tutup yang 0 tap tidak ditampilkan)
+  const activeHours = useMemo(() => {
+    const list = Array.from({ length: 24 })
+      .map((_, h) => h)
+      .filter((h) => (allHourCounts[h] || 0) > 0);
+
+    // Jika jam yang sedang dipilih belum ada di list (misal pengguna klik batang di grafik yang bernilai 0), sertakan agar select tidak hilang
+    if (hour !== null && hour !== undefined && !list.includes(hour) && (allHourCounts[hour] || 0) === 0) {
+      list.push(hour);
+      list.sort((a, b) => a - b);
+    }
+    return list;
+  }, [allHourCounts, hour]);
+
   return (
     <div className="cafe-breakdown-card" style={{ marginTop: 22 }}>
       {/* Header dengan Dropdown Pilihan Jam */}
@@ -658,17 +672,23 @@ function HourlyCafeBreakdownCard({
                 minWidth: 195,
               }}
             >
-              {Array.from({ length: 24 }).map((_, h) => {
-                const sH = String(h).padStart(2, "0");
-                const eH = String((h + 1) % 24).padStart(2, "0");
-                const count = allHourCounts[h] || 0;
-                const isThisPeak = peakHour && peakHour.hour === h;
-                return (
-                  <option key={h} value={h}>
-                    {sH}.00 – {eH}.00 {isThisPeak ? "🏆 (Puncak) " : ""}— {count} tap
-                  </option>
-                );
-              })}
+              {activeHours.length === 0 ? (
+                <option value={hour} style={{ background: "#111118", color: "#94A3B8" }}>
+                  Belum ada jam dengan aktivitas tap
+                </option>
+              ) : (
+                activeHours.map((h) => {
+                  const sH = String(h).padStart(2, "0");
+                  const eH = String((h + 1) % 24).padStart(2, "0");
+                  const count = allHourCounts[h] || 0;
+                  const isThisPeak = peakHour && peakHour.hour === h;
+                  return (
+                    <option key={h} value={h} style={{ background: "#111118", color: "#F8FAFC" }}>
+                      {sH}.00 – {eH}.00 {isThisPeak ? "🏆 (Puncak) " : ""}— {count} tap
+                    </option>
+                  );
+                })
+              )}
             </select>
             <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: "0.6rem", color: "#A5B4FC", pointerEvents: "none" }}>
               ▼
@@ -1836,7 +1856,9 @@ export default function TapsPage() {
   }, [hourFilteredLogs]);
 
   // Jam aktif yang sedang dipilih (otomatis default ke Jam Puncak jika belum ada pilihan manual)
-  const activeHour = selectedHour !== null ? selectedHour : (peakHour ? peakHour.hour : 17);
+  const activeHour = selectedHour !== null
+    ? selectedHour
+    : (peakHour ? peakHour.hour : (allHourCounts.findIndex(c => c > 0) !== -1 ? allHourCounts.findIndex(c => c > 0) : 17));
 
   // Filter logs khusus jam yang dipilih
   const selectedHourLogs = useMemo(() => {
