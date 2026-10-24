@@ -1084,6 +1084,33 @@ html, body {
   cursor: pointer;
 }
 
+/* === DATE RANGE PICKER INPUT (Clear, Visible, Non-Black) === */
+.date-range-picker-input {
+  color-scheme: dark !important;
+  accent-color: #F59E0B !important;
+}
+
+.date-range-picker-input::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  opacity: 0.95 !important;
+  filter: brightness(1.6) drop-shadow(0 0 2px rgba(245, 158, 11, 0.5)) !important;
+  padding: 2px !important;
+  border-radius: 4px !important;
+  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease !important;
+}
+
+.date-range-picker-input:hover {
+  background: rgba(245, 158, 11, 0.24) !important;
+  border-color: rgba(245, 158, 11, 0.75) !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3) !important;
+}
+
+.date-range-picker-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+  transform: scale(1.15) !important;
+  filter: brightness(2.2) drop-shadow(0 0 4px rgba(245, 158, 11, 0.8)) !important;
+}
+
 @media (max-width: 768px) {
   .dashboard-unified-toolbar {
     padding: 10px 12px !important;
