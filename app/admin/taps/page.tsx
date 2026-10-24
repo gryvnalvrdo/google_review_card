@@ -823,8 +823,8 @@ export default function TapsPage() {
     return days;
   }, [validLogs]);
 
-  // ── Tab: Tren - Distribusi Jam Berdasarkan Filter Periode ──────────
-  const hourPeriodCounts = useMemo(() => {
+  // ── Tab: Riwayat Jam Masuk (Hourly Distribution & Jam Puncak per Periode) ───
+  const periodLogsMap = useMemo(() => {
     const now = new Date();
     const todayYmd = toDateInputValue(now);
     const cutoff7 = new Date(now);
@@ -835,51 +835,59 @@ export default function TapsPage() {
     cutoff30.setHours(0, 0, 0, 0);
 
     const sourceLogs = search.trim() ? filtered : validLogs;
-    let today = 0;
-    let last7 = 0;
-    let last30 = 0;
+    const todayLogs: TapLogEntry[] = [];
+    const last7Logs: TapLogEntry[] = [];
+    const last30Logs: TapLogEntry[] = [];
 
     for (const l of sourceLogs) {
       const d = new Date(l.tappedAt);
-      if (toDateInputValue(d) === todayYmd) today++;
-      if (d >= cutoff7) last7++;
-      if (d >= cutoff30) last30++;
+      if (toDateInputValue(d) === todayYmd) todayLogs.push(l);
+      if (d >= cutoff7) last7Logs.push(l);
+      if (d >= cutoff30) last30Logs.push(l);
     }
 
     return {
-      today,
-      last7,
-      last30,
-      all: sourceLogs.length,
+      today: todayLogs,
+      last7: last7Logs,
+      last30: last30Logs,
+      all: sourceLogs,
     };
   }, [validLogs, filtered, search]);
 
-  const hourFilteredLogs = useMemo(() => {
-    const now = new Date();
-    const todayYmd = toDateInputValue(now);
-    const cutoff7 = new Date(now);
-    cutoff7.setDate(now.getDate() - 7);
-    cutoff7.setHours(0, 0, 0, 0);
-    const cutoff30 = new Date(now);
-    cutoff30.setDate(now.getDate() - 30);
-    cutoff30.setHours(0, 0, 0, 0);
+  const hourPeriodCounts = useMemo(() => ({
+    today: periodLogsMap.today.length,
+    last7: periodLogsMap.last7.length,
+    last30: periodLogsMap.last30.length,
+    all: periodLogsMap.all.length,
+  }), [periodLogsMap]);
 
-    const sourceLogs = search.trim() ? filtered : validLogs;
+  const peakByPeriod = useMemo(() => {
+    function computePeak(logs: TapLogEntry[]) {
+      const counts = Array(24).fill(0);
+      logs.forEach(l => {
+        const h = new Date(l.tappedAt).getHours();
+        if (h >= 0 && h < 24) counts[h]++;
+      });
+      const max = Math.max(...counts);
+      if (max === 0) return null;
+      const h = counts.indexOf(max);
+      return {
+        hour: h,
+        count: max,
+        label: `${String(h).padStart(2, "0")}.00–${String((h + 1) % 24).padStart(2, "0")}.00`,
+      };
+    }
 
-    return sourceLogs.filter(l => {
-      const d = new Date(l.tappedAt);
-      if (hourPeriod === "today") {
-        return toDateInputValue(d) === todayYmd;
-      }
-      if (hourPeriod === "last7") {
-        return d >= cutoff7;
-      }
-      if (hourPeriod === "last30") {
-        return d >= cutoff30;
-      }
-      return true; // "all"
-    });
-  }, [validLogs, filtered, search, hourPeriod]);
+    return {
+      today: computePeak(periodLogsMap.today),
+      last7: computePeak(periodLogsMap.last7),
+      last30: computePeak(periodLogsMap.last30),
+      all: computePeak(periodLogsMap.all),
+    };
+  }, [periodLogsMap]);
+
+  const hourFilteredLogs = periodLogsMap[hourPeriod];
+  const peakHour = peakByPeriod[hourPeriod];
 
   const hourData = useMemo(() => {
     const counts = Array(24).fill(0);
@@ -899,22 +907,6 @@ export default function TapsPage() {
         tooltip: `Pukul ${hourStr}.00 - ${nextHourStr}.00: ${v} tap`,
       };
     });
-  }, [hourFilteredLogs]);
-
-  const peakHour = useMemo(() => {
-    const counts = Array(24).fill(0);
-    hourFilteredLogs.forEach(l => {
-      const h = new Date(l.tappedAt).getHours();
-      if (h >= 0 && h < 24) counts[h]++;
-    });
-    const max = Math.max(...counts);
-    if (max === 0) return null;
-    const h = counts.indexOf(max);
-    return {
-      hour: h,
-      count: max,
-      label: `${String(h).padStart(2, "0")}.00–${String((h + 1) % 24).padStart(2, "0")}.00`,
-    };
   }, [hourFilteredLogs]);
 
   // ── Tab: Kartu Tidur (Belum Pernah Tap) ──────────────────────────────
@@ -1869,8 +1861,8 @@ export default function TapsPage() {
                         Total: {hourFilteredLogs.length} tap
                       </span>
                       {peakHour ? (
-                        <span className="badge badge-green">
-                          🏆 Jam Puncak: {peakHour.label} ({peakHour.count} tap)
+                        <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          🏆 Jam Puncak {hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}: <strong>{peakHour.label}</strong> ({peakHour.count} tap)
                         </span>
                       ) : (
                         <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
@@ -1880,43 +1872,64 @@ export default function TapsPage() {
                     </div>
                   </div>
 
-                  {/* Filter Periode Cepat: Hari Ini, 7 Hari Terakhir, 1 Bulan Terakhir, Semua */}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600, marginRight: 4 }}>
-                      Filter Jam:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setHourPeriod("today")}
-                      className={`btn ${hourPeriod === "today" ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
-                    >
-                      ☀️ Hari Ini ({hourPeriodCounts.today})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHourPeriod("last7")}
-                      className={`btn ${hourPeriod === "last7" ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
-                    >
-                      📅 7 Hari Terakhir ({hourPeriodCounts.last7})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHourPeriod("last30")}
-                      className={`btn ${hourPeriod === "last30" ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
-                    >
-                      🗓️ 1 Bulan Terakhir ({hourPeriodCounts.last30})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHourPeriod("all")}
-                      className={`btn ${hourPeriod === "all" ? "btn-primary" : "btn-ghost"}`}
-                      style={{ padding: "5px 12px", fontSize: "0.75rem", borderRadius: 8 }}
-                    >
-                      📑 Semua ({hourPeriodCounts.all})
-                    </button>
+                  {/* Filter Periode & Ringkasan Jam Puncak per Periode */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginBottom: 16 }}>
+                    {(
+                      [
+                        { id: "today", icon: "☀️", label: "Hari Ini" },
+                        { id: "last7", icon: "📅", label: "7 Hari Terakhir" },
+                        { id: "last30", icon: "🗓️", label: "1 Bulan Terakhir" },
+                        { id: "all", icon: "📑", label: "Semua Riwayat" },
+                      ] as const
+                    ).map(p => {
+                      const isAct = hourPeriod === p.id;
+                      const count = hourPeriodCounts[p.id];
+                      const peak = peakByPeriod[p.id];
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setHourPeriod(p.id)}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            background: isAct ? "rgba(99, 102, 241, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                            border: isAct ? "1.5px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.08)",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            transition: "all 0.15s ease",
+                            boxShadow: isAct ? "0 0 14px rgba(99,102,241,0.25)" : "none",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isAct ? "#A5B4FC" : "#E2E8F0" }}>
+                              {p.icon} {p.label}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                padding: "2px 7px",
+                                borderRadius: 6,
+                                background: isAct ? "#6366F1" : "rgba(255,255,255,0.08)",
+                                color: "#FFF",
+                              }}
+                            >
+                              {count} tap
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: isAct ? "#CBD5E1" : "var(--text-muted)", marginTop: 5, display: "flex", alignItems: "center", gap: 5 }}>
+                            <span>🏆 Puncak:</span>
+                            <strong style={{ color: isAct ? "#34D399" : "#94A3B8" }}>
+                              {peak ? `${peak.label} (${peak.count} tap)` : "Belum ada"}
+                            </strong>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <BarChart
@@ -1945,7 +1958,9 @@ export default function TapsPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981" }} />
-                      <span>Jam puncak tertinggi ({peakHour ? `${peakHour.label}: ${peakHour.count} tap` : "-"})</span>
+                      <span>
+                        Jam puncak periode {hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"} ({peakHour ? `${peakHour.label}: ${peakHour.count} tap` : "-"})
+                      </span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, background: "#6366F1" }} />
