@@ -3230,27 +3230,21 @@ export default function TapsPage() {
                       </div>
                     </div>
 
-                    {/* Dropdown Arsip Bulan Terpadu */}
+                    {/* Dropdown Arsip Bulan Terpadu (Khusus Per Bulan) */}
                     <div className="month-select-wrapper">
                       <select
                         id="unified-month-select"
-                        value={selectedMonthKey}
+                        value={selectedMonthKey === "all" ? "" : selectedMonthKey}
                         onChange={(e) => {
                           if (e.target.value) setSelectedMonth(e.target.value);
                         }}
                         className="month-unified-select"
                       >
-                        <optgroup
-                          label="── Akumulasi Global ──"
-                          style={{ background: "#111118", color: "#FCD34D", fontWeight: 800 }}
-                        >
-                          <option
-                            value="all"
-                            style={{ background: "#181824", color: "#FCD34D", fontWeight: 700 }}
-                          >
-                            🌐 Sepanjang Masa · {validLogs.length} Tap
+                        {selectedMonthKey === "all" && (
+                          <option value="" disabled hidden>
+                            📅 Pilih Bulan...
                           </option>
-                        </optgroup>
+                        )}
 
                         {monthsByYear.map(({ year, months }) => (
                           <optgroup
