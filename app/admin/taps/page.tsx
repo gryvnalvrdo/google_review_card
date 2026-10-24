@@ -3331,31 +3331,17 @@ export default function TapsPage() {
                       style={{
                         padding: 0,
                         overflow: "hidden",
-                        borderColor: isThisMonth ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)",
+                        borderColor: "rgba(255,255,255,0.08)",
                         background: "#111118",
                       }}
                     >
                       {/* Month Header Banner */}
-                      <div
-                        className="leaderboard-card-header"
-                        style={{
-                          background: isThisMonth ? "rgba(245,158,11,0.06)" : "transparent",
-                        }}
-                      >
+                      <div className="leaderboard-card-header">
                         <div className="leaderboard-header-info">
                           <div className="leaderboard-title-row">
                             <span className="leaderboard-title-text">
                               🏆 Rekap {mg.label}
                             </span>
-                            {selectedMonthKey === "all" ? null : isThisMonth ? (
-                              <span className="leaderboard-pill-current">
-                                Bulan Berjalan
-                              </span>
-                            ) : (
-                              <span className="leaderboard-pill-archive">
-                                Arsip Historis
-                              </span>
-                            )}
                           </div>
                           <div className="leaderboard-subtitle-text">
                             {mg.byStore.length} Toko Terdaftar Aktif · Total {mg.total} Tap Pelanggan
@@ -3428,26 +3414,6 @@ export default function TapsPage() {
                                     <span style={{ fontWeight: 800, fontSize: "1.05rem", color: idx === 0 ? "#FCD34D" : "#E0E0F0" }}>
                                       {s.count}×
                                     </span>
-
-                                    {selectedMonthKey === "all" ? null : isThisMonth ? (
-                                      delta === null ? (
-                                        <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                          baru
-                                        </span>
-                                      ) : delta > 0 ? (
-                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                          +{delta}
-                                        </span>
-                                      ) : delta < 0 ? (
-                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#FCA5A5", background: "rgba(239,68,68,0.12)", padding: "2px 6px", borderRadius: 999 }}>
-                                          {delta}
-                                        </span>
-                                      ) : (
-                                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>±0</span>
-                                      )
-                                    ) : (
-                                      <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>selesai</span>
-                                    )}
                                   </div>
                                 </div>
 
@@ -3582,11 +3548,7 @@ export default function TapsPage() {
                           );
                         })}
 
-                        {isThisMonth && mg.byStore.some(s => s.lastMonthCount > 0) && (
-                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 12, paddingLeft: 6 }}>
-                            * Delta (+/−) menunjukkan perbandingan aktivitas tap dibanding bulan lalu ({formatMonthLabel(lastMonthKey)}).
-                          </div>
-                        )}
+
                       </div>
                     </div>
                   );
