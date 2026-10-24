@@ -3194,50 +3194,51 @@ export default function TapsPage() {
               </div>
             ) : (
               <div>
-                {/* Selector Pemilih Bulan Terpadu (Dropdown Rapi Dikelompokkan per Tahun) */}
-                <div className="month-selector-bar" style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  gap: 12, marginBottom: 18, flexWrap: "wrap",
-                  background: "#111118", padding: "12px 16px",
-                  borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)",
-                }}>
-                  <div className="month-selector-left" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
-                    <label
-                      htmlFor="unified-month-select"
-                      style={{
-                        fontSize: "0.82rem",
-                        fontWeight: 700,
-                        color: "#E0E0F0",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <span>📅</span>
-                      <span>Pilih Bulan:</span>
-                    </label>
+                {/* Selector Pemilih Bulan Terpadu (Dropdown Rapi Dikelompokkan per Tahun + Quick Toggle) */}
+                <div className="month-selector-bar">
+                  <div className="month-selector-main">
+                    <div className="month-selector-label-group">
+                      <label
+                        htmlFor="unified-month-select"
+                        className="month-selector-label"
+                      >
+                        <span>📅</span>
+                        <span>Pilih Periode:</span>
+                      </label>
 
-                    <div style={{ position: "relative", display: "inline-block" }}>
+                      {/* Tombol Cepat: Bulan Ini & All-Time Langsung di Toolbar Atas */}
+                      <div className="month-selector-quick-actions">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMonth(thisMonthKey)}
+                          className={`month-quick-pill ${selectedMonthKey === thisMonthKey ? "active" : ""}`}
+                          title="Tampilkan leaderboard bulan berjalan saat ini"
+                        >
+                          <span>🌟</span>
+                          <span>Bulan Ini</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMonth("all")}
+                          className={`month-quick-pill ${selectedMonthKey === "all" ? "active" : ""}`}
+                          title="Tampilkan akumulasi total tap sepanjang masa (All-Time)"
+                        >
+                          <span>🌐</span>
+                          <span>Histori All-Time</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dropdown Arsip Bulan Terpadu */}
+                    <div className="month-select-wrapper">
                       <select
                         id="unified-month-select"
                         value={selectedMonthKey}
                         onChange={(e) => {
                           if (e.target.value) setSelectedMonth(e.target.value);
                         }}
-                        style={{
-                          background: "#181824",
-                          border: "1.5px solid rgba(99, 102, 241, 0.45)",
-                          color: "#F0F0FF",
-                          padding: "7px 32px 7px 12px",
-                          borderRadius: 8,
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          outline: "none",
-                          cursor: "pointer",
-                          appearance: "none",
-                          WebkitAppearance: "none",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-                        }}
+                        className="month-unified-select"
                       >
                         <optgroup
                           label="── Akumulasi Global ──"
@@ -3254,7 +3255,7 @@ export default function TapsPage() {
                         {monthsByYear.map(({ year, months }) => (
                           <optgroup
                             key={year}
-                            label={`── Tahun ${year} ──`}
+                            label={`── Arsip Tahun ${year} ──`}
                             style={{ background: "#111118", color: "#A5B4FC", fontWeight: 800 }}
                           >
                             {months.map(m => {
@@ -3272,47 +3273,12 @@ export default function TapsPage() {
                           </optgroup>
                         ))}
                       </select>
-                      <span
-                        style={{
-                          position: "absolute",
-                          right: 10,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          pointerEvents: "none",
-                          fontSize: "0.65rem",
-                          color: "#A5B4FC",
-                        }}
-                      >
-                        ▼
-                      </span>
+                      <span className="month-select-arrow">▼</span>
                     </div>
-
-                    {/* Tombol Cepat: Kembali ke Bulan Ini (muncul saat sedang memilih bulan arsip masa lalu atau all-time) */}
-                    {selectedMonthKey !== thisMonthKey && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMonth(thisMonthKey)}
-                        className="btn btn-ghost"
-                        style={{
-                          padding: "5px 12px",
-                          fontSize: "0.78rem",
-                          borderRadius: 8,
-                          border: "1px dashed rgba(245, 158, 11, 0.45)",
-                          color: "#FCD34D",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 5,
-                        }}
-                        title="Kembali ke Bulan Berjalan"
-                      >
-                        <span>🌟</span>
-                        <span>Kembali ke Bulan Ini</span>
-                      </button>
-                    )}
                   </div>
 
                   {/* Status / Badge Periode Terpilih */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <div className="month-selector-badge-wrap">
                     {selectedMonthKey === "all" ? (
                       <span
                         className="badge"
@@ -3377,63 +3343,40 @@ export default function TapsPage() {
                     >
                       {/* Month Header Banner */}
                       <div
+                        className="leaderboard-card-header"
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          padding: "14px 16px",
                           background: isThisMonth ? "rgba(245,158,11,0.06)" : "transparent",
-                          borderBottom: "1px solid rgba(255,255,255,0.06)",
-                          gap: 12,
                         }}
                       >
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                            <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#F0F0FF", whiteSpace: "nowrap" }}>
+                        <div className="leaderboard-header-info">
+                          <div className="leaderboard-title-row">
+                            <span className="leaderboard-title-text">
                               🏆 Rekap {mg.label}
                             </span>
                             {selectedMonthKey === "all" ? (
-                              <span style={{
-                                fontSize: "0.65rem", fontWeight: 800,
-                                background: "rgba(16,185,129,0.18)", color: "#34D399",
-                                border: "1px solid rgba(16,185,129,0.4)",
-                                padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
-                                whiteSpace: "nowrap", flexShrink: 0,
-                              }}>
+                              <span className="leaderboard-pill-alltime">
                                 All-Time
                               </span>
                             ) : isThisMonth ? (
-                              <span style={{
-                                fontSize: "0.65rem", fontWeight: 800,
-                                background: "rgba(245,158,11,0.18)", color: "#FCD34D",
-                                border: "1px solid rgba(245,158,11,0.4)",
-                                padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
-                                whiteSpace: "nowrap", flexShrink: 0,
-                              }}>
+                              <span className="leaderboard-pill-current">
                                 Bulan Berjalan
                               </span>
                             ) : (
-                              <span style={{
-                                fontSize: "0.65rem", fontWeight: 800,
-                                background: "rgba(99,102,241,0.18)", color: "#A5B4FC",
-                                border: "1px solid rgba(99,102,241,0.4)",
-                                padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
-                                whiteSpace: "nowrap", flexShrink: 0,
-                              }}>
+                              <span className="leaderboard-pill-archive">
                                 Arsip Historis
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", wordBreak: "break-word" }}>
+                          <div className="leaderboard-subtitle-text">
                             {mg.byStore.length} Toko Terdaftar Aktif · Total {mg.total} Tap Pelanggan
                           </div>
                         </div>
 
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <span style={{ fontSize: "1.35rem", fontWeight: 800, color: "#FCD34D", lineHeight: 1, display: "block" }}>
+                        <div className="leaderboard-header-stat">
+                          <span className="leaderboard-stat-count">
                             {mg.total}×
                           </span>
-                          <span style={{ display: "block", fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 3 }}>
+                          <span className="leaderboard-stat-label">
                             Total Tap
                           </span>
                         </div>
@@ -3580,27 +3523,6 @@ export default function TapsPage() {
                                 }}>
                                   <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                                     <span>📋 Riwayat {storeTaps.length} Tap — {s.storeName} ({selectedMonthKey === "all" ? "Sepanjang Masa" : mg.label})</span>
-                                    {selectedMonthKey !== "all" && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setSelectedMonth("all")}
-                                        style={{
-                                          background: "rgba(255,255,255,0.06)",
-                                          border: "1px solid rgba(255,255,255,0.12)",
-                                          color: "#CBD5E1",
-                                          borderRadius: 6,
-                                          padding: "2px 8px",
-                                          fontSize: "0.68rem",
-                                          cursor: "pointer",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: 4,
-                                        }}
-                                        title="Buka rekap seluruh riwayat tap toko ini sejak hari pertama"
-                                      >
-                                        <span>🌐</span> Lihat Histori All-Time
-                                      </button>
-                                    )}
                                   </div>
 
                                   <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 240, overflowY: "auto" }}>
