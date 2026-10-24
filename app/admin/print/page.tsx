@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import AdminNav from "../components/AdminNav";
 
 // ─── Konfigurasi posisi QR pada desain PNG (638 × 1004 px) ──────────────────
 const CARD_W   = 638;
@@ -108,8 +109,6 @@ function CardItem({ code, url, bgImage, onCanvasReady }: CardItemProps) {
     </div>
   );
 }
-
-import AdminNav from "../components/AdminNav";
 
 export default function PrintQRCodes() {
   const [count, setCount]       = useState(10);

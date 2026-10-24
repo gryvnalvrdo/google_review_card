@@ -88,8 +88,10 @@ export default function AdminDashboard() {
       const all: TapLogEntry[] = data.logs ?? [];
 
       // Filter: hanya yang sesudah kunjungan terakhir
-      const unseen = prevVisit
-        ? all.filter(l => new Date(l.tappedAt) > new Date(prevVisit))
+      const prevDate = prevVisit ? new Date(prevVisit) : null;
+      const isValidPrevDate = prevDate && !isNaN(prevDate.getTime());
+      const unseen = isValidPrevDate
+        ? all.filter(l => new Date(l.tappedAt).getTime() > prevDate.getTime())
         : all;
 
       setTapLogs(unseen);
@@ -144,8 +146,8 @@ export default function AdminDashboard() {
   function openEditForm(card: CardRecord) {
     setCode(card.code);
     setStoreName(card.storeName);
-    setGoogleReviewUrl(card.googleReviewUrl);
-    const match = card.googleReviewUrl.match(/placeid=([^&]+)/);
+    setGoogleReviewUrl(card.googleReviewUrl || "");
+    const match = (card.googleReviewUrl || "").match(/placeid=([^&]+)/);
     setPlaceId(match ? match[1] : "");
     setPrice(card.price ?? 50000);
     setMessage(null); setError(null);

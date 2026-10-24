@@ -1012,8 +1012,18 @@ export default function TapsPage() {
     const d = new Date(iso);
     return toDateInputValue(d) === targetYmd;
   }
+  function parseDateSafe(input: string | Date): Date {
+    if (input instanceof Date) return input;
+    if (!input || typeof input !== "string") return new Date(NaN);
+    const trimmed = input.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const [y, m, d] = trimmed.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return new Date(trimmed);
+  }
   function formatDateIndo(dateInput: string | Date) {
-    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    const d = parseDateSafe(dateInput);
     if (isNaN(d.getTime())) return String(dateInput);
     return d.toLocaleDateString("id-ID", {
       weekday: "long",
@@ -1023,7 +1033,7 @@ export default function TapsPage() {
     });
   }
   function formatDateShortIndo(dateInput: string | Date) {
-    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    const d = parseDateSafe(dateInput);
     if (isNaN(d.getTime())) return String(dateInput);
     return d.toLocaleDateString("id-ID", {
       day: "numeric",
@@ -1387,10 +1397,14 @@ export default function TapsPage() {
     text += `──────────────────────────\n`;
     text += `📈 *Total Tap Pelanggan:* ${totalFilteredCount} kali\n`;
     text += `• *Estimasi Ulasan Baru:* ~${estimatedReviews} ulasan\n`;
-    text += `🔥 *Jam Paling Ramai:* ${busiestDaypart.name} (${busiestDaypart.pct}% volume trafik)\n`;
+    if (totalFilteredCount > 0) {
+      text += `🔥 *Jam Paling Ramai:* ${busiestDaypart.name} (${busiestDaypart.pct}% volume trafik)\n`;
+    } else {
+      text += `🔥 *Aktivitas Jam:* Belum ada tap tercatat pada periode ini\n`;
+    }
     text += `🏪 *Tingkat Keaktifan Cabang:* ${activeStoresCount} dari ${availableStores.length} cabang aktif (${activeStoreRatio}%)\n\n`;
 
-    if (cafeBreakdownList.length > 0) {
+    if (cafeBreakdownList.length > 0 && totalFilteredCount > 0) {
       text += `🏆 *Kontribusi Outlet:* \n`;
       cafeBreakdownList.slice(0, 5).forEach((c, idx) => {
         text += `${idx + 1}. ${c.storeName}: ${c.count} tap (${c.pct}%)\n`;
@@ -1399,7 +1413,11 @@ export default function TapsPage() {
     }
 
     text += `💡 *Rekomendasi Analis Data:*\n`;
-    text += `• Waktu emas meminta ulasan adalah di jam ${busiestDaypart.time}.\n`;
+    if (totalFilteredCount > 0) {
+      text += `• Waktu emas meminta ulasan adalah di jam ${busiestDaypart.time}.\n`;
+    } else {
+      text += `• Letakkan kartu review di titik strategis seperti kasir atau meja untuk memulai pengumpulan ulasan.\n`;
+    }
     if (topStore && topStore.count > 0) {
       text += `• Cabang ${topStore.storeName} memimpin performa ulasan tertinggi.\n`;
     }
@@ -1559,11 +1577,36 @@ export default function TapsPage() {
         total: matchingStores.reduce((s, x) => s + x.count, 0),
       };
     }
-    return (
+    const found =
       filteredMonthly.find(mg => mg.monthKey === selectedMonthKey) ||
-      monthlyGroups.find(mg => mg.monthKey === selectedMonthKey) ||
-      null
-    );
+      monthlyGroups.find(mg => mg.monthKey === selectedMonthKey);
+    if (found) return found;
+
+    if (selectedMonthKey === thisMonthKey) {
+      const stores = allTimeGroup.byStore.map(s => ({
+        ...s,
+        count: 0,
+        pct: 0,
+        taps: [],
+        firstTap: "",
+        lastTap: "",
+        avgDaily: 0,
+        status: "idle" as const,
+      }));
+      return {
+        monthKey: thisMonthKey,
+        label: formatMonthLabel(thisMonthKey),
+        total: 0,
+        byStore: search
+          ? stores.filter(
+              s =>
+                s.storeName.toLowerCase().includes(search.toLowerCase()) ||
+                s.code.toLowerCase().includes(search.toLowerCase())
+            )
+          : stores,
+      };
+    }
+    return null;
   }, [selectedMonthKey, allTimeGroup, filteredMonthly, monthlyGroups, search]);
 
   const isCurrentSelected = selectedMonthKey === thisMonthKey;
@@ -1851,7 +1894,9 @@ export default function TapsPage() {
     });
 
     if (timestamps.length === 0) return null;
-    return new Date(Math.min(...timestamps));
+    const minTimestamp = Math.min(...timestamps);
+    if (minTimestamp > Date.now()) return new Date();
+    return new Date(minTimestamp);
   }, [cards, storeFilteredLogs, selectedStoreFilters]);
 
   const earliestWeekRange = useMemo(() => {
@@ -2057,7 +2102,7 @@ export default function TapsPage() {
       return `Bulan ${formatMonthLabel(selectedWeeklyMonth || thisMonthKey)}`;
     }
     if (weeklyPeriodType === "year") {
-      return `Tahun ${selectedWeeklyYear}`;
+      return `Tahun ${selectedWeeklyYear || new Date().getFullYear()}`;
     }
     return "Tren Mingguan";
   }, [weeklyTrendData, weeklyPeriodType, weekPageOffset, selectedWeeklyMonth, selectedWeeklyYear, thisMonthKey]);
@@ -3313,17 +3358,23 @@ export default function TapsPage() {
 
                                 {/* Bottom row: Actions (Detail tap) */}
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "0.72rem" }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
-                                    style={{
-                                      background: "none", border: "none", color: "#A5B4FC",
-                                      cursor: "pointer", fontSize: "0.72rem", padding: "4px 0",
-                                      display: "flex", alignItems: "center", gap: 4,
-                                    }}
-                                  >
-                                    {isStoreOpen ? "▲ Tutup rincian jam" : `▼ Lihat detail ${s.count} tap`}
-                                  </button>
+                                  {s.count > 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
+                                      style={{
+                                        background: "none", border: "none", color: "#A5B4FC",
+                                        cursor: "pointer", fontSize: "0.72rem", padding: "4px 0",
+                                        display: "flex", alignItems: "center", gap: 4,
+                                      }}
+                                    >
+                                      {isStoreOpen ? "▲ Tutup rincian jam" : `▼ Lihat detail ${s.count} tap`}
+                                    </button>
+                                  ) : (
+                                    <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", fontStyle: "italic" }}>
+                                      Belum ada tap di bulan ini
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
@@ -3508,7 +3559,7 @@ export default function TapsPage() {
                     )}
 
                     {/* 2. Breakdown Cafe pada Tanggal Ini — sembunyikan jika hanya 1 outlet difilter */}
-                    {!isSingleOutletFilter && (
+                    {!isSingleOutletFilter && drilldownLogs.length > 0 && (
                       <CafeBreakdownCard
                         title={`Outlet yang Ditap pada ${formatDateIndo(selectedDrilldownDate)}`}
                         subtitle="Daftar toko/cafe yang menerima tap pelanggan pada tanggal ini."
@@ -3526,7 +3577,11 @@ export default function TapsPage() {
                           {trenView === "jam"
                             ? `⏱️ Distribusi Jam Masuk ${hourPeriod === "today" ? "(Hari Ini)" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}`
                             : trenView === "harian"
-                            ? `📅 Tren Aktivitas Harian (${trendRange} Hari Terakhir)`
+                            ? (trendRange === "custom"
+                                ? (customStartDate && customEndDate
+                                    ? `📅 Tren Aktivitas Harian (${formatDateShortIndo(customStartDate)} – ${formatDateShortIndo(customEndDate)})`
+                                    : "📅 Tren Aktivitas Harian (Rentang Kustom)")
+                                : `📅 Tren Aktivitas Harian (${trendRange} Hari Terakhir)`)
                             : selectedWeekObj
                             ? `📅 Rincian 7 Hari: ${selectedWeekObj.subLabel} (${selectedWeekObj.label})`
                             : `📊 Tren Aktivitas Mingguan (${weeklyPeriodLabel})`}
@@ -3747,7 +3802,9 @@ export default function TapsPage() {
                     {trenView === "harian" && (() => {
                       const activeDailyData = trendRange === 7 ? trendData7 : trendRange === 30 ? trendData30 : customTrendData;
                       const rangeTitle = trendRange === "custom"
-                        ? `${formatDateShortIndo(customStartDate)} – ${formatDateShortIndo(customEndDate)}`
+                        ? (customStartDate && customEndDate
+                            ? `${formatDateShortIndo(customStartDate)} – ${formatDateShortIndo(customEndDate)}`
+                            : "Rentang Kustom")
                         : `${trendRange} Hari Terakhir`;
 
                       return (
@@ -4435,7 +4492,7 @@ export default function TapsPage() {
                               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                                 <span>Kode: <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</strong></span>
                                 <span>·</span>
-                                <span>Dibuat: {new Date(card.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                                <span>Dibuat: {card.createdAt ? formatDateShortIndo(card.createdAt) : "-"}</span>
                               </div>
                             </div>
                           </div>

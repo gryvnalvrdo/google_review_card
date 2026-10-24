@@ -166,7 +166,7 @@ export default function CardsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `QR_${card.storeName.replace(/\s+/g, "_")}_${card.code}.png`;
+      a.download = `QR_${card.storeName.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_")}_${card.code}.png`;
       a.click();
       URL.revokeObjectURL(url);
     }, "image/png");
@@ -180,8 +180,12 @@ export default function CardsPage() {
     });
   }
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  const formatDate = (d: string) => {
+    if (!d) return "-";
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  };
 
   const filtered = useMemo(() => {
     return cards
@@ -193,7 +197,9 @@ export default function CardsPage() {
         if (sortBy === "tap") return (b.tapCount || 0) - (a.tapCount || 0);
         if (sortBy === "name") return a.storeName.localeCompare(b.storeName);
         if (sortBy === "price") return (b.price ?? 50000) - (a.price ?? 50000);
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
       });
   }, [cards, searchTerm, sortBy]);
 
@@ -528,14 +534,14 @@ export default function CardsPage() {
             <form onSubmit={handleEditSubmit}>
               <div className="form-group">
                 <label className="label">Kode Kartu</label>
-                <input className="input" value={editingCard.code} disabled style={{ opacity: 0.6, cursor: "not-allowed" }} />
+                <input className="input" value={editingCard.code || ""} disabled style={{ opacity: 0.6, cursor: "not-allowed" }} />
               </div>
 
               <div className="form-group">
                 <label className="label">Nama Toko / Resto</label>
                 <input
                   className="input"
-                  value={editingCard.storeName}
+                  value={editingCard.storeName || ""}
                   onChange={e => setEditingCard({ ...editingCard, storeName: e.target.value })}
                   placeholder="Nama toko binaan"
                   required
@@ -582,7 +588,7 @@ export default function CardsPage() {
                 </label>
                 <input
                   className="input"
-                  value={editingCard.googleReviewUrl}
+                  value={editingCard.googleReviewUrl || ""}
                   onChange={e => {
                     const url = e.target.value;
                     setEditingCard({ ...editingCard, googleReviewUrl: url });
