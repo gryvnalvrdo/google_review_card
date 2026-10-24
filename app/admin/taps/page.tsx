@@ -166,87 +166,7 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
   );
 }
 
-// ── Collapsible period section ─────────────────────────────────────────
-function PeriodSection({
-  title,
-  entries,
-  defaultOpen = true,
-  accentColor = "#F59E0B",
-  cardUrlMap,
-  formatFull,
-  timeAgo,
-}: {
-  title: string;
-  entries: TapLogEntry[];
-  defaultOpen?: boolean;
-  accentColor?: string;
-  cardUrlMap: Map<string, string>;
-  formatFull: (iso: string) => string;
-  timeAgo: (iso: string) => string;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  if (entries.length === 0) return null;
 
-  return (
-    <div style={{ marginBottom: 12, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "12px 16px",
-          background: "#13131C",
-          border: "none",
-          borderLeft: `4px solid ${accentColor}`,
-          cursor: "pointer", color: "#F0F0FF", fontFamily: "inherit",
-          transition: "background 0.15s",
-        }}
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <span style={{
-            width: 8, height: 8, borderRadius: "50%",
-            background: accentColor, flexShrink: 0, boxShadow: `0 0 8px ${accentColor}99`,
-          }} />
-          <span style={{ fontSize: "0.82rem", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase", color: "#E0E0F0" }}>
-            {title}
-          </span>
-        </span>
-
-        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{
-            fontSize: "0.74rem", fontWeight: 800,
-            color: accentColor,
-            background: `${accentColor}18`,
-            border: `1px solid ${accentColor}40`,
-            padding: "3px 10px", borderRadius: 999,
-          }}>
-            {entries.length} TAP
-          </span>
-          <span style={{
-            fontSize: "0.72rem", color: "#7A7A95",
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.25s", display: "inline-block",
-          }}>▼</span>
-        </span>
-      </button>
-
-      {open && (
-        <div style={{ background: "#0E0E16" }}>
-          {entries.map((log, i) => (
-            <TapItem
-              key={`${log.code}-${log.tappedAt}-${i}`}
-              log={log}
-              reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
-              accentColor={accentColor}
-              timeAgo={timeAgo}
-              formatFull={formatFull}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Main Page ─────────────────────────────────────────────────────────
 export default function TapsPage() {
@@ -462,32 +382,74 @@ export default function TapsPage() {
     cutoff30.setHours(0, 0, 0, 0);
 
     const today: TapLogEntry[] = [];
-    const yest: TapLogEntry[] = [];
-    const last7Rest: TapLogEntry[] = [];
-    const last30Rest: TapLogEntry[] = [];
-    const older: TapLogEntry[] = [];
+    const last7: TapLogEntry[] = [];
+    const last30: TapLogEntry[] = [];
 
     for (const entry of filtered) {
       const d = new Date(entry.tappedAt);
       const ymd = toDateInputValue(d);
       if (ymd === todayYmd) {
         today.push(entry);
-      } else if (ymd === yestYmd) {
-        yest.push(entry);
-      } else if (d >= cutoff7) {
-        last7Rest.push(entry);
-      } else if (d >= cutoff30) {
-        last30Rest.push(entry);
-      } else {
-        older.push(entry);
+      }
+      if (d >= cutoff7) {
+        last7.push(entry);
+      }
+      if (d >= cutoff30) {
+        last30.push(entry);
       }
     }
 
-    const last7Total = today.length + yest.length + last7Rest.length;
-    const last30Total = last7Total + last30Rest.length;
-
-    return { today, yest, last7Rest, last30Rest, older, last7Total, last30Total };
+    return {
+      today,
+      last7,
+      last30,
+      todayTotal: today.length,
+      last7Total: last7.length,
+      last30Total: last30.length,
+    };
   }, [filtered]);
+
+  // Active period list to display directly (no hidden accordion barriers)
+  const activePeriodInfo = useMemo(() => {
+    if (customDate) {
+      return {
+        title: `🗓️ Riwayat Tap: ${formatDateIndo(customDate)}`,
+        color: "#6366F1",
+        entries: customDateEntries,
+        emptyMsg: `Tidak ada aktivitas tap kartu pada tanggal ${formatDateIndo(customDate)}.`,
+      };
+    }
+    if (dailyMode === "today") {
+      return {
+        title: `☀️ Tap Masuk Hari Ini — ${formatDateIndo(new Date())}`,
+        color: "#10B981",
+        entries: hariianPeriods.today,
+        emptyMsg: `Pelanggan belum men-tap kartu toko hari ini (${formatDateIndo(new Date())}). Tap baru akan otomatis terdeteksi via live auto-refresh.`,
+      };
+    }
+    if (dailyMode === "last7") {
+      return {
+        title: "📅 Riwayat Tap 7 Hari Terakhir",
+        color: "#6366F1",
+        entries: hariianPeriods.last7,
+        emptyMsg: "Belum ada aktivitas tap dalam 7 hari terakhir.",
+      };
+    }
+    if (dailyMode === "last30") {
+      return {
+        title: "🗓️ Riwayat Tap 1 Bulan Terakhir",
+        color: "#EC4899",
+        entries: hariianPeriods.last30,
+        emptyMsg: "Belum ada aktivitas tap dalam 30 hari terakhir.",
+      };
+    }
+    return {
+      title: "📑 Semua Riwayat Tap",
+      color: "#8B5CF6",
+      entries: filtered,
+      emptyMsg: "Belum ada aktivitas tap yang tercatat.",
+    };
+  }, [dailyMode, customDate, customDateEntries, hariianPeriods, filtered]);
 
   // ── Tab: Bulanan (Leaderboard Tanpa Kartu Terhapus) ───────────────────
   type MonthGroup = {
@@ -984,7 +946,7 @@ export default function TapsPage() {
                       className={`btn ${dailyMode === "today" && !customDate ? "btn-primary" : "btn-ghost"}`}
                       style={{ padding: "7px 12px", fontSize: "0.78rem", borderRadius: 8 }}
                     >
-                      ☀️ Hari Ini ({hariianPeriods.today.length})
+                      ☀️ Hari Ini ({hariianPeriods.todayTotal})
                     </button>
 
                     <button
@@ -1059,295 +1021,70 @@ export default function TapsPage() {
                   </div>
                 </div>
 
-                {/* MODE 1: HARI INI */}
-                {dailyMode === "today" && !customDate && (
-                  hariianPeriods.today.length === 0 ? (
-                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
-                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>☀️</div>
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
-                        Belum Ada Tap Masuk Hari Ini
-                      </h3>
-                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 18px", lineHeight: 1.5 }}>
-                        Pelanggan belum men-tap kartu NFC atau scan QR toko hari ini ({formatDateIndo(new Date())}).
-                        Tap baru akan otomatis terdeteksi via live auto-refresh.
-                      </p>
-                      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={() => setDailyMode("last7")}
-                          className="btn btn-ghost"
-                          style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#6366F1", borderColor: "rgba(99,102,241,0.3)" }}
-                        >
-                          📅 Lihat 7 Hari Terakhir ({hariianPeriods.last7Total} tap)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDailyMode("last30")}
-                          className="btn btn-ghost"
-                          style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#EC4899", borderColor: "rgba(236,72,153,0.3)" }}
-                        >
-                          🗓️ Lihat 1 Bulan Terakhir ({hariianPeriods.last30Total} tap)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDailyMode("all")}
-                          className="btn btn-ghost"
-                          style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
-                        >
-                          📑 Lihat Semua Riwayat ({filtered.length} tap)
-                        </button>
-                      </div>
+                {/* DAFTAR DATA TAP LANGSUNG TAMPIL (Tanpa Accordion / Dropdown Tersembunyi) */}
+                {activePeriodInfo.entries.length === 0 ? (
+                  <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+                    <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>
+                      {dailyMode === "today" ? "☀️" : dailyMode === "last7" ? "📅" : dailyMode === "last30" ? "🗓️" : "📑"}
                     </div>
-                  ) : (
-                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-                      <div style={{
-                        padding: "12px 16px", background: "#13131C", borderLeft: "4px solid #10B981",
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                      }}>
-                        <span style={{ fontWeight: 800, fontSize: "0.84rem", color: "#34D399", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                          ☀️ Tap Masuk Hari Ini — {formatDateIndo(new Date())}
-                        </span>
-                        <span style={{
-                          fontSize: "0.75rem", fontWeight: 800, color: "#34D399",
-                          background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.35)",
-                          padding: "3px 10px", borderRadius: 999,
-                        }}>
-                          {hariianPeriods.today.length} TAP
-                        </span>
-                      </div>
-                      <div>
-                        {hariianPeriods.today.map((log, i) => (
-                          <TapItem
-                            key={`${log.code}-${log.tappedAt}-${i}`}
-                            log={log}
-                            reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
-                            accentColor="#10B981"
-                            timeAgo={timeAgo}
-                            formatFull={formatFull}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )
-                )}
-
-                {/* MODE 2: 7 HARI TERAKHIR */}
-                {dailyMode === "last7" && !customDate && (
-                  hariianPeriods.last7Total === 0 ? (
-                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
-                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>📅</div>
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
-                        Tidak Ada Tap dalam 7 Hari Terakhir
-                      </h3>
-                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 400, margin: "0 auto 16px" }}>
-                        Belum ada aktivitas tap kartu yang tercatat dalam 7 hari terakhir.
-                      </p>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
+                      Tidak Ada Data Tap
+                    </h3>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 18px", lineHeight: 1.5 }}>
+                      {activePeriodInfo.emptyMsg}
+                    </p>
+                    {dailyMode !== "all" && filtered.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => setDailyMode("last30")}
-                        className="btn btn-ghost"
-                        style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#EC4899", borderColor: "rgba(236,72,153,0.3)" }}
-                      >
-                        Lihat 1 Bulan Terakhir ({hariianPeriods.last30Total} tap)
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <PeriodSection
-                        title="Hari Ini"
-                        entries={hariianPeriods.today}
-                        defaultOpen={true}
-                        accentColor="#10B981"
-                        cardUrlMap={cardUrlMap}
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="Kemarin"
-                        entries={hariianPeriods.yest}
-                        defaultOpen={true}
-                        accentColor="#F59E0B"
-                        cardUrlMap={cardUrlMap}
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="2 – 7 Hari Terakhir"
-                        entries={hariianPeriods.last7Rest}
-                        defaultOpen={true}
-                        accentColor="#6366F1"
-                        cardUrlMap={cardUrlMap}
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                    </div>
-                  )
-                )}
-
-                {/* MODE 3: 1 BULAN TERAKHIR */}
-                {dailyMode === "last30" && !customDate && (
-                  hariianPeriods.last30Total === 0 ? (
-                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
-                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>🗓️</div>
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
-                        Tidak Ada Tap dalam 1 Bulan Terakhir
-                      </h3>
-                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 400, margin: "0 auto 16px" }}>
-                        Belum ada aktivitas tap kartu yang tercatat dalam 30 hari terakhir.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setDailyMode("all")}
+                        onClick={() => { setDailyMode("all"); setCustomDate(""); }}
                         className="btn btn-ghost"
                         style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
                       >
-                        Lihat Semua Riwayat ({filtered.length} tap)
+                        📑 Lihat Semua Riwayat ({filtered.length} tap)
                       </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <PeriodSection
-                        title="Hari Ini"
-                        entries={hariianPeriods.today}
-                        defaultOpen={true}
-                        accentColor="#10B981"
-                        cardUrlMap={cardUrlMap}
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="Kemarin"
-                        entries={hariianPeriods.yest}
-                        defaultOpen={hariianPeriods.today.length === 0}
-                        accentColor="#F59E0B"
-                        cardUrlMap={cardUrlMap}
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="7 Hari Terakhir"
-                        entries={hariianPeriods.last7Rest}
-                        defaultOpen={hariianPeriods.today.length === 0 && hariianPeriods.yest.length === 0}
-                        accentColor="#6366F1"
-                        cardUrlMap={cardUrlMap}
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="8 – 30 Hari Terakhir"
-                        entries={hariianPeriods.last30Rest}
-                        defaultOpen={hariianPeriods.last7Total === 0}
-                        accentColor="#EC4899"
-                        cardUrlMap={cardUrlMap}
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                    </div>
-                  )
-                )}
-
-                {/* MODE 4: SEMUA RIWAYAT */}
-                {dailyMode === "all" && !customDate && (
-                  <div>
-                    <PeriodSection
-                      title="Hari Ini"
-                      entries={hariianPeriods.today}
-                      defaultOpen={true}
-                      accentColor="#10B981"
-                      cardUrlMap={cardUrlMap}
-                      formatFull={formatFull}
-                      timeAgo={timeAgo}
-                    />
-                    <PeriodSection
-                      title="Kemarin"
-                      entries={hariianPeriods.yest}
-                      defaultOpen={hariianPeriods.today.length === 0}
-                      accentColor="#F59E0B"
-                      cardUrlMap={cardUrlMap}
-                      formatFull={formatFull}
-                      timeAgo={timeAgo}
-                    />
-                    <PeriodSection
-                      title="7 Hari Terakhir"
-                      entries={hariianPeriods.last7Rest}
-                      defaultOpen={false}
-                      accentColor="#6366F1"
-                      cardUrlMap={cardUrlMap}
-                      formatFull={formatFull}
-                      timeAgo={timeAgo}
-                    />
-                    <PeriodSection
-                      title="1 Bulan Terakhir (8–30 Hari)"
-                      entries={hariianPeriods.last30Rest}
-                      defaultOpen={false}
-                      accentColor="#EC4899"
-                      cardUrlMap={cardUrlMap}
-                      formatFull={formatFull}
-                      timeAgo={timeAgo}
-                    />
-                    <PeriodSection
-                      title="Lebih Lama (> 30 Hari)"
-                      entries={hariianPeriods.older}
-                      defaultOpen={false}
-                      accentColor="#6B7280"
-                      cardUrlMap={cardUrlMap}
-                      formatFull={formatFull}
-                      timeAgo={timeAgo}
-                    />
+                    )}
                   </div>
-                )}
-
-                {/* MODE 5: PILIH TANGGAL SPESIFIK */}
-                {customDate && (
-                  customDateEntries.length === 0 ? (
-                    <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
-                      <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>📅</div>
-                      <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6, color: "#F0F0FF" }}>
-                        Tidak Ada Data Tap
-                      </h3>
-                      <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 16px" }}>
-                        Tidak ada aktivitas tap kartu pada tanggal <strong>{formatDateIndo(customDate)}</strong>.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => { setCustomDate(""); setDailyMode("today"); }}
-                        className="btn btn-ghost"
-                        style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#34D399", borderColor: "rgba(16,185,129,0.3)" }}
-                      >
-                        Kembali ke Hari Ini
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-                      <div style={{
-                        padding: "12px 16px", background: "#13131C", borderLeft: "4px solid #6366F1",
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                ) : (
+                  <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <div style={{
+                      padding: "12px 16px",
+                      background: "#13131C",
+                      borderLeft: `4px solid ${activePeriodInfo.color}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 8,
+                    }}>
+                      <span style={{ fontWeight: 800, fontSize: "0.84rem", color: activePeriodInfo.color, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                        {activePeriodInfo.title}
+                      </span>
+                      <span style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 800,
+                        color: activePeriodInfo.color,
+                        background: `${activePeriodInfo.color}18`,
+                        border: `1px solid ${activePeriodInfo.color}40`,
+                        padding: "3px 10px",
+                        borderRadius: 999,
                       }}>
-                        <span style={{ fontWeight: 800, fontSize: "0.84rem", color: "#A5B4FC", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                          🗓️ Riwayat Tap: {formatDateIndo(customDate)}
-                        </span>
-                        <span style={{
-                          fontSize: "0.75rem", fontWeight: 800, color: "#A5B4FC",
-                          background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)",
-                          padding: "3px 10px", borderRadius: 999,
-                        }}>
-                          {customDateEntries.length} TAP
-                        </span>
-                      </div>
-                      <div>
-                        {customDateEntries.map((log, i) => (
-                          <TapItem
-                            key={`${log.code}-${log.tappedAt}-${i}`}
-                            log={log}
-                            reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
-                            accentColor="#6366F1"
-                            timeAgo={timeAgo}
-                            formatFull={formatFull}
-                          />
-                        ))}
-                      </div>
+                        {activePeriodInfo.entries.length} TAP
+                      </span>
                     </div>
-                  )
+
+                    <div>
+                      {activePeriodInfo.entries.map((log, i) => (
+                        <TapItem
+                          key={`${log.code}-${log.tappedAt}-${i}`}
+                          log={log}
+                          reviewUrl={cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "")}
+                          accentColor={activePeriodInfo.color}
+                          timeAgo={timeAgo}
+                          formatFull={formatFull}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             )
