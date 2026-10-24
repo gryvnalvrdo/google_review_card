@@ -296,20 +296,26 @@ export default function CardsPage() {
                 </div>
               </div>
 
-              {/* Toolbar */}
-              <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+              {/* Toolbar: Tetap sejajar (side-by-side) baik di mobile maupun desktop */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 18, alignItems: "center", width: "100%", flexWrap: "nowrap" }}>
+                <div style={{ flex: "1 1 auto", minWidth: 0, position: "relative" }}>
                   <input
                     type="text"
                     className="input"
-                    placeholder="🔍 Cari nama toko atau kode kartu..."
+                    placeholder="🔍 Cari nama atau kode..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
+                    style={{
+                      width: "100%",
+                      paddingRight: searchTerm ? 32 : 12,
+                      fontSize: "0.82rem",
+                      textOverflow: "ellipsis",
+                    }}
                   />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm("")}
-                      style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                      style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.85rem" }}
                     >
                       ✕
                     </button>
@@ -320,9 +326,18 @@ export default function CardsPage() {
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as "date" | "tap" | "name" | "price")}
                   style={{
-                    padding: "10px 14px", background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
-                    color: "#F0F0FF", fontSize: "0.85rem", outline: "none", cursor: "pointer",
+                    flex: "0 0 auto",
+                    maxWidth: "46%",
+                    padding: "9px 10px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 8,
+                    color: "#F0F0FF",
+                    fontSize: "0.8rem",
+                    outline: "none",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   <option value="date" style={{ background: "#111118" }}>Terbaru Ditambahkan</option>
