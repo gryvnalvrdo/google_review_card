@@ -284,82 +284,107 @@ function TapItem({ log, reviewUrl, accentColor = "#34D399", timeAgo, formatFull 
   formatFull: (iso: string) => string;
 }) {
   const d = new Date(log.tappedAt);
-  const timeStr = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const timeStr = `${hours}:${minutes}`;
   const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-      padding: "12px 16px",
-      background: "#111118",
-      borderBottom: "1px solid rgba(255,255,255,0.04)",
-      borderLeft: `4px solid ${accentColor}`,
-      flexWrap: "wrap",
-      transition: "background 0.15s",
-    }}>
-      {/* Kolom Kiri: Jam Tap Tegas + Nama Toko & Kode */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 230px" }}>
-        {/* Badge Jam Tap Sangat Menonjol */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        padding: "10px 14px",
+        background: "#111118",
+        borderBottom: "1px solid rgba(255,255,255,0.04)",
+        borderLeft: `4px solid ${accentColor}`,
+        transition: "background 0.15s",
+      }}
+    >
+      {/* Kolom Kiri: Jam Tap Box + Info Toko */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+        {/* Time Badge (Clean digital time without spacing) */}
         <div
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 8,
-            padding: "5px 8px",
+            borderRadius: 7,
+            padding: "4px 6px",
             textAlign: "center",
             flexShrink: 0,
-            minWidth: 54,
+            width: 52,
           }}
           title={formatFull(log.tappedAt)}
         >
-          <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#F0F0FF", fontFamily: "monospace", lineHeight: 1.1 }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#F0F0FF", fontFamily: "ui-monospace, monospace", lineHeight: 1.1 }}>
             {timeStr}
           </div>
-          <div style={{ fontSize: "0.62rem", color: "var(--text-muted)", marginTop: 2, textTransform: "uppercase" }}>
+          <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", marginTop: 2, textTransform: "uppercase" }}>
             {dateStr}
           </div>
         </div>
 
-        {/* Info Toko & Kode */}
+        {/* Info Toko: Nama & Kode di atas, Time Ago di bawah */}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.92rem", wordBreak: "break-word" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <span style={{
+              fontWeight: 700,
+              color: "#F0F0FF",
+              fontSize: "0.88rem",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}>
               {log.storeName}
             </span>
             <span style={{
-              fontFamily: "monospace", fontSize: "0.68rem", fontWeight: 700,
-              color: "#818CF8", background: "rgba(99,102,241,0.12)",
+              fontFamily: "ui-monospace, monospace",
+              fontSize: "0.65rem",
+              fontWeight: 700,
+              color: "#818CF8",
+              background: "rgba(99,102,241,0.12)",
               border: "1px solid rgba(99,102,241,0.25)",
-              padding: "1px 6px", borderRadius: 5, flexShrink: 0,
+              padding: "1px 5px",
+              borderRadius: 4,
+              flexShrink: 0,
             }}>
               {log.code}
             </span>
           </div>
-          <div style={{ fontSize: "0.72rem", color: "#7A7A95", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
             <span>🕒 {timeAgo(log.tappedAt)}</span>
           </div>
         </div>
       </div>
 
       {/* Kolom Kanan: Tombol Menu Ulasan */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: "auto" }}>
-        {reviewUrl && (
-          <a
-            href={reviewUrl}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              fontSize: "0.74rem", fontWeight: 700, color: "#FCD34D",
-              background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
-              padding: "6px 12px", borderRadius: 8, textDecoration: "none",
-              display: "inline-flex", alignItems: "center", gap: 5,
-            }}
-            title="Buka ulasan Google toko ini di browser"
-          >
-            <span>⭐</span> Menu Ulasan ↗
-          </a>
-        )}
-      </div>
+      {reviewUrl && (
+        <a
+          href={reviewUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            fontSize: "0.72rem",
+            fontWeight: 700,
+            color: "#FCD34D",
+            background: "rgba(245,158,11,0.1)",
+            border: "1px solid rgba(245,158,11,0.3)",
+            padding: "5px 10px",
+            borderRadius: 7,
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+          }}
+          title="Buka ulasan Google toko ini di browser"
+        >
+          <span>⭐</span> Menu Ulasan ↗
+        </a>
+      )}
     </div>
   );
 }
@@ -1068,54 +1093,7 @@ export default function TapsPage() {
             </div>
           )}
 
-          {/* Quick Review Verification Bar (Tap Terakhir) */}
-          {validLogs.length > 0 && !newTapAlert && (
-            <div style={{
-              background: "rgba(99,102,241,0.06)",
-              border: "1px solid rgba(99,102,241,0.2)",
-              borderRadius: 12,
-              padding: "10px 14px",
-              marginBottom: 18,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 10,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 220px" }}>
-                <span style={{ fontSize: "1.1rem" }}>📲</span>
-                <div style={{ minWidth: 0, fontSize: "0.78rem" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Tap Terakhir: </span>
-                  <strong style={{ color: "#F0F0FF" }}>{validLogs[0].storeName}</strong>
-                  <span style={{ color: "#34D399", marginLeft: 6 }}>({timeAgo(validLogs[0].tappedAt)})</span>
-                </div>
-              </div>
 
-              {cardUrlMap.get(validLogs[0].code) && (
-                <a
-                  href={cardUrlMap.get(validLogs[0].code)}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    color: "#A5B4FC",
-                    background: "rgba(99,102,241,0.15)",
-                    border: "1px solid rgba(99,102,241,0.3)",
-                    padding: "6px 12px",
-                    borderRadius: 8,
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                  title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
-                >
-                  <span>⭐</span> Menu Ulasan Toko ↗
-                </a>
-              )}
-            </div>
-          )}
 
           {/* KPI Stat Cards (Grid kiri-kanan seperti di Dashboard) */}
           <div
@@ -1166,8 +1144,8 @@ export default function TapsPage() {
             </div>
           </div>
 
-          {/* Sub Navigation Tabs */}
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, marginBottom: 18, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          {/* Sub Navigation Tabs (Grid 2x2 di Mobile agar Belum Ada Tap terlihat dan mudah ditekan) */}
+          <div className="taps-nav-grid">
             <button
               onClick={() => setActiveTab("harian")}
               className={`btn ${activeTab === "harian" ? "btn-primary" : "btn-ghost"}`}
@@ -1372,26 +1350,27 @@ export default function TapsPage() {
                 ) : (
                   <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div style={{
-                      padding: "12px 16px",
+                      padding: "10px 14px",
                       background: "#13131C",
                       borderLeft: `4px solid ${activePeriodInfo.color}`,
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: 8,
+                      gap: 10,
                     }}>
-                      <span style={{ fontWeight: 800, fontSize: "0.84rem", color: activePeriodInfo.color, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: activePeriodInfo.color, letterSpacing: "0.02em" }}>
                         {activePeriodInfo.title}
-                      </span>
+                      </div>
                       <span style={{
-                        fontSize: "0.75rem",
+                        fontSize: "0.72rem",
                         fontWeight: 800,
                         color: activePeriodInfo.color,
                         background: `${activePeriodInfo.color}18`,
                         border: `1px solid ${activePeriodInfo.color}40`,
                         padding: "3px 10px",
                         borderRadius: 999,
+                        flexShrink: 0,
+                        whiteSpace: "nowrap",
                       }}>
                         {activePeriodInfo.entries.length} TAP
                       </span>
@@ -2015,72 +1994,92 @@ export default function TapsPage() {
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {sleepingCards.map((card) => (
-                      <div
-                        key={card.code}
-                        className="card"
-                        style={{
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                          padding: "14px 18px", borderLeft: "4px solid #EF4444",
-                          flexWrap: "wrap", gap: 10,
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={{
-                            width: 38, height: 38, borderRadius: 10,
-                            background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
-                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem",
-                          }}>😴</div>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#F0F0FF" }}>
-                              {card.storeName}
-                            </div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
-                              <span>Kode: <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</strong></span>
-                              <span>·</span>
-                              <span>Assign: {new Date(card.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    {sleepingCards.map((card) => {
+                      const reviewUrl = card.googleReviewUrl ? getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName) : "";
+                      const targetUrl = reviewUrl || `/c/${card.code}`;
+                      return (
+                        <div
+                          key={card.code}
+                          className="card"
+                          onClick={() => {
+                            window.open(targetUrl, "_blank");
+                          }}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "14px 16px",
+                            borderLeft: "4px solid #EF4444",
+                            gap: 12,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            background: "rgba(239,68,68,0.03)",
+                          }}
+                          title="Klik kartu ini untuk membuka menu ulasan Google / tes link"
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
+                            <div style={{
+                              width: 38, height: 38, borderRadius: 10,
+                              background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
+                              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem",
+                              flexShrink: 0,
+                            }}>😴</div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF", wordBreak: "break-word" }}>
+                                {card.storeName}
+                              </div>
+                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span>Kode: <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</strong></span>
+                                <span>·</span>
+                                <span>Dibuat: {new Date(card.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          <span style={{
-                            fontSize: "0.72rem", fontWeight: 600,
-                            color: "#FCA5A5", background: "rgba(239,68,68,0.12)",
-                            border: "1px solid rgba(239,68,68,0.25)",
-                            padding: "4px 10px", borderRadius: 999,
-                          }}>
-                            Belum Ada Tap
-                          </span>
-                          <a
-                            href={`/c/${card.code}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn btn-ghost"
-                            style={{ padding: "6px 10px", fontSize: "0.75rem" }}
-                            title="Buka link kartu untuk uji coba"
+                          <div
+                            style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            Tes Link ↗
-                          </a>
-                          {card.googleReviewUrl && (
+                            <span style={{
+                              fontSize: "0.7rem", fontWeight: 700,
+                              color: "#FCA5A5", background: "rgba(239,68,68,0.12)",
+                              border: "1px solid rgba(239,68,68,0.25)",
+                              padding: "4px 8px", borderRadius: 999,
+                              whiteSpace: "nowrap",
+                            }}>
+                              Belum Ada Tap
+                            </span>
                             <a
-                              href={getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName)}
+                              href={`/c/${card.code}`}
                               target="_blank"
                               rel="noreferrer"
-                              style={{
-                                padding: "6px 10px", fontSize: "0.75rem",
-                                color: "#FCD34D", textDecoration: "none", fontWeight: 600,
-                                background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
-                                borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 4,
-                              }}
-                              title="Buka menu ulasan Google publik toko ini"
+                              className="btn btn-ghost"
+                              style={{ padding: "5px 9px", fontSize: "0.72rem", borderRadius: 7 }}
+                              title="Buka link kartu untuk uji coba tap"
                             >
-                              ⭐ Menu Ulasan Toko ↗
+                              Tes Link ↗
                             </a>
-                          )}
+                            {reviewUrl && (
+                              <a
+                                href={reviewUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  padding: "5px 9px", fontSize: "0.72rem",
+                                  color: "#FCD34D", textDecoration: "none", fontWeight: 700,
+                                  background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
+                                  borderRadius: 7, display: "inline-flex", alignItems: "center", gap: 4,
+                                  whiteSpace: "nowrap",
+                                }}
+                                title="Buka menu ulasan Google publik toko ini"
+                              >
+                                ⭐ Menu Ulasan ↗
+                              </a>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
