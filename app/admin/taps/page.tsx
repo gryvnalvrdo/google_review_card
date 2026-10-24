@@ -2448,11 +2448,14 @@ export default function TapsPage() {
                       height: 42,
                       padding: customDate ? "0 34px 0 14px" : "0 14px",
                       borderRadius: 10,
-                      background: customDate ? "rgba(99, 102, 241, 0.18)" : "rgba(255, 255, 255, 0.03)",
-                      border: customDate ? "1px solid rgba(99, 102, 241, 0.45)" : "1px solid rgba(255, 255, 255, 0.08)",
-                      color: customDate ? "#EDE9FE" : "#94A3B8",
+                      background: customDate
+                        ? "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)"
+                        : "rgba(99, 102, 241, 0.16)",
+                      border: customDate ? "1.5px solid #C7D2FE" : "1.5px solid rgba(99, 102, 241, 0.45)",
+                      color: customDate ? "#FFFFFF" : "#C7D2FE",
                       fontSize: "0.82rem",
-                      fontWeight: 600,
+                      fontWeight: 700,
+                      boxShadow: customDate ? "0 4px 14px rgba(99, 102, 241, 0.45)" : "none",
                       cursor: "pointer",
                       display: "inline-flex",
                       alignItems: "center",
@@ -3963,70 +3966,114 @@ export default function TapsPage() {
                                 <span>Pilih Tanggal:</span>
                               </span>
 
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                <input
-                                  type="date"
-                                  value={customStartDate}
-                                  min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
-                                  max={customEndDate || toDateInputValue(new Date())}
-                                  onChange={(e) => setCustomStartDate(e.target.value)}
-                                  onClick={(e) => {
-                                    try {
-                                      if (typeof e.currentTarget.showPicker === "function") {
-                                        e.currentTarget.showPicker();
-                                      }
-                                    } catch {}
-                                  }}
-                                  className="date-range-picker-input"
-                                  style={{
-                                    background: "rgba(245, 158, 11, 0.16)",
-                                    color: "#FFFFFF",
-                                    border: "1.5px solid rgba(245, 158, 11, 0.5)",
-                                    borderRadius: 8,
-                                    padding: "7px 12px",
-                                    fontSize: "0.82rem",
-                                    fontWeight: 700,
-                                    outline: "none",
-                                    cursor: "pointer",
-                                    colorScheme: "dark",
-                                    boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-                                    transition: "all 0.18s ease",
-                                  }}
-                                  title="Klik untuk memilih tanggal awal"
-                                />
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                                {/* Tombol Tanggal Mulai */}
+                                <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                                  <button
+                                    type="button"
+                                    className="date-range-pill-btn"
+                                    style={{
+                                      background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                                      color: "#0F172A",
+                                      border: "1.5px solid #FEF08A",
+                                      borderRadius: 10,
+                                      padding: "8px 14px",
+                                      fontSize: "0.84rem",
+                                      fontWeight: 800,
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 7,
+                                      boxShadow: "0 3px 12px rgba(245, 158, 11, 0.4)",
+                                      transition: "all 0.15s ease",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                    title="Klik untuk memilih tanggal mulai"
+                                  >
+                                    <span style={{ fontSize: "0.95rem" }}>📅</span>
+                                    <span>{customStartDate ? formatDateShortIndo(customStartDate) : "Pilih Mulai"}</span>
+                                    <span style={{ fontSize: "0.6rem", opacity: 0.75 }}>▼</span>
+                                  </button>
+                                  <input
+                                    type="date"
+                                    value={customStartDate}
+                                    min={earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined}
+                                    max={customEndDate || toDateInputValue(new Date())}
+                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                    onClick={(e) => {
+                                      try {
+                                        if (typeof e.currentTarget.showPicker === "function") {
+                                          e.currentTarget.showPicker();
+                                        }
+                                      } catch {}
+                                    }}
+                                    style={{
+                                      position: "absolute",
+                                      inset: 0,
+                                      opacity: 0,
+                                      width: "100%",
+                                      height: "100%",
+                                      cursor: "pointer",
+                                      zIndex: 2,
+                                    }}
+                                    title="Klik untuk memilih tanggal awal"
+                                  />
+                                </div>
 
-                                <span style={{ color: "#E2E8F0", fontSize: "0.8rem", fontWeight: 700 }}>s/d</span>
+                                <span style={{ color: "#FCD34D", fontSize: "0.85rem", fontWeight: 800 }}>s/d</span>
 
-                                <input
-                                  type="date"
-                                  value={customEndDate}
-                                  min={customStartDate || (earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined)}
-                                  max={toDateInputValue(new Date())}
-                                  onChange={(e) => setCustomEndDate(e.target.value)}
-                                  onClick={(e) => {
-                                    try {
-                                      if (typeof e.currentTarget.showPicker === "function") {
-                                        e.currentTarget.showPicker();
-                                      }
-                                    } catch {}
-                                  }}
-                                  className="date-range-picker-input"
-                                  style={{
-                                    background: "rgba(245, 158, 11, 0.16)",
-                                    color: "#FFFFFF",
-                                    border: "1.5px solid rgba(245, 158, 11, 0.5)",
-                                    borderRadius: 8,
-                                    padding: "7px 12px",
-                                    fontSize: "0.82rem",
-                                    fontWeight: 700,
-                                    outline: "none",
-                                    cursor: "pointer",
-                                    colorScheme: "dark",
-                                    boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-                                    transition: "all 0.18s ease",
-                                  }}
-                                  title="Klik untuk memilih tanggal akhir"
-                                />
+                                {/* Tombol Tanggal Akhir */}
+                                <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                                  <button
+                                    type="button"
+                                    className="date-range-pill-btn"
+                                    style={{
+                                      background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                                      color: "#0F172A",
+                                      border: "1.5px solid #FEF08A",
+                                      borderRadius: 10,
+                                      padding: "8px 14px",
+                                      fontSize: "0.84rem",
+                                      fontWeight: 800,
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 7,
+                                      boxShadow: "0 3px 12px rgba(245, 158, 11, 0.4)",
+                                      transition: "all 0.15s ease",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                    title="Klik untuk memilih tanggal akhir"
+                                  >
+                                    <span style={{ fontSize: "0.95rem" }}>📅</span>
+                                    <span>{customEndDate ? formatDateShortIndo(customEndDate) : "Pilih Akhir"}</span>
+                                    <span style={{ fontSize: "0.6rem", opacity: 0.75 }}>▼</span>
+                                  </button>
+                                  <input
+                                    type="date"
+                                    value={customEndDate}
+                                    min={customStartDate || (earliestAssignedDate ? toDateInputValue(earliestAssignedDate) : undefined)}
+                                    max={toDateInputValue(new Date())}
+                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                    onClick={(e) => {
+                                      try {
+                                        if (typeof e.currentTarget.showPicker === "function") {
+                                          e.currentTarget.showPicker();
+                                        }
+                                      } catch {}
+                                    }}
+                                    style={{
+                                      position: "absolute",
+                                      inset: 0,
+                                      opacity: 0,
+                                      width: "100%",
+                                      height: "100%",
+                                      cursor: "pointer",
+                                      zIndex: 2,
+                                    }}
+                                    title="Klik untuk memilih tanggal akhir"
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}
