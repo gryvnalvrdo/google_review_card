@@ -589,10 +589,39 @@ html, body {
   gap: 14px;
 }
 
+.stats-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
 @media (max-width: 640px) {
   .mobile-kpi-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
+  }
+  .stats-grid-3 {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+  .stat-card-compact {
+    padding: 10px 8px !important;
+  }
+  .stat-card-title {
+    font-size: 0.62rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .stat-card-icon {
+    font-size: 1rem !important;
+  }
+  .stat-card-value {
+    font-size: clamp(0.85rem, 3.5vw, 1.25rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
   }
   .mobile-container-pad {
     padding-left: 12px !important;

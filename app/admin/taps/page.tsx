@@ -814,42 +814,42 @@ export default function TapsPage() {
               marginBottom: 20,
             }}
           >
-            <div className="card" style={{ padding: "14px 16px", borderColor: "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
+            <div className="card stat-card-compact" style={{ borderColor: "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Hari Ini</span>
-                <span style={{ fontSize: "1.2rem" }}>☀️</span>
+                <span className="stat-card-title" style={{ fontWeight: 700, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Hari Ini</span>
+                <span className="stat-card-icon">☀️</span>
               </div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#34D399", lineHeight: 1 }}>{todayCount}</div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Tap tercatat hari ini</div>
+              <div className="stat-card-value" style={{ fontWeight: 800, color: "#34D399" }}>{todayCount}</div>
+              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Tap tercatat hari ini</div>
             </div>
 
-            <div className="card" style={{ padding: "14px 16px", borderColor: "rgba(245,158,11,0.25)", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
+            <div className="card stat-card-compact" style={{ borderColor: "rgba(245,158,11,0.25)", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#FCD34D", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bulan Ini</span>
-                <span style={{ fontSize: "1.2rem" }}>📅</span>
+                <span className="stat-card-title" style={{ fontWeight: 700, color: "#FCD34D", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bulan Ini</span>
+                <span className="stat-card-icon">📅</span>
               </div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#FCD34D", lineHeight: 1 }}>{thisMonthCount}</div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>{formatMonthLabel(thisMonthKey)}</div>
+              <div className="stat-card-value" style={{ fontWeight: 800, color: "#FCD34D" }}>{thisMonthCount}</div>
+              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>{formatMonthLabel(thisMonthKey)}</div>
             </div>
 
-            <div className="card" style={{ padding: "14px 16px", borderColor: "rgba(99,102,241,0.25)", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
+            <div className="card stat-card-compact" style={{ borderColor: "rgba(99,102,241,0.25)", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Tap</span>
-                <span style={{ fontSize: "1.2rem" }}>📲</span>
+                <span className="stat-card-title" style={{ fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Tap</span>
+                <span className="stat-card-icon">📲</span>
               </div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#A5B4FC", lineHeight: 1 }}>{validLogs.length}</div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Kartu aktif terdaftar</div>
+              <div className="stat-card-value" style={{ fontWeight: 800, color: "#A5B4FC" }}>{validLogs.length}</div>
+              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Kartu aktif terdaftar</div>
             </div>
 
-            <div className="card" style={{ padding: "14px 16px", borderColor: sleepingCards.length > 0 ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(255,255,255,0.02), #111118)" }}>
+            <div className="card stat-card-compact" style={{ borderColor: sleepingCards.length > 0 ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(255,255,255,0.02), #111118)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Belum Ada Tap</span>
-                <span style={{ fontSize: "1.2rem" }}>😴</span>
+                <span className="stat-card-title" style={{ fontWeight: 700, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Belum Ada Tap</span>
+                <span className="stat-card-icon">😴</span>
               </div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", lineHeight: 1 }}>
+              <div className="stat-card-value" style={{ fontWeight: 800, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399" }}>
                 {sleepingCards.length}
               </div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Perlu follow up/promosi</div>
+              <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Perlu follow up/promosi</div>
             </div>
           </div>
 

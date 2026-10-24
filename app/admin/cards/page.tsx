@@ -278,27 +278,19 @@ export default function CardsPage() {
               </a>
             </div>
           </div>
-              {/* KPI Stats */}
-              <div
-                className="mobile-kpi-grid"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: 14,
-                  marginBottom: 22,
-                }}
-              >
-                <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#A5B4FC", fontWeight: 700, textTransform: "uppercase" }}>💳 Total Kartu Aktif</div>
-                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#F0F0FF", marginTop: 4 }}>{cards.length}</div>
+              {/* KPI Stats (3 cards horizontal on desktop and mobile) */}
+              <div className="stats-grid-3" style={{ marginBottom: 22 }}>
+                <div className="card stat-card-compact" style={{ background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
+                  <div className="stat-card-title" style={{ color: "#A5B4FC", fontWeight: 700, textTransform: "uppercase" }}>💳 Total Kartu Aktif</div>
+                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#F0F0FF", marginTop: 4 }}>{cards.length}</div>
                 </div>
-                <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#34D399", fontWeight: 700, textTransform: "uppercase" }}>💰 Total Omzet</div>
-                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#34D399", marginTop: 4 }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
+                <div className="card stat-card-compact" style={{ background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
+                  <div className="stat-card-title" style={{ color: "#34D399", fontWeight: 700, textTransform: "uppercase" }}>💰 Total Omzet</div>
+                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#34D399", marginTop: 4 }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
                 </div>
-                <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#FCD34D", fontWeight: 700, textTransform: "uppercase" }}>👆 Total Tap</div>
-                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#FCD34D", marginTop: 4 }}>{totalTaps}×</div>
+                <div className="card stat-card-compact" style={{ background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
+                  <div className="stat-card-title" style={{ color: "#FCD34D", fontWeight: 700, textTransform: "uppercase" }}>👆 Total Tap</div>
+                  <div className="stat-card-value" style={{ fontWeight: 800, color: "#FCD34D", marginTop: 4 }}>{totalTaps}×</div>
                 </div>
               </div>
 

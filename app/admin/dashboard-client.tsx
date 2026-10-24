@@ -57,7 +57,6 @@ export default function AdminDashboard() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
@@ -218,23 +217,7 @@ export default function AdminDashboard() {
   const totalRevenue = useMemo(() => cards.reduce((sum, c) => sum + (c.price ?? 50000), 0), [cards]);
   const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "", c.storeName)])), [cards]);
 
-  const monthlyRevenueObj = useMemo(() => {
-    return cards.reduce((acc, card) => {
-      const d = new Date(card.createdAt);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      acc[key] = (acc[key] || 0) + (card.price ?? 50000);
-      return acc;
-    }, {} as Record<string, number>);
-  }, [cards]);
 
-  const allMonthKeys = useMemo(() => Object.keys(monthlyRevenueObj).sort((a, b) => b.localeCompare(a)), [monthlyRevenueObj]);
-  const sortedMonthKeys = selectedMonth ? allMonthKeys.filter(k => k === selectedMonth) : allMonthKeys;
-
-  const formatMonthKey = (key: string) => {
-    const [y, m] = key.split("-");
-    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
-    return date.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-  };
 
   // ── Form content (shared between desktop sidebar & mobile sheet) ──
   const formContent = (
@@ -515,8 +498,8 @@ export default function AdminDashboard() {
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
         <main style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
-          {/* Quick Stats Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14, marginBottom: 24 }}>
+          {/* Quick Stats Grid (3 cards in 1 row horizontal, responsive on desktop and mobile) */}
+          <div className="stats-grid-3">
             {[
               { label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#4F46E5", sub: "Terhubung ke Google Review" },
               { label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString("id-ID")}`, icon: "💰", color: "#10B981", sub: "Penjualan fisik kartu" },
@@ -524,111 +507,28 @@ export default function AdminDashboard() {
             ].map((s) => (
               <div
                 key={s.label}
-                className="card"
+                className="card stat-card-compact"
                 style={{
-                  padding: "16px 18px",
                   background: "linear-gradient(180deg, rgba(255,255,255,0.03), #111118)",
                   borderColor: "rgba(255,255,255,0.08)",
                   position: "relative",
                   overflow: "hidden",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span className="stat-card-title" style={{ color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {s.label}
                   </span>
-                  <span style={{ fontSize: "1.3rem" }}>{s.icon}</span>
+                  <span className="stat-card-icon">{s.icon}</span>
                 </div>
-                <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.1 }}>
+                <div className="stat-card-value" style={{ fontWeight: 800, color: "var(--text-primary)" }}>
                   {s.value}
                 </div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 6 }}>
+                <div className="mobile-hide-sm" style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 6 }}>
                   {s.sub}
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Quick Action Navigation Bar */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 12,
-            marginBottom: 26,
-          }}>
-            <button
-              type="button"
-              onClick={() => setShowScanner(true)}
-              style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)",
-                borderRadius: 14, cursor: "pointer", color: "var(--text-primary)",
-                textAlign: "left", width: "100%", fontFamily: "inherit",
-                transition: "all 0.2s",
-              }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(16,185,129,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
-                📷
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#34D399" }}>Scan QR Kartu</div>
-                <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>Pindai cepat untuk assign</div>
-              </div>
-            </button>
-
-            <a
-              href="/admin/cards"
-              style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)",
-                borderRadius: 14, textDecoration: "none", color: "var(--text-primary)",
-                transition: "all 0.2s",
-              }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
-                🗂️
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF" }}>Manajemen Kartu</div>
-                <div style={{ fontSize: "0.72rem", color: "#A5B4FC" }}>{cards.length} kartu aktif · Cetak PNG</div>
-              </div>
-            </a>
-
-            <a
-              href="/admin/taps"
-              style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
-                borderRadius: 14, textDecoration: "none", color: "var(--text-primary)",
-                transition: "all 0.2s",
-              }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
-                📈
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF" }}>Leaderboard Tap</div>
-                <div style={{ fontSize: "0.72rem", color: "#FCD34D" }}>Peringkat terbanyak per bulan</div>
-              </div>
-            </a>
-
-            <a
-              href="/admin/print"
-              style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.25)",
-                borderRadius: 14, textDecoration: "none", color: "var(--text-primary)",
-                transition: "all 0.2s",
-              }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(6,182,212,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
-                🖨️
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF" }}>Mesin Cetak QR</div>
-                <div style={{ fontSize: "0.72rem", color: "#67E8F9" }}>Generate batch &amp; stok</div>
-              </div>
-            </a>
           </div>
 
           {/* Grid Layout: Desktop Form (Left) & Widgets (Right) */}
@@ -666,56 +566,6 @@ export default function AdminDashboard() {
 
             {/* Right Column Widgets */}
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-              {/* MONTHLY REVENUE ACCORDION */}
-              <div className="card" style={{ padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                    💰 Rekap Pendapatan Kartu
-                  </h2>
-                  {allMonthKeys.length > 1 && (
-                    <select
-                      value={selectedMonth}
-                      onChange={e => setSelectedMonth(e.target.value)}
-                      style={{
-                        padding: "5px 10px", background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
-                        color: "#F0F0FF", fontSize: "0.78rem", fontFamily: "inherit",
-                        outline: "none", cursor: "pointer",
-                      }}
-                    >
-                      <option value="">Semua Bulan</option>
-                      {allMonthKeys.map(k => (
-                        <option key={k} value={k}>{formatMonthKey(k)}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                {sortedMonthKeys.length === 0 ? (
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Belum ada data penjualan tercatat.</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {sortedMonthKeys.map((key) => (
-                      <div
-                        key={key}
-                        style={{
-                          display: "flex", justifyContent: "space-between", alignItems: "center",
-                          padding: "12px 14px", background: "rgba(255,255,255,0.03)",
-                          borderRadius: 8,
-                        }}
-                      >
-                        <div style={{ fontWeight: 600, color: "#F0F0FF", fontSize: "0.88rem" }}>
-                          {formatMonthKey(key)}
-                        </div>
-                        <div style={{ color: "#10B981", fontWeight: 800, fontSize: "0.95rem" }}>
-                          Rp {monthlyRevenueObj[key].toLocaleString("id-ID")}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* RECENT TAPS WIDGET */}
               <div className="card" style={{ padding: "20px" }}>
