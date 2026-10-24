@@ -63,8 +63,29 @@ export default function CardsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price">("date");
-  const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
+  const [editingCard, setEditingCard] = useState<CardData | null>(null);
+  const [editPlaceId, setEditPlaceId] = useState("");
+
+  function startEdit(card: CardData) {
+    setEditingCard(card);
+    const match = card.googleReviewUrl?.match(/placeid=([a-zA-Z0-9_\-]+)/i);
+    setEditPlaceId(match ? match[1] : "");
+  }
+
+  function handlePlaceIdChange(rawVal: string) {
+    let pid = rawVal.trim();
+    // Auto-extract place ID if user pastes full URL
+    const match = pid.match(/placeid=([a-zA-Z0-9_\-]+)/i);
+    if (match) pid = match[1];
+    setEditPlaceId(pid);
+    if (pid) {
+      setEditingCard(prev => prev ? {
+        ...prev,
+        googleReviewUrl: `https://search.google.com/local/writereview?placeid=${pid}`,
+      } : null);
+    }
+  }
   const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -380,7 +401,7 @@ export default function CardsPage() {
                           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
                             <button
                               type="button"
-                              onClick={() => setEditingCard(card)}
+                              onClick={() => startEdit(card)}
                               className="btn btn-ghost"
                               style={{ padding: "7px 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
                               title="Edit Toko"
@@ -493,17 +514,60 @@ export default function CardsPage() {
                   className="input"
                   value={editingCard.storeName}
                   onChange={e => setEditingCard({ ...editingCard, storeName: e.target.value })}
+                  placeholder="Nama toko binaan"
                   required
                 />
               </div>
 
+              {/* Google Place ID: Cukup edit ini jika toko pindah lokasi */}
               <div className="form-group">
-                <label className="label">Google Review URL</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <label className="label" style={{ marginBottom: 0 }}>
+                    Google Place ID (Lokasi Toko)
+                  </label>
+                  <a
+                    href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: "0.7rem", color: "#A5B4FC", textDecoration: "none", fontWeight: 600 }}
+                  >
+                    🔍 Cari Place ID Baru ↗
+                  </a>
+                </div>
+                <input
+                  className="input"
+                  value={editPlaceId}
+                  onChange={e => handlePlaceIdChange(e.target.value)}
+                  placeholder="cth: ChIJxxxxxxxxxxxxxxxxx"
+                  maxLength={120}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
+                  💡 <strong>Pindah Lokasi?</strong> Cukup ganti <strong>Place ID</strong> baru di sini. URL Review Google akan otomatis diperbarui dan langsung aktif saat kartu di-tap / di-scan pelanggan.
+                </p>
+                {editingCard.googleReviewUrl && (
+                  <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                    <span>✅</span> URL Review Google aktif
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="label" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Google Review URL (Otomatis dari Place ID)
+                </label>
                 <input
                   className="input"
                   value={editingCard.googleReviewUrl}
-                  onChange={e => setEditingCard({ ...editingCard, googleReviewUrl: e.target.value })}
+                  onChange={e => {
+                    const url = e.target.value;
+                    setEditingCard({ ...editingCard, googleReviewUrl: url });
+                    const match = url.match(/placeid=([a-zA-Z0-9_\-]+)/i);
+                    if (match) setEditPlaceId(match[1]);
+                  }}
                   required
+                  style={{ fontSize: "0.8rem", color: "#CBD5E1" }}
                 />
               </div>
 

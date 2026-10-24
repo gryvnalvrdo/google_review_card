@@ -298,9 +298,11 @@ export default function AdminDashboard() {
           className="input"
           value={placeId}
           onChange={(e) => {
-            const pid = e.target.value.trim();
+            let pid = e.target.value.trim();
+            const match = pid.match(/placeid=([a-zA-Z0-9_\-]+)/i);
+            if (match) pid = match[1];
             setPlaceId(pid);
-            if (pid.startsWith("ChIJ") || pid.startsWith("Eh")) {
+            if (pid) {
               setGoogleReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
             } else {
               setGoogleReviewUrl("");
