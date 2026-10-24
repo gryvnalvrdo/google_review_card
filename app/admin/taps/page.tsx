@@ -968,6 +968,7 @@ export default function TapsPage() {
   const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
+  const showReviewBtn = (dailyMode === "today" || dailyMode === "last7" || dailyMode === "last30") && !customDate;
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
@@ -2896,7 +2897,7 @@ export default function TapsPage() {
                                   <span className="tap-time-exact">{timeStr}</span>
                                 </div>
 
-                                {reviewUrl && (
+                                {showReviewBtn && reviewUrl && (
                                   <a
                                     href={reviewUrl}
                                     target="_blank"
@@ -3121,7 +3122,7 @@ export default function TapsPage() {
                                   <span className="cafe-count-unit">tap</span>
                                 </div>
 
-                                {c.reviewUrl && (
+                                {showReviewBtn && c.reviewUrl && (
                                   <a
                                     href={c.reviewUrl}
                                     target="_blank"
@@ -3366,7 +3367,6 @@ export default function TapsPage() {
                           const isStoreOpen = expandedStore === storeKey;
                           const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
                           const percent = Math.round((s.count / maxCount) * 100);
-                          const storeReviewUrl = cardUrlMap.get(s.code) || (s.storeName ? getPublicGoogleReviewUrl("", s.storeName) : "");
 
                           const rankMedal =
                             idx === 0 ? "🥇" :
@@ -3431,7 +3431,7 @@ export default function TapsPage() {
                                   />
                                 </div>
 
-                                {/* Bottom row: Actions (Detail tap + Google Review link) */}
+                                {/* Bottom row: Actions (Detail tap) */}
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: "0.72rem" }}>
                                   <button
                                     type="button"
@@ -3444,23 +3444,6 @@ export default function TapsPage() {
                                   >
                                     {isStoreOpen ? "▲ Tutup rincian jam" : `▼ Lihat detail ${s.count} tap`}
                                   </button>
-
-                                  {storeReviewUrl && (
-                                    <a
-                                      href={storeReviewUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      style={{
-                                        color: "#FCD34D", textDecoration: "none", fontWeight: 600,
-                                        display: "inline-flex", alignItems: "center", gap: 4,
-                                        background: "rgba(245,158,11,0.08)", padding: "3px 8px", borderRadius: 6,
-                                        border: "1px solid rgba(245,158,11,0.25)",
-                                      }}
-                                      title="Buka menu ulasan Google publik toko ini untuk membaca ulasan pelanggan"
-                                    >
-                                      ⭐ Menu Ulasan ↗
-                                    </a>
-                                  )}
                                 </div>
                               </div>
 
