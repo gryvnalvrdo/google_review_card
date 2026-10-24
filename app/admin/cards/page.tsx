@@ -251,32 +251,13 @@ export default function CardsPage() {
         <div className="mobile-container-pad" style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
           {/* Header Title */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                💳 Daftar Kartu Toko
-              </h1>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
-                Kelola kartu toko aktif, cetak ulang QR resolusi tinggi, atau edit data toko.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => setShowScanner(true)}
-                className="btn btn-ghost"
-                style={{ fontSize: "0.85rem", padding: "8px 14px", color: "#34D399", borderColor: "rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)" }}
-              >
-                📷 Scan QR Kartu
-              </button>
-              <a
-                href="/admin"
-                className="btn btn-primary"
-                style={{ fontSize: "0.85rem", padding: "8px 16px" }}
-              >
-                ➕ Hubungkan Kartu Baru
-              </a>
-            </div>
+          <div style={{ marginBottom: 20 }}>
+            <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+              💳 Daftar Kartu Toko
+            </h1>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
+              Kelola kartu toko aktif, cetak ulang QR resolusi tinggi, atau edit data toko.
+            </p>
           </div>
               {/* KPI Stats (3 cards horizontal on desktop and mobile) */}
               <div className="stats-grid-3" style={{ marginBottom: 22 }}>
