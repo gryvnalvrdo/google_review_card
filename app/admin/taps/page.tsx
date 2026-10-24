@@ -50,20 +50,20 @@ function getNiceYScale(maxVal: number) {
   };
 }
 
-// ── SVG Bar Chart (explicit X & Y axes, scale numbers, gridlines, values) ─
+// ── SVG Bar Chart (Mobile-Adaptive, Large Numbers, Zero-Squish) ──────
 function BarChart({
   data,
-  color = "#F59E0B",
+  color = "#6366F1",
   yAxisUnit = "Tap",
-  xAxisTitle = "Waktu",
+  xAxisTitle = "",
   showValue = true,
   onBarClick,
   selectedIndex,
-  benchmarkLine,
 }: {
   data: {
     label: string;
     subLabel?: string;
+    mobileSubLabel?: string;
     value: number;
     highlight?: boolean;
     tooltip?: string;
@@ -76,35 +76,48 @@ function BarChart({
   showValue?: boolean;
   onBarClick?: (index: number, item: any) => void;
   selectedIndex?: number | null;
-  benchmarkLine?: {
-    value: number;
-    label: string;
-    color?: string;
-    unit?: string;
-  };
+  benchmarkLine?: any;
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth <= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   const maxVal = Math.max(...data.map((d) => d.value), 0);
   const { niceMax, ticks } = getNiceYScale(maxVal);
 
-  const W = 820;
+  const isFewBars = data.length <= 8;
+  const W = isMobile ? (isFewBars ? 380 : Math.max(data.length * 32, 600)) : 820;
   const H = 220;
-  const PAD_L = 46;
-  const PAD_R = 24;
-  const PAD_T = 26;
-  const PAD_B = 34;
+  const PAD_L = isMobile ? 32 : 46;
+  const PAD_R = isMobile ? 12 : 24;
+  const PAD_T = isMobile ? 32 : 28;
+  const PAD_B = 38;
 
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
-  const y0 = PAD_T + chartH; // Baseline Y position
+  const y0 = PAD_T + chartH;
 
   const slotW = data.length > 0 ? chartW / data.length : chartW;
-  const barW = Math.max(Math.min(Math.floor(slotW * 0.72), 34), 5);
+  const barW = Math.max(Math.min(Math.floor(slotW * 0.72), isMobile && isFewBars ? 28 : 34), 6);
+
+  const valFontSize = isMobile ? (isFewBars ? 16 : 13) : (isFewBars ? 14 : 12);
+  const xLabelFontSize = isMobile ? (isFewBars ? 11.5 : 10) : 10;
+  const xSubLabelFontSize = isMobile ? (isFewBars ? 9.5 : 8.5) : 8.5;
 
   return (
-    <div style={{ width: "100%", overflowX: "auto" }}>
+    <div style={{ width: "100%", overflowX: isMobile && !isFewBars ? "auto" : "hidden", WebkitOverflowScrolling: "touch" }}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        style={{ width: "100%", minWidth: data.length <= 8 ? "100%" : 460, height: "auto", display: "block" }}
+        style={{
+          width: "100%",
+          minWidth: isMobile && !isFewBars ? W : "100%",
+          height: "auto",
+          display: "block",
+        }}
         role="img"
         aria-label="Grafik Batang"
       >
@@ -142,10 +155,10 @@ function BarChart({
               />
               {/* Tick Number Label on Y-axis */}
               <text
-                x={PAD_L - 8}
+                x={PAD_L - 6}
                 y={y + 3.5}
                 fill="#94A3B8"
-                fontSize={10}
+                fontSize={isMobile ? 10 : 10.5}
                 fontWeight={600}
                 fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
                 textAnchor="end"
@@ -187,7 +200,7 @@ function BarChart({
         />
         {xAxisTitle && (
           <text
-            x={W - PAD_R + 10}
+            x={W - PAD_R + 8}
             y={y0 + 3.5}
             fill="#64748B"
             fontSize={9.5}
@@ -251,15 +264,16 @@ function BarChart({
                 style={{ transition: "all 0.2s ease" }}
               />
 
-              {/* Value on top of bar */}
+              {/* Value on top of bar (Large, Bold & Crisp on Mobile) */}
               {showValue && d.value > 0 && (
                 <text
                   x={cx}
-                  y={by - 5}
-                  fill={isHighlight ? "#34D399" : "#F8FAFC"}
-                  fontSize={barW < 14 ? 8.5 : 9.5}
-                  fontWeight={700}
+                  y={by - 6}
+                  fill={isHighlight ? "#34D399" : "#FFFFFF"}
+                  fontSize={valFontSize}
+                  fontWeight={800}
                   textAnchor="middle"
+                  style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
                 >
                   {d.value}
                 </text>
@@ -277,235 +291,79 @@ function BarChart({
                 />
               )}
 
-              {/* Sumbu X: Primary Label */}
-              {d.label && (
-                <text
-                  x={cx}
-                  y={y0 + (d.subLabel ? 14 : 17)}
-                  fill={isHighlight ? "#34D399" : "#94A3B8"}
-                  fontSize={9}
-                  fontWeight={isHighlight ? 700 : 500}
-                  textAnchor="middle"
-                >
-                  {d.label}
-                </text>
-              )}
-
-              {/* Sumbu X: Sub-label (e.g. date under day name) */}
-              {d.subLabel && (
-                <text
-                  x={cx}
-                  y={y0 + 26}
-                  fill={isHighlight ? "#A7F3D0" : "#64748B"}
-                  fontSize={8}
-                  fontWeight={isHighlight ? 600 : 400}
-                  textAnchor="middle"
-                >
-                  {d.subLabel}
-                </text>
+              {/* Sumbu X: Primary Label & Sub-label */}
+              {isMobile && d.label && d.label.startsWith("Minggu ") ? (
+                <>
+                  <text
+                    x={cx}
+                    y={y0 + 11}
+                    fill={isHighlight ? "#34D399" : "#94A3B8"}
+                    fontSize={8.5}
+                    fontWeight={600}
+                    textAnchor="middle"
+                  >
+                    Minggu
+                  </text>
+                  <text
+                    x={cx}
+                    y={y0 + 22}
+                    fill={isHighlight ? "#34D399" : "#E2E8F0"}
+                    fontSize={10}
+                    fontWeight={800}
+                    textAnchor="middle"
+                  >
+                    {d.label.replace("Minggu ", "")}
+                  </text>
+                  {d.subLabel && (
+                    <text
+                      x={cx}
+                      y={y0 + 33}
+                      fill={isHighlight ? "#A7F3D0" : "#64748B"}
+                      fontSize={7.5}
+                      fontWeight={isHighlight ? 700 : 500}
+                      textAnchor="middle"
+                    >
+                      {d.mobileSubLabel || d.subLabel}
+                    </text>
+                  )}
+                </>
+              ) : (
+                <>
+                  {d.label && (
+                    <text
+                      x={cx}
+                      y={y0 + (d.subLabel ? 14 : 17)}
+                      fill={isHighlight ? "#34D399" : "#94A3B8"}
+                      fontSize={xLabelFontSize}
+                      fontWeight={isHighlight ? 700 : 600}
+                      textAnchor="middle"
+                    >
+                      {d.label}
+                    </text>
+                  )}
+                  {d.subLabel && (
+                    <text
+                      x={cx}
+                      y={y0 + 26}
+                      fill={isHighlight ? "#A7F3D0" : "#64748B"}
+                      fontSize={xSubLabelFontSize}
+                      fontWeight={isHighlight ? 700 : 500}
+                      textAnchor="middle"
+                    >
+                      {d.subLabel}
+                    </text>
+                  )}
+                </>
               )}
             </g>
           );
         })}
-
-        {/* ── Benchmark Reference Line (Garis Rata-rata) ── */}
-        {benchmarkLine && benchmarkLine.value > 0 && benchmarkLine.value <= niceMax && (() => {
-          const bY = y0 - (benchmarkLine.value / niceMax) * chartH;
-          const bColor = benchmarkLine.color || "#F59E0B";
-          const badgeText = `${benchmarkLine.label}: ${benchmarkLine.value}${benchmarkLine.unit ? ` ${benchmarkLine.unit}` : ""}`;
-          return (
-            <g key="benchmark-line">
-              <line
-                x1={PAD_L}
-                y1={bY}
-                x2={W - PAD_R}
-                y2={bY}
-                stroke={bColor}
-                strokeDasharray="4 4"
-                strokeWidth={1.5}
-                opacity={0.85}
-              />
-              <rect
-                x={W - PAD_R - 134}
-                y={bY - 10}
-                width={134}
-                height={20}
-                rx={5}
-                fill="rgba(15, 23, 42, 0.92)"
-                stroke={bColor}
-                strokeWidth={1}
-              />
-              <text
-                x={W - PAD_R - 67}
-                y={bY + 3.5}
-                fill={bColor}
-                fontSize={9}
-                fontWeight={700}
-                textAnchor="middle"
-              >
-                {badgeText}
-              </text>
-            </g>
-          );
-        })()}
       </svg>
     </div>
   );
 }
 
-// ── Helper functions for Smart Insights ─────────────────────────────
-function getTopOutlet(logs: TapLogEntry[]) {
-  if (logs.length === 0) return null;
-  const map = new Map<string, number>();
-  for (const l of logs) {
-    const name = l.storeName || "Toko Tanpa Nama";
-    map.set(name, (map.get(name) || 0) + 1);
-  }
-  let topName = "";
-  let topCount = 0;
-  map.forEach((cnt, name) => {
-    if (cnt > topCount) {
-      topCount = cnt;
-      topName = name;
-    }
-  });
-  const percent = Math.round((topCount / logs.length) * 100);
-  return { name: topName, count: topCount, percent };
-}
 
-function getPeakTime(logs: TapLogEntry[]) {
-  if (logs.length === 0) return null;
-  const hourCounts = Array(24).fill(0);
-  const dayCounts = Array(7).fill(0); // 0 = Minggu, 1 = Senin, ...
-  const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  for (const l of logs) {
-    const d = new Date(l.tappedAt);
-    const h = d.getHours();
-    const day = d.getDay();
-    if (h >= 0 && h < 24) hourCounts[h]++;
-    dayCounts[day]++;
-  }
-  const maxHVal = Math.max(...hourCounts);
-  const maxHour = hourCounts.indexOf(maxHVal);
-  const maxDVal = Math.max(...dayCounts);
-  const maxDay = dayCounts.indexOf(maxDVal);
-  return {
-    peakHourStr: maxHVal > 0 ? `${String(maxHour).padStart(2, "0")}.00–${String((maxHour + 1) % 24).padStart(2, "0")}.00` : "-",
-    peakHourCount: maxHVal,
-    peakDayName: maxDVal > 0 ? dayNames[maxDay] : "-",
-    peakDayCount: maxDVal,
-  };
-}
-
-// ── SmartInsightCard — 3 AI / Data-driven Key Takeaways ───────────────
-function SmartInsightCard({
-  scopeTitle,
-  logs,
-  wowGrowth,
-  prevPeriodCount,
-  currentPeriodCount,
-  customPeakText,
-}: {
-  scopeTitle: string;
-  logs: TapLogEntry[];
-  wowGrowth?: number | null;
-  prevPeriodCount?: number;
-  currentPeriodCount?: number;
-  customPeakText?: string;
-}) {
-  const topOutlet = useMemo(() => getTopOutlet(logs), [logs]);
-  const peakTime = useMemo(() => getPeakTime(logs), [logs]);
-
-  if (logs.length === 0) return null;
-
-  return (
-    <div className="smart-insight-card">
-      <div className="smart-insight-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: "1.1rem" }}>⚡</span>
-          <div>
-            <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#F0F0FF" }}>
-              Smart Insight Otomatis · {scopeTitle}
-            </h4>
-            <p style={{ margin: 0, fontSize: "0.72rem", color: "var(--text-muted)" }}>
-              Ringkasan performa otomatis berdasarkan {logs.length} riwayat tap terekam
-            </p>
-          </div>
-        </div>
-        <span className="smart-insight-badge">
-          ✦ Insight Cerdas
-        </span>
-      </div>
-
-      <div className="smart-insight-grid">
-        {/* Kolom 1: Prime Time */}
-        <div className="smart-insight-item">
-          <div className="smart-insight-icon" style={{ background: "rgba(56, 189, 248, 0.12)", color: "#38BDF8" }}>
-            ⏰
-          </div>
-          <div>
-            <span className="smart-insight-kpi-label">Puncak Kunjungan</span>
-            <div className="smart-insight-kpi-val">
-              {customPeakText || peakTime?.peakHourStr || "-"}
-            </div>
-            <div className="smart-insight-kpi-sub">
-              {peakTime?.peakDayName && peakTime.peakDayName !== "-" ? `Hari teramai: ${peakTime.peakDayName} (${peakTime.peakDayCount} tap)` : `${peakTime?.peakHourCount || 0} tap di jam ini`}
-            </div>
-          </div>
-        </div>
-
-        {/* Kolom 2: Top Outlet */}
-        <div className="smart-insight-item">
-          <div className="smart-insight-icon" style={{ background: "rgba(245, 158, 11, 0.12)", color: "#F59E0B" }}>
-            ☕
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <span className="smart-insight-kpi-label">Outlet Teraktif</span>
-            <div className="smart-insight-kpi-val" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={topOutlet?.name}>
-              {topOutlet?.name || "Belum ada"}
-            </div>
-            <div className="smart-insight-kpi-sub">
-              {topOutlet ? `${topOutlet.count} tap (${topOutlet.percent}% pangsa ulasan)` : "0 tap"}
-            </div>
-          </div>
-        </div>
-
-        {/* Kolom 3: Pertumbuhan / Momentum */}
-        <div className="smart-insight-item">
-          <div
-            className="smart-insight-icon"
-            style={{
-              background: (wowGrowth ?? 0) >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-              color: (wowGrowth ?? 0) >= 0 ? "#34D399" : "#F87171"
-            }}
-          >
-            {(wowGrowth ?? 0) >= 0 ? "🚀" : "📉"}
-          </div>
-          <div>
-            <span className="smart-insight-kpi-label">Laju Pertumbuhan</span>
-            <div
-              className="smart-insight-kpi-val"
-              style={{ color: wowGrowth !== undefined && wowGrowth !== null ? (wowGrowth >= 0 ? "#34D399" : "#F87171") : "#94A3B8" }}
-            >
-              {wowGrowth !== undefined && wowGrowth !== null ? (
-                `${wowGrowth >= 0 ? `+${wowGrowth}%` : `${wowGrowth}%`} WoW`
-              ) : (
-                `${logs.length} Total Tap`
-              )}
-            </div>
-            <div className="smart-insight-kpi-sub">
-              {prevPeriodCount !== undefined && currentPeriodCount !== undefined ? (
-                `${currentPeriodCount} tap vs ${prevPeriodCount} tap periode lalu`
-              ) : (
-                "Aktivitas ulasan berjalan sehat"
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── InteractiveBreadcrumb — Navigasi Mundur-Maju 3 Level ─────────────
 function InteractiveBreadcrumb({
@@ -600,16 +458,6 @@ function CafeBreakdownCard({
   }
 
   const medals = ["🥇", "🥈", "🥉"];
-  const barGradients = [
-    "linear-gradient(90deg, #F59E0B, #FCD34D)", // gold
-    "linear-gradient(90deg, #6366F1, #818CF8)", // indigo
-    "linear-gradient(90deg, #10B981, #34D399)", // emerald
-    "linear-gradient(90deg, #EC4899, #F472B6)", // pink
-    "linear-gradient(90deg, #8B5CF6, #A78BFA)", // purple
-    "linear-gradient(90deg, #06B6D4, #22D3EE)", // cyan
-    "linear-gradient(90deg, #F97316, #FB923C)", // orange
-  ];
-  const dotColors = ["#F59E0B", "#6366F1", "#10B981", "#EC4899", "#8B5CF6", "#06B6D4", "#F97316"];
 
   return (
     <div className="cafe-breakdown-card">
@@ -627,64 +475,10 @@ function CafeBreakdownCard({
         </span>
       </div>
 
-      {/* ── Mini Leaderboard: Stacked Multi-Segment Rainbow Bar (Kontribusi Toko) ── */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            📊 Pangsa Pasar Kontribusi ({countsByStore.length} Toko)
-          </span>
-          <span style={{ fontSize: "0.72rem", color: "#A5B4FC", fontWeight: 700 }}>
-            100% Total ({total} Tap)
-          </span>
-        </div>
-
-        {/* Stacked Rainbow Bar */}
-        <div className="cafe-stacked-bar">
-          {countsByStore.map((store, i) => {
-            const pct = total > 0 ? (store.count / total) * 100 : 0;
-            if (pct <= 0) return null;
-            return (
-              <div
-                key={store.storeName}
-                style={{
-                  width: `${pct}%`,
-                  height: "100%",
-                  background: barGradients[i % barGradients.length],
-                  transition: "width 0.3s ease",
-                }}
-                title={`${store.storeName}: ${store.count} tap (${Math.round(pct)}%)`}
-              />
-            );
-          })}
-        </div>
-
-        {/* Mini Legend Top 4 Outlet */}
-        <div className="cafe-stacked-legend">
-          {countsByStore.slice(0, 4).map((store, i) => {
-            const pct = total > 0 ? Math.round((store.count / total) * 100) : 0;
-            return (
-              <div key={store.storeName} className="cafe-legend-item">
-                <span className="cafe-legend-dot" style={{ background: dotColors[i % dotColors.length] }} />
-                <span className="cafe-legend-name">{store.storeName}</span>
-                <span className="cafe-legend-pct">{pct}%</span>
-              </div>
-            );
-          })}
-          {countsByStore.length > 4 && (
-            <div className="cafe-legend-item">
-              <span className="cafe-legend-dot" style={{ background: "#64748B" }} />
-              <span className="cafe-legend-name">+{countsByStore.length - 4} Toko Lain</span>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {countsByStore.map((store, i) => {
-          const percentOfTotal = total > 0 ? Math.round((store.count / total) * 100) : 0;
           const relativePercent = Math.round((store.count / max) * 100);
           const reviewUrl = cardUrlMap.get(store.code) || (store.storeName ? getPublicGoogleReviewUrl("", store.storeName) : "");
-          const gradient = barGradients[i % barGradients.length];
 
           return (
             <div key={store.storeName} className="cafe-breakdown-item">
@@ -704,9 +498,6 @@ function CafeBreakdownCard({
                 <div className="cafe-breakdown-stats">
                   <span className="cafe-tap-count">
                     {store.count} tap
-                  </span>
-                  <span className="cafe-percent">
-                    ({percentOfTotal}%)
                   </span>
                   {reviewUrl && (
                     <a
@@ -728,7 +519,9 @@ function CafeBreakdownCard({
                   style={{
                     width: `${relativePercent}%`,
                     height: "100%",
-                    background: gradient,
+                    background: i === 0
+                      ? "linear-gradient(90deg, #F59E0B, #FCD34D)"
+                      : "linear-gradient(90deg, #6366F1, #818CF8)",
                     borderRadius: 999,
                     transition: "width 0.3s ease",
                   }}
@@ -1442,6 +1235,7 @@ export default function TapsPage() {
       weekKey: string;
       label: string;
       subLabel: string;
+      mobileSubLabel: string;
       start: Date;
       end: Date;
       count: number;
@@ -1463,10 +1257,17 @@ export default function TapsPage() {
         return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
       });
 
+      const sDay = wInfo.start.getDate();
+      const sMo = wInfo.start.getMonth() + 1;
+      const eDay = wInfo.end.getDate();
+      const eMo = wInfo.end.getMonth() + 1;
+      const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
+
       weeks.push({
         weekKey: wInfo.weekKey,
         label: wInfo.label,
         subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
+        mobileSubLabel: mobileRange,
         start: wInfo.start,
         end: wInfo.end,
         count: wLogs.length,
@@ -1544,10 +1345,11 @@ export default function TapsPage() {
       return {
         label: w.subLabel,
         subLabel: w.label,
+        mobileSubLabel: w.mobileSubLabel,
         value: w.count,
         weekKey: w.weekKey,
         highlight: isSelected || (w.count === maxV && maxV > 0),
-        tooltip: `${w.subLabel} (${w.label}): ${w.count} tap${w.wowGrowth !== undefined && w.wowGrowth !== null ? ` (${w.wowGrowth >= 0 ? `+${w.wowGrowth}%` : `${w.wowGrowth}%`} vs minggu lalu)` : ""}`,
+        tooltip: `${w.subLabel} (${w.label}): ${w.count} tap`,
       };
     });
   }, [weeklyTrendData, selectedWeekKey]);
@@ -2417,13 +2219,6 @@ export default function TapsPage() {
                       backLabel={selectedWeekObj ? `Kembali ke ${selectedWeekObj.subLabel}` : "Kembali ke Tren Harian"}
                     />
 
-                    {/* 5. Kartu Smart Insight Otomatis untuk Hari Terpilih */}
-                    <SmartInsightCard
-                      scopeTitle={`Hari ${formatDateIndo(selectedDrilldownDate)}`}
-                      logs={drilldownLogs}
-                      customPeakText={drilldownPeakHour ? `${drilldownPeakHour.label} (${drilldownPeakHour.count} tap)` : undefined}
-                    />
-
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
                       <div>
                         <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F0F0FF" }}>
@@ -2450,26 +2245,13 @@ export default function TapsPage() {
                       </div>
                     </div>
 
-                    {/* 4. BarChart dengan Benchmark Reference Line */}
-                    {(() => {
-                      const activeHours = drilldownHourData.filter(h => h.value > 0);
-                      const avgHourVal = activeHours.length > 0 ? Math.round(drilldownLogs.length / activeHours.length) : 0;
-                      return (
-                        <BarChart
-                          data={drilldownHourData}
-                          color="#38BDF8"
-                          yAxisUnit="Tap"
-                          xAxisTitle="Jam"
-                          showValue={true}
-                          benchmarkLine={avgHourVal > 0 ? {
-                            value: avgHourVal,
-                            label: "Rata-rata Jam Aktif",
-                            color: "#38BDF8",
-                            unit: "tap/jam",
-                          } : undefined}
-                        />
-                      );
-                    })()}
+                    <BarChart
+                      data={drilldownHourData}
+                      color="#38BDF8"
+                      yAxisUnit="Tap"
+                      xAxisTitle="Jam"
+                      showValue={true}
+                    />
 
                     {drilldownLogs.length === 0 && (
                       <div style={{
@@ -2607,7 +2389,7 @@ export default function TapsPage() {
                             </span>
                             {peakHour ? (
                               <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                                🏆 Jam Puncak {hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}: <strong>{peakHour.label}</strong> ({peakHour.count} tap)
+                                🏆 Jam Puncak: <strong>{peakHour.label}</strong> ({peakHour.count} tap)
                               </span>
                             ) : (
                               <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
@@ -2666,9 +2448,9 @@ export default function TapsPage() {
                                     {count} tap
                                   </span>
                                 </div>
-                                <div style={{ fontSize: "0.72rem", color: isAct ? "#CBD5E1" : "var(--text-muted)", marginTop: 5, display: "flex", alignItems: "center", gap: 5 }}>
-                                  <span>🏆 Puncak:</span>
-                                  <strong style={{ color: isAct ? "#34D399" : "#94A3B8" }}>
+                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                                  <span style={{ color: isAct ? "#CBD5E1" : "var(--text-muted)" }}>🏆 Puncak:</span>
+                                  <strong style={{ color: "#34D399" }}>
                                     {peak ? `${peak.label} (${peak.count} tap)` : "Belum ada"}
                                   </strong>
                                 </div>
@@ -2677,33 +2459,13 @@ export default function TapsPage() {
                           })}
                         </div>
 
-                        {/* 5. Smart Insight Otomatis untuk Distribusi Jam */}
-                        <SmartInsightCard
-                          scopeTitle={hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"}
-                          logs={hourFilteredLogs}
-                          customPeakText={peakHour ? `${peakHour.label} (${peakHour.count} tap)` : undefined}
+                        <BarChart
+                          data={hourData}
+                          color="#6366F1"
+                          yAxisUnit="Tap"
+                          xAxisTitle="Jam"
+                          showValue={true}
                         />
-
-                        {/* 4. BarChart Jam dengan Garis Rata-rata */}
-                        {(() => {
-                          const activeHours = hourData.filter(h => h.value > 0);
-                          const avgH = activeHours.length > 0 ? Math.round(hourFilteredLogs.length / activeHours.length) : 0;
-                          return (
-                            <BarChart
-                              data={hourData}
-                              color="#6366F1"
-                              yAxisUnit="Tap"
-                              xAxisTitle="Jam"
-                              showValue={true}
-                              benchmarkLine={avgH > 0 ? {
-                                value: avgH,
-                                label: "Rata-rata Jam Sibuk",
-                                color: "#818CF8",
-                                unit: "tap/jam",
-                              } : undefined}
-                            />
-                          );
-                        })()}
 
                         {hourFilteredLogs.length === 0 && (
                           <div style={{
@@ -2738,12 +2500,6 @@ export default function TapsPage() {
                           items={[
                             { label: `Tren Aktivitas Harian (${trendRange} Hari)`, icon: "📅", active: true },
                           ]}
-                        />
-
-                        {/* 5. Kartu Smart Insight Otomatis untuk Tren Harian */}
-                        <SmartInsightCard
-                          scopeTitle={`${trendRange} Hari Terakhir`}
-                          logs={trendRangeLogs}
                         />
 
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
@@ -2821,32 +2577,18 @@ export default function TapsPage() {
                           </div>
                         </div>
 
-                        {/* 4. BarChart dengan Benchmark Reference Line */}
-                        {(() => {
-                          const currentData = trendRange === 7 ? trendData7 : trendData30;
-                          const trendTotal = currentData.reduce((s, d) => s + d.value, 0);
-                          const avgDaily = Math.round(trendTotal / trendRange);
-                          return (
-                            <BarChart
-                              data={currentData}
-                              color="#F59E0B"
-                              yAxisUnit="Tap"
-                              xAxisTitle="Tanggal"
-                              showValue={true}
-                              benchmarkLine={{
-                                value: Math.max(avgDaily, 1),
-                                label: "Rata-rata",
-                                color: "#F59E0B",
-                                unit: "tap/hari",
-                              }}
-                              onBarClick={(_idx, item: any) => {
-                                if (item.dateKey) {
-                                  setSelectedDrilldownDate(item.dateKey);
-                                }
-                              }}
-                            />
-                          );
-                        })()}
+                        <BarChart
+                          data={trendRange === 7 ? trendData7 : trendData30}
+                          color="#F59E0B"
+                          yAxisUnit="Tap"
+                          xAxisTitle="Tanggal"
+                          showValue={true}
+                          onBarClick={(_idx, item: any) => {
+                            if (item.dateKey) {
+                              setSelectedDrilldownDate(item.dateKey);
+                            }
+                          }}
+                        />
 
                         {/* Breakdown Cafe Periode Harian Ini */}
                         <CafeBreakdownCard
@@ -2874,31 +2616,11 @@ export default function TapsPage() {
                               backLabel="Kembali ke Semua Minggu"
                             />
 
-                            {/* 5. Kartu Smart Insight Otomatis untuk Minggu Terpilih */}
-                            <SmartInsightCard
-                              scopeTitle={`${selectedWeekObj.subLabel} (${selectedWeekObj.label})`}
-                              logs={selectedWeekObj.logs}
-                              wowGrowth={selectedWeekObj.wowGrowth}
-                              prevPeriodCount={selectedWeekObj.prevCount}
-                              currentPeriodCount={selectedWeekObj.count}
-                            />
-
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                                 <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
                                   Total Minggu Ini: {selectedWeekObj.count} tap
                                 </span>
-                                {/* 3. Indikator Pertumbuhan WoW */}
-                                {selectedWeekObj.wowGrowth !== undefined && selectedWeekObj.wowGrowth !== null && (
-                                  <span className="badge" style={{
-                                    background: selectedWeekObj.wowGrowth >= 0 ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)",
-                                    color: selectedWeekObj.wowGrowth >= 0 ? "#34D399" : "#FCA5A5",
-                                    border: `1px solid ${selectedWeekObj.wowGrowth >= 0 ? "rgba(16,185,129,0.35)" : "rgba(239,68,68,0.35)"}`,
-                                    fontWeight: 700,
-                                  }}>
-                                    {selectedWeekObj.wowGrowth >= 0 ? `🚀 +${selectedWeekObj.wowGrowth}% WoW (${selectedWeekObj.count} vs ${selectedWeekObj.prevCount ?? 0} tap)` : `📉 ${selectedWeekObj.wowGrowth}% WoW (${selectedWeekObj.count} vs ${selectedWeekObj.prevCount ?? 0} tap)`}
-                                  </span>
-                                )}
                               </div>
 
                               <div style={{
@@ -2917,19 +2639,12 @@ export default function TapsPage() {
                               </div>
                             </div>
 
-                            {/* 4. BarChart dengan Benchmark Reference Line */}
                             <BarChart
                               data={weekDailyData}
                               color="#38BDF8"
                               yAxisUnit="Tap"
                               xAxisTitle="Hari"
                               showValue={true}
-                              benchmarkLine={{
-                                value: Math.max(Math.round(selectedWeekObj.count / 7), 1),
-                                label: "Rata-rata Harian",
-                                color: "#38BDF8",
-                                unit: "tap/hari",
-                              }}
                               onBarClick={(_idx, item: any) => {
                                 if (item.dateKey) {
                                   setSelectedDrilldownDate(item.dateKey);
@@ -2955,46 +2670,11 @@ export default function TapsPage() {
                               ]}
                             />
 
-                            {/* 5. Kartu Smart Insight Otomatis untuk 8 Minggu Terakhir */}
-                            {(() => {
-                              const latestWeek = weeklyTrendData[weeklyTrendData.length - 1];
-                              const prevWeek = weeklyTrendData[weeklyTrendData.length - 2];
-                              return (
-                                <SmartInsightCard
-                                  scopeTitle="8 Minggu Terakhir"
-                                  logs={eightWeeksLogs}
-                                  wowGrowth={latestWeek?.wowGrowth}
-                                  prevPeriodCount={prevWeek?.count}
-                                  currentPeriodCount={latestWeek?.count}
-                                />
-                              );
-                            })()}
-
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
                               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                                 <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
                                   Total 8 Minggu: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
                                 </span>
-                                <span className="badge" style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-muted)" }}>
-                                  Rata-rata: ~{Math.round(weeklyTrendData.reduce((s, w) => s + w.count, 0) / 8)} tap/minggu
-                                </span>
-                                {/* 3. Indikator Pertumbuhan WoW Minggu Terakhir */}
-                                {(() => {
-                                  const latestWeek = weeklyTrendData[weeklyTrendData.length - 1];
-                                  if (latestWeek && latestWeek.wowGrowth !== undefined && latestWeek.wowGrowth !== null) {
-                                    return (
-                                      <span className="badge" style={{
-                                        background: latestWeek.wowGrowth >= 0 ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)",
-                                        color: latestWeek.wowGrowth >= 0 ? "#34D399" : "#FCA5A5",
-                                        border: `1px solid ${latestWeek.wowGrowth >= 0 ? "rgba(16,185,129,0.35)" : "rgba(239,68,68,0.35)"}`,
-                                        fontWeight: 700,
-                                      }}>
-                                        {latestWeek.wowGrowth >= 0 ? `🚀 +${latestWeek.wowGrowth}% WoW Minggu Ini` : `📉 ${latestWeek.wowGrowth}% WoW Minggu Ini`}
-                                      </span>
-                                    );
-                                  }
-                                  return null;
-                                })()}
                               </div>
 
                               <div style={{
@@ -3013,30 +2693,18 @@ export default function TapsPage() {
                               </div>
                             </div>
 
-                            {/* 4. BarChart dengan Benchmark Reference Line */}
-                            {(() => {
-                              const avgWeekly = Math.round(weeklyTrendData.reduce((s, w) => s + w.count, 0) / 8);
-                              return (
-                                <BarChart
-                                  data={weeklyChartData}
-                                  color="#8B5CF6"
-                                  yAxisUnit="Tap"
-                                  xAxisTitle="Minggu"
-                                  showValue={true}
-                                  benchmarkLine={{
-                                    value: Math.max(avgWeekly, 1),
-                                    label: "Rata-rata Mingguan",
-                                    color: "#A78BFA",
-                                    unit: "tap/minggu",
-                                  }}
-                                  onBarClick={(_idx, item: any) => {
-                                    if (item.weekKey) {
-                                      setSelectedWeekKey(item.weekKey);
-                                    }
-                                  }}
-                                />
-                              );
-                            })()}
+                            <BarChart
+                              data={weeklyChartData}
+                              color="#8B5CF6"
+                              yAxisUnit="Tap"
+                              xAxisTitle="Minggu"
+                              showValue={true}
+                              onBarClick={(_idx, item: any) => {
+                                if (item.weekKey) {
+                                  setSelectedWeekKey(item.weekKey);
+                                }
+                              }}
+                            />
 
                             {/* Breakdown Cafe 8 Minggu Ini */}
                             <CafeBreakdownCard
