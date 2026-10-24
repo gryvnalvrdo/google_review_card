@@ -38,7 +38,7 @@ const TAP_PREFIX   = "tap:";
 const INDEX_KEY    = "card:_index";
 const STOK_INDEX   = "stok:_index";   // set kode yang sudah dicetak tapi belum di-assign
 const TAP_LOG_KEY  = "tap_log";        // list riwayat tap (JSON string), newest first
-const TAP_LOG_MAX  = 5000;             // maksimal entri yang disimpan (menampung riwayat bulanan penuh)
+const TAP_LOG_MAX  = 25000;            // maksimal entri yang disimpan (kapasitas jangka panjang multi-tahun puluhan cafe)
 
 // Mengambil env vars standar atau nama hasil auto-generate Vercel Integration
 const kvUrl = process.env.KV_REST_API_URL || process.env.KV_REST_API_URL_KV_REST_API_URL;

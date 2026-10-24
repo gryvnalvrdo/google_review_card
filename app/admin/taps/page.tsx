@@ -666,10 +666,12 @@ export default function TapsPage() {
     return toDateInputValue(d);
   });
   const [customEndDate, setCustomEndDate] = useState<string>(() => toDateInputValue(new Date()));
-  const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>("all");
+  const [selectedStoreFilters, setSelectedStoreFilters] = useState<string[]>([]); // empty = all
+  const [storeFilterOpen, setStoreFilterOpen] = useState(false);
   const [trenView, setTrenView] = useState<"jam" | "harian" | "mingguan">("jam");
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
   const [hourPeriod, setHourPeriod] = useState<"today" | "last7" | "last30" | "all">("today");
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const lastKnownTapRef = useRef<string | null>(null);
 
   async function fetchData(isBackground = false) {
@@ -678,7 +680,7 @@ export default function TapsPage() {
 
     try {
       const [tapRes, cardRes] = await Promise.all([
-        fetch("/api/admin/taps?limit=5000"),
+        fetch("/api/admin/taps?limit=25000"),
         fetch("/api/admin/codes"),
       ]);
       if (tapRes.ok) {
@@ -726,6 +728,19 @@ export default function TapsPage() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Tutup dropdown filter outlet jika klik di luar
+  useEffect(() => {
+    if (!storeFilterOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Element;
+      if (!target.closest("#store-filter-dropdown-wrapper")) {
+        setStoreFilterOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [storeFilterOpen]);
 
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1124,15 +1139,25 @@ export default function TapsPage() {
 
   const storeFilteredLogs = useMemo(() => {
     let list = validLogs;
-    if (selectedStoreFilter !== "all") {
-      list = list.filter(l => l.storeName === selectedStoreFilter);
+    if (selectedStoreFilters.length > 0) {
+      const filterSet = new Set(selectedStoreFilters);
+      list = list.filter(l => filterSet.has(l.storeName));
     }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(l => l.storeName.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
     }
     return list;
-  }, [validLogs, selectedStoreFilter, search]);
+  }, [validLogs, selectedStoreFilters, search]);
+
+  // Apakah filter aktif dan hanya 1 outlet dipilih → sembunyikan CafeBreakdownCard
+  const isSingleOutletFilter = selectedStoreFilters.length === 1;
+
+  function toggleStoreFilter(store: string) {
+    setSelectedStoreFilters(prev =>
+      prev.includes(store) ? prev.filter(s => s !== store) : [...prev, store]
+    );
+  }
 
   const trendData7 = useMemo(() => {
     const days: { label: string; subLabel?: string; value: number; highlight?: boolean; tooltip: string; dateKey: string }[] = [];
@@ -2410,50 +2435,148 @@ export default function TapsPage() {
               </div>
             ) : (
               <div className="card" style={{ padding: "20px" }}>
-                {/* ── Global Outlet Filter Bar ── */}
+                {/* ── Global Outlet Filter Bar (Multi-Select) ── */}
                 <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
                   marginBottom: 18,
                   padding: "10px 14px",
-                  background: selectedStoreFilter !== "all" ? "rgba(99, 102, 241, 0.12)" : "rgba(255, 255, 255, 0.03)",
-                  border: selectedStoreFilter !== "all" ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid rgba(255, 255, 255, 0.08)",
+                  background: selectedStoreFilters.length > 0 ? "rgba(99, 102, 241, 0.12)" : "rgba(255, 255, 255, 0.03)",
+                  border: selectedStoreFilters.length > 0 ? "1px solid rgba(99, 102, 241, 0.35)" : "1px solid rgba(255, 255, 255, 0.08)",
                   borderRadius: 10,
-                  flexWrap: "wrap",
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: 1 }}>
-                    <label htmlFor="store-global-filter" style={{ fontSize: "0.82rem", fontWeight: 700, color: selectedStoreFilter !== "all" ? "#A5B4FC" : "#E2E8F0", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {/* Row 1: Label + Dropdown Trigger + Reset */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: selectedStoreFilters.length > 0 ? "#A5B4FC" : "#E2E8F0", display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                       <span>🏪</span> Filter Outlet:
-                    </label>
-                    <select
-                      id="store-global-filter"
-                      value={selectedStoreFilter}
-                      onChange={(e) => setSelectedStoreFilter(e.target.value)}
-                      style={{
-                        background: "#161622",
-                        color: "#F8FAFC",
-                        border: selectedStoreFilter !== "all" ? "1px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.15)",
-                        borderRadius: 8,
-                        padding: "6px 12px",
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
-                        outline: "none",
-                        cursor: "pointer",
-                        minWidth: 200,
-                        maxWidth: "100%",
-                      }}
-                    >
-                      <option value="all">Semua Outlet ({availableStores.length} Cafe)</option>
-                      {availableStores.map(store => (
-                        <option key={store} value={store}>{store}</option>
-                      ))}
-                    </select>
-                    {selectedStoreFilter !== "all" && (
+                    </span>
+
+                    {/* Custom dropdown trigger */}
+                    <div id="store-filter-dropdown-wrapper" style={{ position: "relative", flex: 1, minWidth: 180 }}>
                       <button
                         type="button"
-                        onClick={() => setSelectedStoreFilter("all")}
+                        onClick={() => setStoreFilterOpen(o => !o)}
+                        style={{
+                          width: "100%",
+                          background: "#161622",
+                          color: "#F8FAFC",
+                          border: selectedStoreFilters.length > 0 ? "1px solid #6366F1" : "1px solid rgba(255, 255, 255, 0.15)",
+                          borderRadius: 8,
+                          padding: "6px 32px 6px 12px",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                          textAlign: "left",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          position: "relative",
+                        }}
+                      >
+                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {selectedStoreFilters.length === 0
+                            ? `Semua Outlet (${availableStores.length} Cafe)`
+                            : selectedStoreFilters.length === 1
+                            ? selectedStoreFilters[0]
+                            : `${selectedStoreFilters.length} Outlet Dipilih`}
+                        </span>
+                        <span style={{ position: "absolute", right: 10, fontSize: "0.6rem", color: "#A5B4FC", pointerEvents: "none" }}>
+                          {storeFilterOpen ? "▲" : "▼"}
+                        </span>
+                      </button>
+
+                      {/* Dropdown panel */}
+                      {storeFilterOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "calc(100% + 6px)",
+                            left: 0,
+                            right: 0,
+                            zIndex: 999,
+                            background: "#181824",
+                            border: "1px solid rgba(99,102,241,0.4)",
+                            borderRadius: 10,
+                            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                            maxHeight: 260,
+                            overflowY: "auto",
+                            padding: "6px",
+                          }}
+                        >
+                          {/* Pilih Semua / Reset */}
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedStoreFilters([]); setStoreFilterOpen(false); }}
+                            style={{
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "7px 10px",
+                              borderRadius: 7,
+                              fontSize: "0.78rem",
+                              fontWeight: 700,
+                              color: selectedStoreFilters.length === 0 ? "#A5B4FC" : "#94A3B8",
+                              background: selectedStoreFilters.length === 0 ? "rgba(99,102,241,0.18)" : "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <span style={{
+                              width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                              border: selectedStoreFilters.length === 0 ? "2px solid #6366F1" : "2px solid #475569",
+                              background: selectedStoreFilters.length === 0 ? "#6366F1" : "transparent",
+                              display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 9, color: "#FFF",
+                            }}>✓</span>
+                            Semua Outlet
+                          </button>
+
+                          <div style={{ height: 1, background: "rgba(255,255,255,0.07)", marginBottom: 4 }} />
+
+                          {availableStores.map(store => {
+                            const checked = selectedStoreFilters.includes(store);
+                            return (
+                              <button
+                                key={store}
+                                type="button"
+                                onClick={() => toggleStoreFilter(store)}
+                                style={{
+                                  width: "100%",
+                                  textAlign: "left",
+                                  padding: "7px 10px",
+                                  borderRadius: 7,
+                                  fontSize: "0.78rem",
+                                  fontWeight: checked ? 700 : 500,
+                                  color: checked ? "#C7D2FE" : "#CBD5E1",
+                                  background: checked ? "rgba(99,102,241,0.15)" : "transparent",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  transition: "background 0.1s ease",
+                                }}
+                              >
+                                <span style={{
+                                  width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                                  border: checked ? "2px solid #6366F1" : "2px solid #475569",
+                                  background: checked ? "#6366F1" : "transparent",
+                                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                  fontSize: 9, color: "#FFF",
+                                }}>{checked ? "✓" : ""}</span>
+                                {store}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedStoreFilters.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStoreFilters([])}
                         style={{
                           background: "rgba(239, 68, 68, 0.15)",
                           border: "1px solid rgba(239, 68, 68, 0.3)",
@@ -2466,16 +2589,40 @@ export default function TapsPage() {
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 4,
+                          flexShrink: 0,
                           transition: "all 0.15s ease",
                         }}
                       >
-                        <span>✕</span> Reset ke Semua Outlet
+                        <span>✕</span> Reset
                       </button>
                     )}
                   </div>
-                  {selectedStoreFilter !== "all" && (
-                    <div style={{ fontSize: "0.74rem", color: "#A5B4FC", fontWeight: 600 }}>
-                      Menampilkan analitik khusus: <strong style={{ color: "#FFF" }}>{selectedStoreFilter}</strong> ({storeFilteredLogs.length} tap)
+
+                  {/* Row 2: Selected chips + count info */}
+                  {selectedStoreFilters.length > 0 && (
+                    <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                      {selectedStoreFilters.map(s => (
+                        <span
+                          key={s}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            background: "rgba(99,102,241,0.2)",
+                            border: "1px solid rgba(99,102,241,0.4)",
+                            borderRadius: 999, padding: "2px 8px 2px 10px",
+                            fontSize: "0.74rem", fontWeight: 700, color: "#C7D2FE",
+                          }}
+                        >
+                          {s}
+                          <button
+                            type="button"
+                            onClick={() => toggleStoreFilter(s)}
+                            style={{ background: "none", border: "none", color: "#818CF8", cursor: "pointer", padding: 0, fontSize: "0.8rem", lineHeight: 1 }}
+                          >✕</button>
+                        </span>
+                      ))}
+                      <span style={{ fontSize: "0.72rem", color: "#818CF8", fontWeight: 600 }}>
+                        · {storeFilteredLogs.length} tap
+                      </span>
                     </div>
                   )}
                 </div>
@@ -2546,13 +2693,15 @@ export default function TapsPage() {
                       </div>
                     )}
 
-                    {/* 2. Breakdown Cafe pada Tanggal Ini dengan Stacked Multi-Color Rainbow Bar */}
-                    <CafeBreakdownCard
-                      title={`Outlet yang Ditap pada ${formatDateIndo(selectedDrilldownDate)}`}
-                      subtitle="Daftar toko/cafe yang menerima tap pelanggan pada tanggal ini."
-                      logs={drilldownLogs}
-                      cardUrlMap={cardUrlMap}
-                    />
+                    {/* 2. Breakdown Cafe pada Tanggal Ini — sembunyikan jika hanya 1 outlet difilter */}
+                    {!isSingleOutletFilter && (
+                      <CafeBreakdownCard
+                        title={`Outlet yang Ditap pada ${formatDateIndo(selectedDrilldownDate)}`}
+                        subtitle="Daftar toko/cafe yang menerima tap pelanggan pada tanggal ini."
+                        logs={drilldownLogs}
+                        cardUrlMap={cardUrlMap}
+                      />
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -2760,13 +2909,15 @@ export default function TapsPage() {
                           </div>
                         )}
 
-                        {/* Breakdown Cafe Periode Jam Ini */}
-                        <CafeBreakdownCard
-                          title={`Peringkat Cafe Teraktif (${hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"})`}
-                          subtitle="Outlet yang menerima tap pelanggan pada rentang waktu terpilih."
-                          logs={hourFilteredLogs}
-                          cardUrlMap={cardUrlMap}
-                        />
+                        {/* Breakdown Cafe Periode Jam — sembunyikan jika hanya 1 outlet difilter */}
+                        {!isSingleOutletFilter && (
+                          <CafeBreakdownCard
+                            title={`Peringkat Cafe Teraktif (${hourPeriod === "today" ? "Hari Ini" : hourPeriod === "last7" ? "7 Hari Terakhir" : hourPeriod === "last30" ? "1 Bulan Terakhir" : "Semua Riwayat"})`}
+                            subtitle="Outlet yang menerima tap pelanggan pada rentang waktu terpilih."
+                            logs={hourFilteredLogs}
+                            cardUrlMap={cardUrlMap}
+                          />
+                        )}
                       </div>
                     )}
 
@@ -2950,13 +3101,15 @@ export default function TapsPage() {
                             </div>
                           )}
 
-                          {/* Breakdown Cafe Periode Harian Ini */}
-                          <CafeBreakdownCard
-                            title={`Peringkat Cafe Teraktif (${rangeTitle})`}
-                            subtitle={`Akumulasi kontribusi tap per cafe selama rentang waktu ini.`}
-                            logs={trendRangeLogs}
-                            cardUrlMap={cardUrlMap}
-                          />
+                          {/* Breakdown Cafe Periode Harian — sembunyikan jika hanya 1 outlet difilter */}
+                          {!isSingleOutletFilter && (
+                            <CafeBreakdownCard
+                              title={`Peringkat Cafe Teraktif (${rangeTitle})`}
+                              subtitle={`Akumulasi kontribusi tap per cafe selama rentang waktu ini.`}
+                              logs={trendRangeLogs}
+                              cardUrlMap={cardUrlMap}
+                            />
+                          )}
                         </div>
                       );
                     })()}
@@ -3013,13 +3166,15 @@ export default function TapsPage() {
                               }}
                             />
 
-                            {/* Breakdown Cafe Minggu Ini */}
-                            <CafeBreakdownCard
-                              title={`Cafe Teraktif pada ${selectedWeekObj.subLabel} (${selectedWeekObj.label})`}
-                              subtitle="Outlet yang menyumbang tap terbanyak dalam minggu terpilih ini."
-                              logs={selectedWeekObj.logs}
-                              cardUrlMap={cardUrlMap}
-                            />
+                            {/* Breakdown Cafe Minggu Ini — sembunyikan jika hanya 1 outlet difilter */}
+                            {!isSingleOutletFilter && (
+                              <CafeBreakdownCard
+                                title={`Cafe Teraktif pada ${selectedWeekObj.subLabel} (${selectedWeekObj.label})`}
+                                subtitle="Outlet yang menyumbang tap terbanyak dalam minggu terpilih ini."
+                                logs={selectedWeekObj.logs}
+                                cardUrlMap={cardUrlMap}
+                              />
+                            )}
                           </div>
                         ) : (
                           /* Level 1: Grafik Batang 8 Minggu Kalender */
@@ -3078,13 +3233,15 @@ export default function TapsPage() {
                               }}
                             />
 
-                            {/* Breakdown Cafe 8 Minggu Ini */}
-                            <CafeBreakdownCard
-                              title="Peringkat Cafe Teraktif (8 Minggu Terakhir)"
-                              subtitle="Akumulasi kontribusi tap per cafe selama 8 minggu."
-                              logs={eightWeeksLogs}
-                              cardUrlMap={cardUrlMap}
-                            />
+                            {/* Breakdown Cafe 8 Minggu — sembunyikan jika hanya 1 outlet difilter */}
+                            {!isSingleOutletFilter && (
+                              <CafeBreakdownCard
+                                title="Peringkat Cafe Teraktif (8 Minggu Terakhir)"
+                                subtitle="Akumulasi kontribusi tap per cafe selama 8 minggu."
+                                logs={eightWeeksLogs}
+                                cardUrlMap={cardUrlMap}
+                              />
+                            )}
                           </div>
                         )}
                       </div>
