@@ -91,11 +91,11 @@ function BarChart({
   const isFewBars = data.length <= 8;
   // Grafik selalu fit 100% lebar layar mobile tanpa perlu digeser (zero horizontal scrolling)
   const W = isMobile ? (isFewBars ? 400 : 480) : 820;
-  const H = isMobile ? 200 : 220;
-  const PAD_L = isMobile ? 26 : 42;
+  const H = isMobile ? 210 : 220;
+  const PAD_L = isMobile ? 24 : 42;
   const PAD_R = isMobile ? 12 : 24;
   const PAD_T = isMobile ? 24 : 28;
-  const PAD_B = isMobile ? 30 : 36;
+  const PAD_B = isMobile ? 38 : 36;
 
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
@@ -104,9 +104,9 @@ function BarChart({
   const slotW = data.length > 0 ? chartW / data.length : chartW;
   const barW = Math.max(Math.min(Math.floor(slotW * 0.7), isMobile ? (isFewBars ? 24 : 13) : 32), 6);
 
-  const valFontSize = isMobile ? (isFewBars ? 13 : 10.5) : (isFewBars ? 13 : 11.5);
-  const xLabelFontSize = isMobile ? (isFewBars ? 11 : 9.5) : 10;
-  const xSubLabelFontSize = isMobile ? (isFewBars ? 9 : 8) : 8.5;
+  const valFontSize = isMobile ? (isFewBars ? 12.5 : 10.5) : (isFewBars ? 13 : 11.5);
+  const xLabelFontSize = isMobile ? (isFewBars ? 10.5 : 9.5) : 10;
+  const xSubLabelFontSize = isMobile ? (isFewBars ? 8.5 : 8) : 8.5;
 
   return (
     <div style={{ width: "100%", overflow: "hidden" }}>
@@ -296,34 +296,24 @@ function BarChart({
                 <>
                   <text
                     x={cx}
-                    y={y0 + 11}
-                    fill={isHighlight ? "#34D399" : "#94A3B8"}
-                    fontSize={8.5}
-                    fontWeight={600}
-                    textAnchor="middle"
-                  >
-                    Minggu
-                  </text>
-                  <text
-                    x={cx}
-                    y={y0 + 22}
+                    y={y0 + 13}
                     fill={isHighlight ? "#34D399" : "#E2E8F0"}
-                    fontSize={10}
+                    fontSize={10.5}
                     fontWeight={800}
                     textAnchor="middle"
                   >
-                    {d.label.replace("Minggu ", "")}
+                    {`M${d.label.replace("Minggu ", "").trim()}`}
                   </text>
                   {d.subLabel && (
                     <text
                       x={cx}
-                      y={y0 + 33}
-                      fill={isHighlight ? "#A7F3D0" : "#64748B"}
-                      fontSize={7.5}
+                      y={y0 + 25}
+                      fill={isHighlight ? "#6EE7B7" : "#64748B"}
+                      fontSize={8}
                       fontWeight={isHighlight ? 700 : 500}
                       textAnchor="middle"
                     >
-                      {d.mobileSubLabel || d.subLabel}
+                      {d.mobileSubLabel || d.subLabel.split(" - ")[0] || d.subLabel}
                     </text>
                   )}
                 </>
@@ -1630,6 +1620,23 @@ export default function TapsPage() {
     });
   }, [storeFilteredLogs, weeklyTrendData]);
 
+  const eightWeeksCount = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 56);
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff).length;
+  }, [storeFilteredLogs]);
+
+  const twelveWeeksCount = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 84);
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff).length;
+  }, [storeFilteredLogs]);
+
+  const yearWeeksCount = useMemo(() => {
+    const y = selectedWeeklyYear || new Date().getFullYear();
+    return storeFilteredLogs.filter(l => new Date(l.tappedAt).getFullYear() === y).length;
+  }, [storeFilteredLogs, selectedWeeklyYear]);
+
   const trendRangeLogs = useMemo(() => {
     if (trendRange === "custom") {
       const start = new Date(customStartDate);
@@ -2837,8 +2844,8 @@ export default function TapsPage() {
                 ) : (
                   <div>
                     {/* ── Header Card dengan Mode Switcher Terpadu (Jam, Harian, Mingguan) ── */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
-                      <div>
+                    <div className="trend-header-row">
+                      <div className="trend-header-text">
                         <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F0F0FF" }}>
                           {trenView === "jam"
                             ? `⏱️ Distribusi Jam Masuk ${hourPeriod === "today" ? "(Hari Ini)" : hourPeriod === "last7" ? "(7 Hari Terakhir)" : hourPeriod === "last30" ? "(1 Bulan Terakhir)" : "(Semua Riwayat)"}`
@@ -2866,7 +2873,7 @@ export default function TapsPage() {
                       </div>
 
                       {/* Mode Switcher: 3 Tombol (Jam Masuk vs Tren Harian vs Tren Mingguan) */}
-                      <div className="chart-mode-switcher">
+                      <div className="chart-mode-switcher" style={{ flexShrink: 0 }}>
                         <button
                           type="button"
                           onClick={() => { setTrenView("jam"); setSelectedDrilldownDate(null); setSelectedWeekKey(null); }}
@@ -3061,116 +3068,10 @@ export default function TapsPage() {
 
                       return (
                         <div>
-                          {/* 1. Breadcrumb Interaktif Navigasi */}
-                          <InteractiveBreadcrumb
-                            items={[
-                              { label: `Tren Aktivitas Harian (${rangeTitle})`, icon: "📅", active: true },
-                            ]}
-                          />
-
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
+                          {/* Badges Info (Sesuai Foto 1) */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                              {/* Range Switcher (7 Hari vs 30 Hari vs Kustom) */}
-                              <div style={{ display: "inline-flex", background: "rgba(255,255,255,0.06)", padding: 3, borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setTrendRange(7)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 600,
-                                    borderRadius: 6,
-                                    background: trendRange === 7 ? "#F59E0B" : "transparent",
-                                    color: trendRange === 7 ? "#000" : "#94A3B8",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                >
-                                  7 Hari
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setTrendRange(30)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 600,
-                                    borderRadius: 6,
-                                    background: trendRange === 30 ? "#F59E0B" : "transparent",
-                                    color: trendRange === 30 ? "#000" : "#94A3B8",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                >
-                                  30 Hari
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setTrendRange("custom")}
-                                  style={{
-                                    padding: "4px 10px",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 600,
-                                    borderRadius: 6,
-                                    background: trendRange === "custom" ? "#F59E0B" : "transparent",
-                                    color: trendRange === "custom" ? "#000" : "#94A3B8",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                >
-                                  🗓️ Kustom
-                                </button>
-                              </div>
-
-                              {trendRange === "custom" && (
-                                <div style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 6,
-                                  padding: "4px 8px",
-                                  background: "rgba(245, 158, 11, 0.08)",
-                                  border: "1px solid rgba(245, 158, 11, 0.25)",
-                                  borderRadius: 8,
-                                  fontSize: "0.75rem",
-                                }}>
-                                  <input
-                                    type="date"
-                                    value={customStartDate}
-                                    onChange={(e) => setCustomStartDate(e.target.value)}
-                                    style={{
-                                      background: "#161622",
-                                      color: "#F8FAFC",
-                                      border: "1px solid rgba(255,255,255,0.15)",
-                                      borderRadius: 6,
-                                      padding: "3px 7px",
-                                      fontSize: "0.74rem",
-                                      outline: "none",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                  <span style={{ color: "var(--text-muted)", fontSize: "0.74rem" }}>s/d</span>
-                                  <input
-                                    type="date"
-                                    value={customEndDate}
-                                    onChange={(e) => setCustomEndDate(e.target.value)}
-                                    style={{
-                                      background: "#161622",
-                                      color: "#F8FAFC",
-                                      border: "1px solid rgba(255,255,255,0.15)",
-                                      borderRadius: 6,
-                                      padding: "3px 7px",
-                                      fontSize: "0.74rem",
-                                      outline: "none",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              <span className="badge badge-orange">
+                              <span className="badge badge-orange" style={{ background: "rgba(245,158,11,0.15)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.3)" }}>
                                 Total: {activeDailyData.reduce((s, d) => s + d.value, 0)} tap
                               </span>
 
@@ -3178,8 +3079,8 @@ export default function TapsPage() {
                                 const maxDay = activeDailyData.reduce((prev, cur) => (cur.value > prev.value ? cur : prev), activeDailyData[0]);
                                 if (maxDay && maxDay.value > 0) {
                                   return (
-                                    <span className="badge badge-green">
-                                      🏆 Hari Teramai: {maxDay.label || maxDay.subLabel} ({maxDay.value} tap)
+                                    <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                      🏆 Hari Teramai: <strong>{maxDay.label || maxDay.subLabel}</strong> ({maxDay.value} tap)
                                     </span>
                                   );
                                 }
@@ -3187,22 +3088,169 @@ export default function TapsPage() {
                               })()}
                             </div>
 
-                            {/* Petunjuk Interaktif Drill-Down */}
-                            <div style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              padding: "4px 10px",
-                              background: "rgba(56, 189, 248, 0.08)",
-                              border: "1px dashed rgba(56, 189, 248, 0.3)",
-                              borderRadius: 8,
-                              fontSize: "0.72rem",
-                              color: "#7DD3FC",
-                            }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#7DD3FC" }}>
                               <span>👆</span>
-                              <span><strong>Klik batang tanggal</strong> untuk membedah jam sibuk &amp; cafe</span>
+                              <span>Klik batang untuk bedah jam &amp; cafe</span>
                             </div>
                           </div>
+
+                          {/* Filter Periode & Ringkasan Hari Puncak per Periode (Sesuai Foto 1) */}
+                          <div className="hour-period-grid">
+                            {/* Card 1: 7 Hari Terakhir */}
+                            <button
+                              type="button"
+                              onClick={() => setTrendRange(7)}
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                padding: "10px 14px",
+                                borderRadius: 10,
+                                background: trendRange === 7 ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                border: trendRange === 7 ? "1.5px solid #F59E0B" : "1px solid rgba(255, 255, 255, 0.08)",
+                                cursor: "pointer",
+                                textAlign: "left",
+                                transition: "all 0.15s ease",
+                                boxShadow: trendRange === 7 ? "0 0 14px rgba(245,158,11,0.25)" : "none",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: trendRange === 7 ? "#FCD34D" : "#E2E8F0" }}>
+                                  📅 7 Hari Terakhir
+                                </span>
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: trendRange === 7 ? "#F59E0B" : "rgba(255,255,255,0.08)", color: trendRange === 7 ? "#000" : "#FFF" }}>
+                                  {trendData7.reduce((s, d) => s + d.value, 0)} tap
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                                <span style={{ color: trendRange === 7 ? "#CBD5E1" : "var(--text-muted)" }}>🏆 Puncak:</span>
+                                <strong style={{ color: "#34D399" }}>
+                                  {(() => {
+                                    const m = trendData7.reduce((prev, cur) => cur.value > prev.value ? cur : prev, trendData7[0]);
+                                    return m && m.value > 0 ? `${m.label || m.subLabel} (${m.value} tap)` : "Belum ada";
+                                  })()}
+                                </strong>
+                              </div>
+                            </button>
+
+                            {/* Card 2: 30 Hari Terakhir */}
+                            <button
+                              type="button"
+                              onClick={() => setTrendRange(30)}
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                padding: "10px 14px",
+                                borderRadius: 10,
+                                background: trendRange === 30 ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                border: trendRange === 30 ? "1.5px solid #F59E0B" : "1px solid rgba(255, 255, 255, 0.08)",
+                                cursor: "pointer",
+                                textAlign: "left",
+                                transition: "all 0.15s ease",
+                                boxShadow: trendRange === 30 ? "0 0 14px rgba(245,158,11,0.25)" : "none",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: trendRange === 30 ? "#FCD34D" : "#E2E8F0" }}>
+                                  🗓️ 30 Hari Terakhir
+                                </span>
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: trendRange === 30 ? "#F59E0B" : "rgba(255,255,255,0.08)", color: trendRange === 30 ? "#000" : "#FFF" }}>
+                                  {trendData30.reduce((s, d) => s + d.value, 0)} tap
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                                <span style={{ color: trendRange === 30 ? "#CBD5E1" : "var(--text-muted)" }}>🏆 Puncak:</span>
+                                <strong style={{ color: "#34D399" }}>
+                                  {(() => {
+                                    const m = trendData30.reduce((prev, cur) => cur.value > prev.value ? cur : prev, trendData30[0]);
+                                    return m && m.value > 0 ? `${m.label || m.subLabel} (${m.value} tap)` : "Belum ada";
+                                  })()}
+                                </strong>
+                              </div>
+                            </button>
+
+                            {/* Card 3: Rentang Kustom */}
+                            <button
+                              type="button"
+                              onClick={() => setTrendRange("custom")}
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                padding: "10px 14px",
+                                borderRadius: 10,
+                                background: trendRange === "custom" ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                border: trendRange === "custom" ? "1.5px solid #F59E0B" : "1px solid rgba(255, 255, 255, 0.08)",
+                                cursor: "pointer",
+                                textAlign: "left",
+                                transition: "all 0.15s ease",
+                                boxShadow: trendRange === "custom" ? "0 0 14px rgba(245,158,11,0.25)" : "none",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: trendRange === "custom" ? "#FCD34D" : "#E2E8F0" }}>
+                                  🗓️ Rentang Kustom
+                                </span>
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: trendRange === "custom" ? "#F59E0B" : "rgba(255,255,255,0.08)", color: trendRange === "custom" ? "#000" : "#FFF" }}>
+                                  {customTrendData.reduce((s, d) => s + d.value, 0)} tap
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                                <span style={{ color: trendRange === "custom" ? "#CBD5E1" : "var(--text-muted)" }}>Pilih:</span>
+                                <strong style={{ color: "#34D399" }}>
+                                  {customStartDate && customEndDate ? `${formatDateShortIndo(customStartDate)} – ${formatDateShortIndo(customEndDate)}` : "Tentukan tanggal"}
+                                </strong>
+                              </div>
+                            </button>
+                          </div>
+
+                          {trendRange === "custom" && (
+                            <div style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "8px 12px",
+                              background: "rgba(245, 158, 11, 0.08)",
+                              border: "1px solid rgba(245, 158, 11, 0.25)",
+                              borderRadius: 10,
+                              marginBottom: 14,
+                              flexWrap: "wrap",
+                            }}>
+                              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#FCD34D" }}>Atur Tanggal:</span>
+                              <input
+                                type="date"
+                                value={customStartDate}
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                style={{
+                                  background: "#161622",
+                                  color: "#F8FAFC",
+                                  border: "1px solid rgba(255,255,255,0.15)",
+                                  borderRadius: 6,
+                                  padding: "4px 8px",
+                                  fontSize: "0.75rem",
+                                  outline: "none",
+                                  cursor: "pointer",
+                                }}
+                              />
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>s/d</span>
+                              <input
+                                type="date"
+                                value={customEndDate}
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                style={{
+                                  background: "#161622",
+                                  color: "#F8FAFC",
+                                  border: "1px solid rgba(255,255,255,0.15)",
+                                  borderRadius: 6,
+                                  padding: "4px 8px",
+                                  fontSize: "0.75rem",
+                                  outline: "none",
+                                  cursor: "pointer",
+                                }}
+                              />
+                            </div>
+                          )}
 
                           <BarChart
                             data={activeDailyData}
@@ -3310,16 +3358,8 @@ export default function TapsPage() {
                         ) : (
                           /* Level 1: Grafik Batang Mingguan dengan Navigasi Periode & Arsip */
                           <div>
-                            {/* 1. Breadcrumb Interaktif Navigasi (Level 1) */}
-                            <InteractiveBreadcrumb
-                              items={[
-                                { label: `Tren Mingguan (${weeklyPeriodLabel})`, icon: "🏠", active: true },
-                              ]}
-                            />
-
-                            {/* Row Kontrol: Di Kanan pada Desktop, Kanan-Kiri pada Mobile */}
-                            <div className="weekly-nav-container" style={{ marginBottom: 12 }}>
-                              {/* Ringkasan Badges */}
+                            {/* Badges Info (Sesuai Foto 1) */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                                 <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
                                   Total: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
@@ -3328,8 +3368,8 @@ export default function TapsPage() {
                                   const maxWeek = weeklyTrendData.reduce((prev, cur) => (cur.count > prev.count ? cur : prev), weeklyTrendData[0]);
                                   if (maxWeek && maxWeek.count > 0) {
                                     return (
-                                      <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)" }}>
-                                        🏆 Minggu Teramai: {maxWeek.subLabel} ({maxWeek.count} tap)
+                                      <span className="badge badge-green" style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                        🏆 Minggu Teramai: <strong>{maxWeek.subLabel}</strong> ({maxWeek.count} tap)
                                       </span>
                                     );
                                   }
@@ -3337,71 +3377,175 @@ export default function TapsPage() {
                                 })()}
                               </div>
 
-                              {/* Navigasi Periode Mingguan & Selector (Kanan pada Desktop, Kanan-Kiri pada Mobile) */}
-                              <div className="weekly-nav-buttons">
-                                {/* Selector Periode */}
-                                <div style={{ position: "relative", display: "inline-block" }}>
-                                  <select
-                                    value={
-                                      weeklyPeriodType === "month"
-                                        ? `month:${selectedWeeklyMonth || thisMonthKey}`
-                                        : weeklyPeriodType === "year"
-                                        ? `year:${selectedWeeklyYear}`
-                                        : weeklyPeriodType
-                                    }
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      setSelectedWeekKey(null);
-                                      setWeekPageOffset(0);
-                                      if (val === "8w" || val === "12w") {
-                                        setWeeklyPeriodType(val);
-                                      } else if (val.startsWith("month:")) {
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#C4B5FD" }}>
+                                <span>👆</span>
+                                <span>Klik batang minggu untuk bedah 7 hari &amp; cafe</span>
+                              </div>
+                            </div>
+
+                            {/* Filter Periode & Ringkasan Minggu Puncak per Periode (Sesuai Foto 1) */}
+                            <div className="hour-period-grid">
+                              {/* Card 1: 8 Minggu Terakhir */}
+                              <button
+                                type="button"
+                                onClick={() => { setWeeklyPeriodType("8w"); setWeekPageOffset(0); setSelectedWeekKey(null); }}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "flex-start",
+                                  padding: "10px 14px",
+                                  borderRadius: 10,
+                                  background: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                  border: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  transition: "all 0.15s ease",
+                                  boxShadow: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "0 0 14px rgba(139,92,246,0.25)" : "none",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#C4B5FD" : "#E2E8F0" }}>
+                                    🌟 8 Minggu Terakhir
+                                  </span>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#8B5CF6" : "rgba(255,255,255,0.08)", color: "#FFF" }}>
+                                    {eightWeeksCount} tap
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                                  <span style={{ color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)" }}>Rentang:</span>
+                                  <strong style={{ color: "#34D399" }}>8 pekan berjalan</strong>
+                                </div>
+                              </button>
+
+                              {/* Card 2: 12 Minggu Terakhir */}
+                              <button
+                                type="button"
+                                onClick={() => { setWeeklyPeriodType("12w"); setWeekPageOffset(0); setSelectedWeekKey(null); }}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "flex-start",
+                                  padding: "10px 14px",
+                                  borderRadius: 10,
+                                  background: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                  border: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  transition: "all 0.15s ease",
+                                  boxShadow: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "0 0 14px rgba(139,92,246,0.25)" : "none",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#C4B5FD" : "#E2E8F0" }}>
+                                    📊 12 Minggu (3 Bulan)
+                                  </span>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#8B5CF6" : "rgba(255,255,255,0.08)", color: "#FFF" }}>
+                                    {twelveWeeksCount} tap
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                                  <span style={{ color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)" }}>Rentang:</span>
+                                  <strong style={{ color: "#34D399" }}>Kuartal 3 bulan terakhir</strong>
+                                </div>
+                              </button>
+
+                              {/* Card 3: Sepanjang Tahun */}
+                              <button
+                                type="button"
+                                onClick={() => { setWeeklyPeriodType("year"); setSelectedWeeklyYear(new Date().getFullYear()); setSelectedWeekKey(null); }}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "flex-start",
+                                  padding: "10px 14px",
+                                  borderRadius: 10,
+                                  background: weeklyPeriodType === "year" ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                  border: weeklyPeriodType === "year" ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  transition: "all 0.15s ease",
+                                  boxShadow: weeklyPeriodType === "year" ? "0 0 14px rgba(139,92,246,0.25)" : "none",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: weeklyPeriodType === "year" ? "#C4B5FD" : "#E2E8F0" }}>
+                                    🗓️ Tahun {selectedWeeklyYear}
+                                  </span>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: weeklyPeriodType === "year" ? "#8B5CF6" : "rgba(255,255,255,0.08)", color: "#FFF" }}>
+                                    {yearWeeksCount} tap
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                                  <span style={{ color: weeklyPeriodType === "year" ? "#CBD5E1" : "var(--text-muted)" }}>Arsip:</span>
+                                  <strong style={{ color: "#34D399" }}>Semua minggu {selectedWeeklyYear}</strong>
+                                </div>
+                              </button>
+
+                              {/* Card 4: Arsip Bulan & Navigasi */}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "flex-start",
+                                  justifyContent: "space-between",
+                                  padding: "10px 14px",
+                                  borderRadius: 10,
+                                  background: weeklyPeriodType === "month" || weekPageOffset > 0 ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                  border: weeklyPeriodType === "month" || weekPageOffset > 0 ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  gap: 8,
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#C4B5FD" }}>
+                                    🗂️ Arsip Bulan &amp; Geser
+                                  </span>
+                                  {weekPageOffset > 0 && (
+                                    <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "#F59E0B", color: "#000" }}>
+                                      Halaman -{weekPageOffset}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", flexWrap: "wrap" }}>
+                                  <div style={{ position: "relative", flex: 1, minWidth: 110 }}>
+                                    <select
+                                      value={weeklyPeriodType === "month" ? `month:${selectedWeeklyMonth || thisMonthKey}` : ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (!val) return;
+                                        setSelectedWeekKey(null);
+                                        setWeekPageOffset(0);
                                         setWeeklyPeriodType("month");
                                         setSelectedWeeklyMonth(val.replace("month:", ""));
-                                      } else if (val.startsWith("year:")) {
-                                        setWeeklyPeriodType("year");
-                                        setSelectedWeeklyYear(parseInt(val.replace("year:", ""), 10));
-                                      }
-                                    }}
-                                    style={{
-                                      background: "#181824",
-                                      border: "1px solid rgba(139, 92, 246, 0.45)",
-                                      color: "#EDE9FE",
-                                      padding: "5px 24px 5px 8px",
-                                      borderRadius: 8,
-                                      fontSize: "0.74rem",
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                      appearance: "none",
-                                      WebkitAppearance: "none",
-                                      outline: "none",
-                                    }}
-                                  >
-                                    <option value="8w">🌟 8 Minggu Terakhir</option>
-                                    <option value="12w">🗓️ 12 Minggu Terakhir (3 Bulan)</option>
-                                    <optgroup label="── Pilih Berdasarkan Bulan ──" style={{ background: "#111118", color: "#A5B4FC" }}>
+                                      }}
+                                      style={{
+                                        width: "100%",
+                                        background: "#181824",
+                                        border: "1px solid rgba(139, 92, 246, 0.35)",
+                                        color: "#EDE9FE",
+                                        padding: "4px 20px 4px 6px",
+                                        borderRadius: 6,
+                                        fontSize: "0.72rem",
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        appearance: "none",
+                                        WebkitAppearance: "none",
+                                        outline: "none",
+                                      }}
+                                    >
+                                      <option value="">Pilih Bulan...</option>
                                       {monthsByYear.flatMap(y => y.months).map(m => (
                                         <option key={m.monthKey} value={`month:${m.monthKey}`}>
                                           {m.monthKey === thisMonthKey ? `🌟 ${m.label} (Bulan Ini)` : m.label}
                                         </option>
                                       ))}
-                                    </optgroup>
-                                    <optgroup label="── Sepanjang Tahun ──" style={{ background: "#111118", color: "#FCD34D" }}>
-                                      {monthsByYear.map(y => (
-                                        <option key={y.year} value={`year:${y.year}`}>
-                                          Tahun {y.year} (Semua Minggu)
-                                        </option>
-                                      ))}
-                                    </optgroup>
-                                  </select>
-                                  <span style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", fontSize: "0.55rem", color: "#C4B5FD", pointerEvents: "none" }}>
-                                    ▼
-                                  </span>
-                                </div>
+                                    </select>
+                                    <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", fontSize: "0.5rem", color: "#C4B5FD", pointerEvents: "none" }}>
+                                      ▼
+                                    </span>
+                                  </div>
 
-                                {/* Tombol Navigasi ◄ dan ► (Khusus mode 8w dan 12w) */}
-                                {(weeklyPeriodType === "8w" || weeklyPeriodType === "12w") && (
-                                  <div style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
+                                  <div style={{ display: "inline-flex", gap: 3, alignItems: "center", flexShrink: 0 }}>
                                     <button
                                       type="button"
                                       onClick={() => setWeekPageOffset(o => o + 1)}
@@ -3409,9 +3553,9 @@ export default function TapsPage() {
                                         background: "rgba(139,92,246,0.15)",
                                         border: "1px solid rgba(139,92,246,0.35)",
                                         color: "#C4B5FD",
-                                        padding: "4px 8px",
+                                        padding: "4px 7px",
                                         borderRadius: 6,
-                                        fontSize: "0.72rem",
+                                        fontSize: "0.7rem",
                                         fontWeight: 700,
                                         cursor: "pointer",
                                         whiteSpace: "nowrap",
@@ -3420,7 +3564,6 @@ export default function TapsPage() {
                                     >
                                       ◄ Lalu
                                     </button>
-
                                     <button
                                       type="button"
                                       onClick={() => setWeekPageOffset(o => Math.max(0, o - 1))}
@@ -3429,9 +3572,9 @@ export default function TapsPage() {
                                         background: weekPageOffset === 0 ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.15)",
                                         border: weekPageOffset === 0 ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.35)",
                                         color: weekPageOffset === 0 ? "var(--text-muted)" : "#C4B5FD",
-                                        padding: "4px 8px",
+                                        padding: "4px 7px",
                                         borderRadius: 6,
-                                        fontSize: "0.72rem",
+                                        fontSize: "0.7rem",
                                         fontWeight: 700,
                                         cursor: weekPageOffset === 0 ? "not-allowed" : "pointer",
                                         opacity: weekPageOffset === 0 ? 0.4 : 1,
@@ -3441,7 +3584,6 @@ export default function TapsPage() {
                                     >
                                       Maju ►
                                     </button>
-
                                     {weekPageOffset > 0 && (
                                       <button
                                         type="button"
@@ -3450,9 +3592,9 @@ export default function TapsPage() {
                                           background: "rgba(245,158,11,0.15)",
                                           border: "1px solid rgba(245,158,11,0.35)",
                                           color: "#FCD34D",
-                                          padding: "4px 8px",
+                                          padding: "4px 6px",
                                           borderRadius: 6,
-                                          fontSize: "0.7rem",
+                                          fontSize: "0.68rem",
                                           fontWeight: 700,
                                           cursor: "pointer",
                                           whiteSpace: "nowrap",
@@ -3463,24 +3605,7 @@ export default function TapsPage() {
                                       </button>
                                     )}
                                   </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-                              <div style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "4px 10px",
-                                background: "rgba(139, 92, 246, 0.08)",
-                                border: "1px dashed rgba(139, 92, 246, 0.3)",
-                                borderRadius: 8,
-                                fontSize: "0.72rem",
-                                color: "#C4B5FD",
-                              }}>
-                                <span>👆</span>
-                                <span><strong>Klik batang minggu</strong> untuk membedah 7 hari &amp; cafe</span>
+                                </div>
                               </div>
                             </div>
 
