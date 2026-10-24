@@ -830,7 +830,15 @@ export default function TapsPage() {
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}j lalu`;
     const days = Math.floor(hrs / 24);
-    return days < 7 ? `${days} hari lalu` : new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const d = new Date(iso);
+    const isPrevYear = d.getFullYear() !== new Date().getFullYear();
+    return days < 7
+      ? `${days} hari lalu`
+      : d.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          ...(isPrevYear ? { year: "numeric" } : {}),
+        });
   }
   function formatFull(iso: string) {
     return new Date(iso).toLocaleString("id-ID", {
@@ -2442,7 +2450,12 @@ export default function TapsPage() {
                           const reviewUrl = cardUrlMap.get(log.code) || (log.storeName ? getPublicGoogleReviewUrl("", log.storeName) : "");
                           const d = new Date(log.tappedAt);
                           const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                          const dateStr = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+                          const isPrevYear = d.getFullYear() !== new Date().getFullYear();
+                          const dateStr = d.toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            ...(isPrevYear ? { year: "numeric" } : {}),
+                          });
                           const initials = getStoreInitials(log.storeName);
 
                           return (

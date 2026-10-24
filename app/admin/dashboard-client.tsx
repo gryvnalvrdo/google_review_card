@@ -209,7 +209,15 @@ export default function AdminDashboard() {
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}j lalu`;
     const days = Math.floor(hrs / 24);
-    return days < 7 ? `${days} hari lalu` : new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const d = new Date(iso);
+    const isPrevYear = d.getFullYear() !== new Date().getFullYear();
+    return days < 7
+      ? `${days} hari lalu`
+      : d.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          ...(isPrevYear ? { year: "numeric" } : {}),
+        });
   }
 
   // Active cards and calculations
@@ -623,7 +631,13 @@ export default function AdminDashboard() {
                               {log.storeName}
                             </div>
                             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                              <span>{new Date(log.tappedAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                              {(() => {
+                                const ld = new Date(log.tappedAt);
+                                const isPrev = ld.getFullYear() !== new Date().getFullYear();
+                                return (
+                                  <span>{ld.toLocaleString("id-ID", { day: "numeric", month: "short", ...(isPrev ? { year: "numeric" } : {}), hour: "2-digit", minute: "2-digit" })}</span>
+                                );
+                              })()}
                             </div>
                           </div>
 
