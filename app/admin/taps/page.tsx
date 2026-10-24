@@ -89,36 +89,32 @@ function BarChart({
   const { niceMax, ticks } = getNiceYScale(maxVal);
 
   const isFewBars = data.length <= 8;
-  const W = isMobile ? (isFewBars ? 380 : Math.max(data.length * 32, 600)) : 820;
-  const H = 220;
-  const PAD_L = isMobile ? 32 : 46;
+  // Grafik selalu fit 100% lebar layar mobile tanpa perlu digeser (zero horizontal scrolling)
+  const W = isMobile ? (isFewBars ? 400 : 480) : 820;
+  const H = isMobile ? 200 : 220;
+  const PAD_L = isMobile ? 26 : 42;
   const PAD_R = isMobile ? 12 : 24;
-  const PAD_T = isMobile ? 32 : 28;
-  const PAD_B = 38;
+  const PAD_T = isMobile ? 24 : 28;
+  const PAD_B = isMobile ? 30 : 36;
 
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
   const y0 = PAD_T + chartH;
 
   const slotW = data.length > 0 ? chartW / data.length : chartW;
-  const barW = Math.max(Math.min(Math.floor(slotW * 0.72), isMobile && isFewBars ? 28 : 34), 6);
+  const barW = Math.max(Math.min(Math.floor(slotW * 0.7), isMobile ? (isFewBars ? 24 : 13) : 32), 6);
 
-  const valFontSize = isMobile ? (isFewBars ? 16 : 13) : (isFewBars ? 14 : 12);
-  const xLabelFontSize = isMobile ? (isFewBars ? 11.5 : 10) : 10;
-  const xSubLabelFontSize = isMobile ? (isFewBars ? 9.5 : 8.5) : 8.5;
+  const valFontSize = isMobile ? (isFewBars ? 13 : 10.5) : (isFewBars ? 13 : 11.5);
+  const xLabelFontSize = isMobile ? (isFewBars ? 11 : 9.5) : 10;
+  const xSubLabelFontSize = isMobile ? (isFewBars ? 9 : 8) : 8.5;
 
   return (
-    <div style={{ width: "100%", overflowX: isMobile && !isFewBars ? "auto" : "hidden", WebkitOverflowScrolling: "touch" }}>
-      {isMobile && !isFewBars && (
-        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
-          <span>↔ Geser grafik untuk melihat 24 jam / hari lainnya</span>
-        </div>
-      )}
+    <div style={{ width: "100%", overflow: "hidden" }}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         style={{
           width: "100%",
-          minWidth: isMobile && !isFewBars ? W : "100%",
+          maxWidth: "100%",
           height: "auto",
           display: "block",
         }}
