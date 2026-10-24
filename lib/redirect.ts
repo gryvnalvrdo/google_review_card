@@ -37,11 +37,10 @@ export function isAllowedReviewUrl(url: string): boolean {
  * 3. Tidak memunculkan dialog pop-up "Tulis ulasan bintang 5" (yang mengganggu jika admin hanya ingin memantau).
  */
 export function getPublicGoogleReviewUrl(url?: string, storeName?: string): string {
-  // 1. Jika nama toko tersedia, gunakan Google Search dengan query "[Nama Toko] ulasan"
+  // 1. Jika nama toko tersedia, gunakan Google Search langsung dengan nama toko
   if (storeName && storeName.trim()) {
     const trimmed = storeName.trim();
-    const query = /ulasan|review/i.test(trimmed) ? trimmed : `${trimmed} ulasan`;
-    return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
   }
 
   if (!url) return "";
@@ -51,13 +50,13 @@ export function getPublicGoogleReviewUrl(url?: string, storeName?: string): stri
   const gPageMatch = clean.match(/g\.page\/([^/?#]+)/i);
   if (gPageMatch && gPageMatch[1] && gPageMatch[1].toLowerCase() !== "r") {
     const slug = decodeURIComponent(gPageMatch[1]).replace(/[-_]/g, " ");
-    return `https://www.google.com/search?q=${encodeURIComponent(slug + " ulasan")}`;
+    return `https://www.google.com/search?q=${encodeURIComponent(slug)}`;
   }
 
   // 3. Jika ada placeid di URL tapi tidak ada nama toko
   const matchPlaceId = clean.match(/placeid=([a-zA-Z0-9_\-]+)/i);
   if (matchPlaceId && matchPlaceId[1]) {
-    return `https://www.google.com/search?q=${encodeURIComponent("ulasan google place_id:" + matchPlaceId[1])}`;
+    return `https://www.google.com/search?q=${encodeURIComponent("place_id:" + matchPlaceId[1])}`;
   }
 
   // Fallback: bersihkan query param writereview
