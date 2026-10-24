@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { QRCodeCanvas } from "qrcode.react";
+import AdminNav from "../components/AdminNav";
+import QRScanner from "../components/QRScanner";
 
 const QR_EXPORT_SIZE = 1000; // ukuran QR PNG yang di-download (px)
 
@@ -29,10 +31,14 @@ export default function CardsPage() {
   const [activeTab, setActiveTab] = useState<"aktif" | "stok">("aktif");
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "tap" | "name">("date");
+  const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price">("date");
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
+  const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
+  const [deleteStockConfirm, setDeleteStockConfirm] = useState<string | null>(null);
   const [downloadingCode, setDownloadingCode] = useState<string | null>(null);
   const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
   const [bgImg, setBgImg] = useState<HTMLImageElement | null>(null);
   const qrRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const qrOnlyRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
@@ -50,7 +56,7 @@ export default function CardsPage() {
     try {
       const [resCodes, resStock] = await Promise.all([
         fetch("/api/admin/codes"),
-        fetch("/api/admin/stock")
+        fetch("/api/admin/stock"),
       ]);
       if (resCodes.ok) {
         const data = await resCodes.json();
@@ -61,7 +67,7 @@ export default function CardsPage() {
         setStockCodes(stockData.codes ?? []);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Gagal load cards / stock:", e);
     } finally {
       setLoading(false);
     }
@@ -70,20 +76,23 @@ export default function CardsPage() {
   useEffect(() => { fetchCards(); }, []);
 
   async function handleDelete(code: string) {
-    if (!confirm(`Yakin hapus kartu "${code}"? Kartu ini tidak akan bisa dipakai lagi.`)) return;
     const res = await fetch(`/api/admin/codes/${code}`, { method: "DELETE" });
-    if (res.ok) setCards(prev => prev.filter(c => c.code !== code));
-    else alert("Gagal menghapus kartu.");
+    if (res.ok) {
+      setCards(prev => prev.filter(c => c.code !== code));
+    } else {
+      alert("Gagal menghapus kartu.");
+    }
+    setDeleteConfirmCode(null);
   }
 
   async function handleDeleteStock(code: string) {
-    if (!confirm(`Yakin hapus kode stok "${code}"?`)) return;
     const res = await fetch(`/api/admin/stock/${code}`, { method: "DELETE" });
     if (res.ok) {
-      setStockCodes((prev) => prev.filter((c) => c !== code));
+      setStockCodes(prev => prev.filter(c => c !== code));
     } else {
       alert("Gagal menghapus kode stok.");
     }
+    setDeleteStockConfirm(null);
   }
 
   async function handleClearStock() {
@@ -109,8 +118,12 @@ export default function CardsPage() {
         price: editingCard.price ?? 50000,
       }),
     });
-    if (res.ok) { setEditingCard(null); fetchCards(); }
-    else alert("Gagal menyimpan perubahan.");
+    if (res.ok) {
+      setEditingCard(null);
+      fetchCards();
+    } else {
+      alert("Gagal menyimpan perubahan.");
+    }
   }
 
   async function downloadCard(card: CardData) {
@@ -118,7 +131,7 @@ export default function CardsPage() {
     await new Promise(r => setTimeout(r, 400));
     const qrCanvas = qrRefs.current[card.code];
     if (!qrCanvas || !bgImg) {
-      alert("Template belum siap, coba lagi sebentar.");
+      alert("Template sedang disiapkan, silakan klik lagi.");
       setDownloadingCode(null);
       return;
     }
@@ -157,11 +170,10 @@ export default function CardsPage() {
     await new Promise(r => setTimeout(r, 300));
     const qrCanvas = qrOnlyRefs.current[card.code];
     if (!qrCanvas) {
-      alert("QR belum siap, coba lagi sebentar.");
+      alert("QR sedang disiapkan, silakan coba lagi.");
       setDownloadingQrCode(null);
       return;
     }
-    // Buat canvas baru dengan padding putih supaya lebih rapi saat dicetak
     const PAD = 40;
     const out = document.createElement("canvas");
     out.width = QR_EXPORT_SIZE + PAD * 2;
@@ -182,96 +194,39 @@ export default function CardsPage() {
     setDownloadingQrCode(null);
   }
 
+  function copyCodeText(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedCode(text);
+      setTimeout(() => setCopiedCode(null), 2000);
+    });
+  }
+
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
-  const filtered = cards
-    .filter(c =>
-      c.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.code.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sortBy === "tap") return (b.tapCount || 0) - (a.tapCount || 0);
-      if (sortBy === "name") return a.storeName.localeCompare(b.storeName);
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  const filtered = useMemo(() => {
+    return cards
+      .filter(c =>
+        c.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.code.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        if (sortBy === "tap") return (b.tapCount || 0) - (a.tapCount || 0);
+        if (sortBy === "name") return a.storeName.localeCompare(b.storeName);
+        if (sortBy === "price") return (b.price ?? 50000) - (a.price ?? 50000);
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [cards, searchTerm, sortBy]);
 
-  const totalRevenue = cards.reduce((s, c) => s + (c.price ?? 50000), 0);
-  const totalTaps = cards.reduce((s, c) => s + (c.tapCount ?? 0), 0);
-
-  const CSS = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:#0A0A0F;color:#F0F0FF;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
-    .pw{max-width:1000px;margin:0 auto;padding:24px 16px 80px;}
-    .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:28px;flex-wrap:wrap;}
-    .topbar h1{font-size:1.4rem;font-weight:800;}
-    .topbar p{color:#9A9AB0;font-size:0.82rem;margin-top:4px;}
-    .tabs{display:flex;gap:12px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:12px;flex-wrap:wrap;}
-    .tab{padding:8px 16px;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;background:transparent;color:#9A9AB0;border:1px solid transparent;transition:all 0.2s;}
-    .tab.act{background:rgba(99,102,241,0.15);color:#A5B4FC;border-color:rgba(99,102,241,0.3);}
-    .tab:hover:not(.act){color:#F0F0FF;background:rgba(255,255,255,0.05);}
-    .back{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;color:#C0C0D8;text-decoration:none;font-size:0.82rem;font-weight:500;transition:all 0.2s;white-space:nowrap;}
-    .back:hover{background:rgba(255,255,255,0.09);color:#F0F0FF;}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
-    .sc{background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px 16px;}
-    .sv{font-size:1.3rem;font-weight:800;margin-bottom:2px;}
-    .sl{font-size:0.68rem;color:#5A5A72;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
-    .toolbar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
-    .sbx{flex:1;min-width:180px;padding:10px 13px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#F0F0FF;font-size:.875rem;outline:none;font-family:inherit;transition:border-color .2s;}
-    .sbx:focus{border-color:rgba(99,102,241,.5);}
-    .ssel{padding:10px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:#F0F0FF;font-size:.875rem;font-family:inherit;outline:none;cursor:pointer;}
-    .ssel option{background:#111118;color:#F0F0FF;}
-    .ci{background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:13px;padding:16px 18px;margin-bottom:10px;transition:border-color .2s;}
-    .ci:hover{border-color:rgba(99,102,241,.2);}
-    .ch{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
-    .cn{font-size:1rem;font-weight:700;color:#F0F0FF;}
-    .ca{display:flex;gap:6px;flex-shrink:0;}
-    .bdg{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:999px;font-size:.72rem;font-weight:600;}
-    .bcode{background:rgba(99,102,241,.1);color:#A5B4FC;border:1px solid rgba(99,102,241,.2);font-family:monospace;letter-spacing:.04em;}
-    .btap{background:rgba(245,158,11,.1);color:#FCD34D;border:1px solid rgba(245,158,11,.2);}
-    .bact{background:rgba(16,185,129,.1);color:#34D399;border:1px solid rgba(16,185,129,.2);}
-    .cm{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px;}
-    .mi{display:flex;flex-direction:column;gap:2px;}
-    .mlb{font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;color:#5A5A72;font-weight:600;}
-    .mv{color:#C0C0D8;font-weight:500;font-size:.82rem;}
-    .ur{padding:8px 11px;background:rgba(0,0,0,.25);border-radius:7px;font-size:.73rem;}
-    .ur a{color:#818CF8;text-decoration:none;word-break:break-all;}
-    .ur a:hover{color:#A5B4FC;}
-    .ib{width:34px;height:34px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all .15s;flex-shrink:0;}
-    .ig{background:rgba(255,255,255,.05);color:#C0C0D8;border:1px solid rgba(255,255,255,.1);}
-    .ig:hover{background:rgba(255,255,255,.1);}
-    .idng{background:rgba(239,68,68,.08);color:#F87171;border:1px solid rgba(239,68,68,.2);}
-    .idng:hover{background:rgba(239,68,68,.16);}
-    .idl{background:rgba(99,102,241,.1);color:#A5B4FC;border:1px solid rgba(99,102,241,.2);}
-    .idl:hover:not(:disabled){background:rgba(99,102,241,.2);}
-    .idl:disabled{opacity:.4;cursor:not-allowed;}
-    .mbg{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(5px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
-    .mo{background:#13131C;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:24px;width:min(100%,420px);max-height:90vh;overflow-y:auto;}
-    .mo h2{font-size:1.05rem;font-weight:700;margin-bottom:18px;}
-    .fl{display:block;font-size:.68rem;font-weight:600;color:#9A9AB0;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
-    .fi{width:100%;padding:10px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:8px;color:#F0F0FF;font-family:inherit;font-size:.875rem;outline:none;margin-bottom:12px;transition:border-color .2s;}
-    .fi:focus{border-color:rgba(99,102,241,.5);}
-    .fi:disabled{opacity:.4;cursor:not-allowed;}
-    .ma{display:flex;gap:8px;margin-top:16px;}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:8px;font-size:.875rem;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:inherit;flex:1;}
-    .bp{background:#4F46E5;color:white;}
-    .bp:hover{background:#6366F1;}
-    .bgh{background:transparent;color:#9A9AB0;border:1px solid rgba(255,255,255,.09);}
-    .bgh:hover{background:rgba(255,255,255,.05);color:#F0F0FF;}
-    .qrh{position:fixed;left:-9999px;top:-9999px;pointer-events:none;}
-    .idqr{background:rgba(16,185,129,.1);color:#34D399;border:1px solid rgba(16,185,129,.25);}
-    .idqr:hover:not(:disabled){background:rgba(16,185,129,.2);}
-    .idqr:disabled{opacity:.4;cursor:not-allowed;}
-    @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
-  `;
+  const totalRevenue = useMemo(() => cards.reduce((s, c) => s + (c.price ?? 50000), 0), [cards]);
+  const totalTaps = useMemo(() => cards.reduce((s, c) => s + (c.tapCount ?? 0), 0), [cards]);
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <AdminNav active="cards" />
 
-      <div className="qrh" aria-hidden="true">
-        {/* QR untuk download kartu penuh (pakai googleReviewUrl) */}
+      {/* Hidden QR canvases for PNG export */}
+      <div style={{ position: "fixed", left: -9999, top: -9999, pointerEvents: "none" }} aria-hidden="true">
         {cards.map(card => (
           <QRCodeCanvas
             key={`full-${card.code}`}
@@ -282,7 +237,6 @@ export default function CardsPage() {
             includeMargin={false}
           />
         ))}
-        {/* QR untuk download QR saja — pakai URL /c/{code} sesuai kartu fisik */}
         {baseUrl && cards.map(card => (
           <QRCodeCanvas
             key={`only-${card.code}`}
@@ -295,189 +249,503 @@ export default function CardsPage() {
         ))}
       </div>
 
-      <div style={{ background: "#0A0A0F", minHeight: "100vh" }}>
-        <div className="pw">
-          <div className="topbar">
-            <div>
-              <h1>🗂️ Manajemen Kartu</h1>
-              <p>Lihat, edit, hapus, dan download ulang QR semua kartu yang sudah di-assign.</p>
+      {/* Delete Card Confirmation Modal */}
+      {deleteConfirmCode && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, backdropFilter: "blur(6px)" }}
+            onClick={() => setDeleteConfirmCode(null)}
+          />
+          <div style={{
+            position: "fixed", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)", zIndex: 301,
+            background: "#14141E", border: "1px solid rgba(239,68,68,0.35)",
+            borderRadius: 18, padding: "28px 24px",
+            width: "min(92vw, 380px)", textAlign: "center",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+          }}>
+            <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontWeight: 800, fontSize: "1.15rem", marginBottom: 8, color: "#F0F0FF" }}>Hapus Kartu Ini?</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 22, lineHeight: 1.5 }}>
+              Kode <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteConfirmCode}</strong> akan dihapus permanen.
+              Kartu fisik ini tidak dapat diakses lagi oleh pelanggan, dan datanya tidak akan muncul lagi di leaderboard.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => setDeleteConfirmCode(null)}
+              >
+                Batal
+              </button>
+              <button
+                className="btn btn-danger"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => handleDelete(deleteConfirmCode)}
+              >
+                Ya, Hapus
+              </button>
             </div>
-            <a href="/admin" className="back">← Dashboard</a>
+          </div>
+        </>
+      )}
+
+      {/* Delete Stock Confirmation Modal */}
+      {deleteStockConfirm && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, backdropFilter: "blur(6px)" }}
+            onClick={() => setDeleteStockConfirm(null)}
+          />
+          <div style={{
+            position: "fixed", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)", zIndex: 301,
+            background: "#14141E", border: "1px solid rgba(239,68,68,0.35)",
+            borderRadius: 18, padding: "28px 24px",
+            width: "min(92vw, 360px)", textAlign: "center",
+          }}>
+            <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>📦</div>
+            <h3 style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: 6, color: "#F0F0FF" }}>Hapus Kode Stok?</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 20 }}>
+              Kode stok <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteStockConfirm}</strong> akan dihapus dari daftar stok.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => setDeleteStockConfirm(null)}>
+                Batal
+              </button>
+              <button className="btn btn-danger" style={{ flex: 1, justifyContent: "center" }} onClick={() => handleDeleteStock(deleteStockConfirm)}>
+                Hapus
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Main Container */}
+      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
+
+          {/* Header Title */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                🗂️ Manajemen Kartu &amp; Stok
+              </h1>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
+                Kelola kartu aktif, cetak ulang QR resolusi tinggi, atau assign stok kartu baru ke toko.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="btn btn-ghost"
+                style={{ fontSize: "0.85rem", padding: "8px 14px", color: "#34D399", borderColor: "rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)" }}
+              >
+                📷 Scan QR Kartu
+              </button>
+              <a
+                href="/admin"
+                className="btn btn-primary"
+                style={{ fontSize: "0.85rem", padding: "8px 16px" }}
+              >
+                ➕ Hubungkan Kartu Baru
+              </a>
+            </div>
           </div>
 
-          <div className="tabs">
-            <button className={`tab ${activeTab === "aktif" ? "act" : ""}`} onClick={() => setActiveTab("aktif")}>
-              💳 Kartu Aktif ({cards.length})
+          {/* Main Tab Switcher */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 10 }}>
+            <button
+              onClick={() => setActiveTab("aktif")}
+              className={`btn ${activeTab === "aktif" ? "btn-primary" : "btn-ghost"}`}
+              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem" }}
+            >
+              💳 Kartu Toko Aktif ({cards.length})
             </button>
-            <button className={`tab ${activeTab === "stok" ? "act" : ""}`} onClick={() => setActiveTab("stok")}>
-              📦 Stok Belum Assign ({stockCodes.length})
+            <button
+              onClick={() => setActiveTab("stok")}
+              className={`btn ${activeTab === "stok" ? "btn-primary" : "btn-ghost"}`}
+              style={{ borderRadius: 10, padding: "8px 18px", fontSize: "0.88rem" }}
+            >
+              📦 Stok Belum Di-Assign ({stockCodes.length})
             </button>
           </div>
 
+          {/* ══════════ TAB 1: KARTU AKTIF ══════════ */}
           {activeTab === "aktif" ? (
             <>
-              <div className="stats">
-                <div className="sc">
-                  <div className="sv" style={{ color: "#A5B4FC" }}>{cards.length}</div>
-                  <div className="sl">💳 Kartu Aktif</div>
+              {/* KPI Stats */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 22 }}>
+                <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
+                  <div style={{ fontSize: "0.72rem", color: "#A5B4FC", fontWeight: 700, textTransform: "uppercase" }}>💳 Total Kartu Aktif</div>
+                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#F0F0FF", marginTop: 4 }}>{cards.length}</div>
                 </div>
-                <div className="sc">
-                  <div className="sv" style={{ color: "#34D399" }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
-                  <div className="sl">💰 Total Pendapatan</div>
+                <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
+                  <div style={{ fontSize: "0.72rem", color: "#34D399", fontWeight: 700, textTransform: "uppercase" }}>💰 Total Omzet</div>
+                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#34D399", marginTop: 4 }}>Rp {totalRevenue.toLocaleString("id-ID")}</div>
                 </div>
-                <div className="sc">
-                  <div className="sv" style={{ color: "#FCD34D" }}>{totalTaps}</div>
-                  <div className="sl">👆 Total Tap</div>
+                <div className="card" style={{ padding: "16px", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
+                  <div style={{ fontSize: "0.72rem", color: "#FCD34D", fontWeight: 700, textTransform: "uppercase" }}>👆 Total Tap</div>
+                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#FCD34D", marginTop: 4 }}>{totalTaps}×</div>
                 </div>
               </div>
 
-              <div className="toolbar">
-                <input
-                  type="text"
-                  className="sbx"
-                  placeholder="🔍 Cari nama toko atau kode..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-                <select className="ssel" value={sortBy} onChange={e => setSortBy(e.target.value as "date" | "tap" | "name")}>
-                  <option value="date">Terbaru</option>
-                  <option value="tap">Tap Terbanyak</option>
-                  <option value="name">Nama A–Z</option>
+              {/* Toolbar */}
+              <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="🔍 Cari nama toko atau kode kartu..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as "date" | "tap" | "name" | "price")}
+                  style={{
+                    padding: "10px 14px", background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+                    color: "#F0F0FF", fontSize: "0.85rem", outline: "none", cursor: "pointer",
+                  }}
+                >
+                  <option value="date" style={{ background: "#111118" }}>Terbaru Ditambahkan</option>
+                  <option value="tap" style={{ background: "#111118" }}>Tap Terbanyak</option>
+                  <option value="name" style={{ background: "#111118" }}>Nama Toko (A–Z)</option>
+                  <option value="price" style={{ background: "#111118" }}>Harga Jual Tertinggi</option>
                 </select>
               </div>
 
+              {/* Cards List */}
               {loading ? (
-                <p style={{ color: "#9A9AB0", textAlign: "center", padding: "40px 0" }}>Memuat data...</p>
+                <div style={{ textAlign: "center", padding: "60px 0" }}>
+                  <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                  <p style={{ color: "var(--text-muted)" }}>Memuat daftar kartu...</p>
+                </div>
               ) : filtered.length === 0 ? (
-                <p style={{ color: "#5A5A72", textAlign: "center", padding: "40px 0" }}>
-                  {searchTerm ? "Tidak ada kartu yang cocok dengan pencarian." : "Belum ada kartu aktif."}
-                </p>
+                <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                  <div style={{ fontSize: "2.5rem", marginBottom: 10, opacity: 0.5 }}>💳</div>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Tidak Ada Kartu</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                    {searchTerm ? `Tidak ditemukan kartu dengan kata kunci "${searchTerm}".` : "Belum ada kartu toko yang terhubung."}
+                  </p>
+                </div>
               ) : (
-                <div>
-                  {filtered.map(card => (
-                    <div key={card.code} className="ci">
-                      <div className="ch">
-                        <div>
-                          <div className="cn">{card.storeName}</div>
-                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                            <span className="bdg bcode">{card.code}</span>
-                            <span className="bdg bact">● Aktif</span>
-                            <span className="bdg btap">👆 {card.tapCount ?? 0} Tap</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {filtered.map(card => {
+                    const fullCardUrl = `${baseUrl}/c/${card.code}`;
+                    return (
+                      <div
+                        key={card.code}
+                        className="card"
+                        style={{
+                          padding: "18px 20px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 14,
+                          background: "#111118",
+                          border: "1px solid rgba(255,255,255,0.07)",
+                          transition: "border-color 0.2s",
+                        }}
+                      >
+                        {/* Row 1: Header + Badges + Actions */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF" }}>
+                                {card.storeName}
+                              </h3>
+                              <button
+                                onClick={() => copyCodeText(card.code)}
+                                title="Klik untuk salin kode"
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                  background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)",
+                                  color: "#A5B4FC", fontFamily: "monospace", fontSize: "0.75rem",
+                                  fontWeight: 700, padding: "2px 8px", borderRadius: 6, cursor: "pointer",
+                                }}
+                              >
+                                {card.code}
+                                <span style={{ fontSize: "0.65rem" }}>{copiedCode === card.code ? "✅" : "📋"}</span>
+                              </button>
+                            </div>
+
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6, alignItems: "center" }}>
+                              <span className="badge badge-green">● Aktif</span>
+                              <span className="badge badge-orange">👆 {card.tapCount ?? 0} Tap</span>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                Ditambahkan: {formatDate(card.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quick Actions Buttons */}
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <button
+                              onClick={() => downloadQrOnly(card)}
+                              disabled={downloadingQrCode === card.code || !baseUrl}
+                              className="btn btn-ghost"
+                              style={{
+                                padding: "6px 12px", fontSize: "0.78rem",
+                                color: "#34D399", borderColor: "rgba(16,185,129,0.25)", background: "rgba(16,185,129,0.06)",
+                              }}
+                              title="Download QR Code resolusi tinggi untuk cetak besar"
+                            >
+                              {downloadingQrCode === card.code ? "⏳ Mengunduh..." : "📷 QR High-Res"}
+                            </button>
+
+                            <button
+                              onClick={() => downloadCard(card)}
+                              disabled={downloadingCode === card.code || !bgImg}
+                              className="btn btn-ghost"
+                              style={{
+                                padding: "6px 12px", fontSize: "0.78rem",
+                                color: "#A5B4FC", borderColor: "rgba(99,102,241,0.25)", background: "rgba(99,102,241,0.06)",
+                              }}
+                              title="Download kartu PNG utuh dengan desain template"
+                            >
+                              {downloadingCode === card.code ? "⏳ Menyiapkan..." : "🖼️ Kartu PNG"}
+                            </button>
+
+                            <button
+                              onClick={() => setEditingCard(card)}
+                              className="btn btn-ghost"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              title="Edit Toko"
+                            >
+                              ✏️
+                            </button>
+
+                            <button
+                              onClick={() => setDeleteConfirmCode(card.code)}
+                              className="btn btn-danger"
+                              style={{ padding: "6px 10px", fontSize: "0.85rem" }}
+                              title="Hapus Kartu"
+                            >
+                              🗑️
+                            </button>
                           </div>
                         </div>
-                        <div className="ca">
-                          <button
-                            className="ib idqr"
-                            onClick={() => downloadQrOnly(card)}
-                            disabled={downloadingQrCode === card.code || !baseUrl}
-                            title="Download QR saja (resolusi tinggi, sesuai kartu fisik) — untuk dicetak besar"
-                          >
-                            {downloadingQrCode === card.code ? "⏳" : "📷"}
-                          </button>
-                          <button
-                            className="ib idl"
-                            onClick={() => downloadCard(card)}
-                            disabled={downloadingCode === card.code || !bgImg}
-                            title={!bgImg ? "Template sedang dimuat..." : "Download kartu PNG lengkap dengan desain"}
-                          >
-                            {downloadingCode === card.code ? "⏳" : "⬇️"}
-                          </button>
-                          <button className="ib ig" onClick={() => setEditingCard(card)} title="Edit">✏️</button>
-                          <button className="ib idng" onClick={() => handleDelete(card.code)} title="Hapus">🗑️</button>
-                        </div>
-                      </div>
 
-                      <div className="cm">
-                        <div className="mi">
-                          <div className="mlb">Tanggal Assign</div>
-                          <div className="mv">{formatDate(card.createdAt)}</div>
-                        </div>
-                        <div className="mi">
-                          <div className="mlb">Harga Jual</div>
-                          <div className="mv" style={{ color: "#34D399" }}>Rp {(card.price ?? 50000).toLocaleString("id-ID")}</div>
-                        </div>
-                        <div className="mi">
-                          <div className="mlb">Total Tap</div>
-                          <div className="mv" style={{ color: "#FCD34D" }}>{card.tapCount ?? 0}×</div>
+                        {/* Row 2: Details */}
+                        <div style={{
+                          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                          gap: 12, padding: "10px 14px", background: "rgba(0,0,0,0.3)", borderRadius: 10,
+                          fontSize: "0.78rem", border: "1px solid rgba(255,255,255,0.04)",
+                        }}>
+                          <div>
+                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Harga Jual</span>
+                            <strong style={{ color: "#34D399", fontSize: "0.88rem" }}>
+                              Rp {(card.price ?? 50000).toLocaleString("id-ID")}
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Link Kartu / NFC</span>
+                            <a href={fullCardUrl} target="_blank" rel="noreferrer" style={{ color: "#A5B4FC", textDecoration: "none", wordBreak: "break-all" }}>
+                              {fullCardUrl} ↗
+                            </a>
+                          </div>
+                          <div>
+                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Target Google Review</span>
+                            <a href={card.googleReviewUrl} target="_blank" rel="noreferrer" style={{ color: "#FCD34D", textDecoration: "none", wordBreak: "break-all" }}>
+                              Buka Halaman Ulasan ↗
+                            </a>
+                          </div>
                         </div>
                       </div>
-
-                      <div className="ur">
-                        🔗 <a href={card.googleReviewUrl} target="_blank" rel="noreferrer">{card.googleReviewUrl}</a>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
           ) : (
-            // TAB STOK
+            /* ══════════ TAB 2: STOK BELUM ASSIGN ══════════ */
             <>
-              <div className="toolbar" style={{ justifyContent: "space-between" }}>
-                <input
-                  type="text"
-                  className="sbx"
-                  placeholder="🔍 Cari kode stok..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-                {stockCodes.length > 0 && (
-                  <button 
-                    className="btn idng" 
-                    style={{ flex: "none", fontSize: "0.8rem", padding: "8px 12px" }} 
-                    onClick={handleClearStock}
-                  >
-                    🗑️ Hapus Semua
-                  </button>
-                )}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="🔍 Cari kode stok..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <a href="/admin/print" className="btn btn-primary" style={{ fontSize: "0.82rem" }}>
+                    + Cetak Stok Baru
+                  </a>
+                  {stockCodes.length > 0 && (
+                    <button onClick={handleClearStock} className="btn btn-danger" style={{ fontSize: "0.82rem" }}>
+                      🗑️ Hapus Semua
+                    </button>
+                  )}
+                </div>
               </div>
-              
+
               {loading ? (
-                <p style={{ color: "#9A9AB0", textAlign: "center", padding: "40px 0" }}>Memuat data...</p>
+                <div style={{ textAlign: "center", padding: "60px 0" }}>
+                  <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                  <p style={{ color: "var(--text-muted)" }}>Memuat stok kartu...</p>
+                </div>
               ) : stockCodes.length === 0 ? (
-                <p style={{ color: "#5A5A72", textAlign: "center", padding: "40px 0" }}>Belum ada stok. Buka menu Cetak QR untuk generate kartu baru.</p>
+                <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                  <div style={{ fontSize: "2.5rem", marginBottom: 10, opacity: 0.5 }}>📦</div>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Belum Ada Stok Tersedia</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: 16 }}>
+                    Generate kode kartu baru di menu Mesin Cetak QR untuk menambah stok kartu fisik.
+                  </p>
+                  <a href="/admin/print" className="btn btn-primary" style={{ display: "inline-flex" }}>
+                    Buka Mesin Cetak QR →
+                  </a>
+                </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-                  {stockCodes.filter(sc => sc.toLowerCase().includes(searchTerm.toLowerCase())).map(sc => (
-                    <div key={sc} className="ci" style={{ marginBottom: 0, padding: "14px 16px" }}>
-                      <div className="ch" style={{ marginBottom: 0 }}>
-                        <span className="bdg bcode" style={{ fontSize: "1rem", padding: "6px 12px" }}>{sc}</span>
+                  {stockCodes
+                    .filter(sc => sc.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map(sc => (
+                      <div
+                        key={sc}
+                        className="card"
+                        style={{
+                          padding: "16px",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          gap: 14,
+                          background: "#111118",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{
+                            fontFamily: "monospace", fontSize: "1.1rem", fontWeight: 800,
+                            color: "#A5B4FC", letterSpacing: "0.05em",
+                            background: "rgba(99,102,241,0.12)", padding: "4px 10px", borderRadius: 8,
+                          }}>
+                            {sc}
+                          </span>
+                          <span className="badge badge-purple" style={{ fontSize: "0.62rem" }}>Siap Pakai</span>
+                        </div>
+
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            onClick={() => setDeleteStockConfirm(sc)}
+                            className="btn btn-danger"
+                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                            title="Hapus Stok"
+                          >
+                            🗑️
+                          </button>
+                          <a
+                            href={`/admin?code=${sc}`}
+                            className="btn btn-primary"
+                            style={{ flex: 1, justifyContent: "center", textDecoration: "none", fontSize: "0.8rem", padding: "6px 12px" }}
+                          >
+                            Assign ke Toko →
+                          </a>
+                        </div>
                       </div>
-                      <div className="ma" style={{ marginTop: 14 }}>
-                        <button className="ib idng" onClick={() => handleDeleteStock(sc)} title="Hapus Stok">🗑️</button>
-                        <a href={`/admin?code=${sc}`} className="btn bp" style={{ textDecoration: "none", padding: "8px" }}>
-                          Assign →
-                        </a>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </>
           )}
+
         </div>
       </div>
 
+      {/* Edit Card Modal */}
       {editingCard && (
-        <div className="mbg" onClick={() => setEditingCard(null)}>
-          <div className="mo" onClick={e => e.stopPropagation()}>
-            <h2>✏️ Edit Kartu</h2>
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
+            zIndex: 400, backdropFilter: "blur(6px)", display: "flex",
+            alignItems: "center", justifyContent: "center", padding: 16,
+          }}
+          onClick={() => setEditingCard(null)}
+        >
+          <div
+            className="card"
+            style={{ width: "min(100%, 460px)", background: "#13131C", padding: "26px 24px" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#F0F0FF" }}>✏️ Edit Kartu Toko</h2>
+              <button onClick={() => setEditingCard(null)} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "0.75rem" }}>
+                ✕
+              </button>
+            </div>
+
             <form onSubmit={handleEditSubmit}>
-              <label className="fl">Kode Kartu</label>
-              <input className="fi" value={editingCard.code} disabled />
-              <label className="fl">Nama Toko</label>
-              <input className="fi" value={editingCard.storeName} onChange={e => setEditingCard({ ...editingCard, storeName: e.target.value })} required />
-              <label className="fl">Google Review URL</label>
-              <input className="fi" value={editingCard.googleReviewUrl} onChange={e => setEditingCard({ ...editingCard, googleReviewUrl: e.target.value })} required />
-              <label className="fl">Harga Jual (Rp)</label>
-              <input className="fi" type="number" value={editingCard.price ?? 50000} onChange={e => setEditingCard({ ...editingCard, price: Number(e.target.value) })} required />
-              <div className="ma">
-                <button type="button" className="btn bgh" onClick={() => setEditingCard(null)}>Batal</button>
-                <button type="submit" className="btn bp">Simpan</button>
+              <div className="form-group">
+                <label className="label">Kode Kartu</label>
+                <input className="input" value={editingCard.code} disabled style={{ opacity: 0.6, cursor: "not-allowed" }} />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Nama Toko / Resto</label>
+                <input
+                  className="input"
+                  value={editingCard.storeName}
+                  onChange={e => setEditingCard({ ...editingCard, storeName: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Google Review URL</label>
+                <input
+                  className="input"
+                  value={editingCard.googleReviewUrl}
+                  onChange={e => setEditingCard({ ...editingCard, googleReviewUrl: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Harga Jual (Rp)</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={editingCard.price ?? 50000}
+                  onChange={e => setEditingCard({ ...editingCard, price: Number(e.target.value) })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => setEditingCard(null)}>
+                  Batal
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }}>
+                  Simpan Perubahan
+                </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <QRScanner
+          onScan={(code) => {
+            setShowScanner(false);
+            window.location.href = `/admin?code=${code}`;
+          }}
+          onClose={() => setShowScanner(false)}
+        />
       )}
     </>
   );

@@ -109,7 +109,8 @@ function CardItem({ code, url, bgImage, onCanvasReady }: CardItemProps) {
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+import AdminNav from "../components/AdminNav";
+
 export default function PrintQRCodes() {
   const [count, setCount]       = useState(10);
   const [codes, setCodes]       = useState<string[]>([]);
@@ -376,14 +377,17 @@ export default function PrintQRCodes() {
         }
       `}</style>
 
+      <AdminNav active="print" />
+
       {/* ── Panel ── */}
       <div className="panel">
         <div className="panel-inner">
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-            <a href="/admin" className="btn btn-ghost" style={{ padding: "6px 10px" }}>← Back</a>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: 10 }}>
             <div>
-              <div className="panel-title">🎴 Generator Kartu NFC</div>
-              <div className="panel-sub" style={{ marginBottom: 0 }}>Buat QR unik, download PNG, atau simpan ke stok</div>
+              <div className="panel-title" style={{ fontSize: "1.2rem", fontWeight: 800 }}>🎴 Mesin Cetak QR Code &amp; Desain Kartu</div>
+              <div className="panel-sub" style={{ marginBottom: 0, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                Generate kode unik massal, download kartu PNG / ZIP siap cetak, dan simpan langsung ke inventori stok
+              </div>
             </div>
           </div>
 
@@ -406,6 +410,25 @@ export default function PrintQRCodes() {
                 className="num-btn" 
                 onClick={() => setCount((c) => Math.min(200, c + 1))}
               >+</button>
+            </div>
+
+            {/* Quick Presets */}
+            <div style={{ display: "flex", gap: 4 }}>
+              {[10, 20, 50, 100].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setCount(n)}
+                  className="btn btn-ghost"
+                  style={{
+                    padding: "6px 10px", fontSize: "0.75rem", borderRadius: 6,
+                    background: count === n ? "rgba(99,102,241,0.25)" : "transparent",
+                    color: count === n ? "#A5B4FC" : "var(--text-muted)",
+                    borderColor: count === n ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.08)",
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
             </div>
 
             {/* Badge count real-time */}

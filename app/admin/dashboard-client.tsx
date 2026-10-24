@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import AdminNav from "./components/AdminNav";
+import QRScanner from "./components/QRScanner";
 
 type CardRecord = {
   code: string;
@@ -36,29 +38,36 @@ export default function AdminDashboard() {
   const [stockPage, setStockPage] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteStockConfirm, setDeleteStockConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
   const [tapLogs, setTapLogs] = useState<TapLogEntry[]>([]);
   const [lastVisitedAt, setLastVisitedAt] = useState<string | null>(null);
   const [newTapCount, setNewTapCount] = useState(0);
+  const [showScanner, setShowScanner] = useState(false);
 
   const LS_KEY = "admin_dashboard_last_visited";
 
   async function loadCards() {
-    const res = await fetch("/api/admin/codes");
-    if (res.ok) {
-      const data = await res.json();
-      setCards(data.cards ?? []);
-    }
-    const stockRes = await fetch("/api/admin/stock");
-    if (stockRes.ok) {
-      const stockData = await stockRes.json();
-      setStockCodes(stockData.codes ?? []);
+    try {
+      const [resCodes, stockRes] = await Promise.all([
+        fetch("/api/admin/codes"),
+        fetch("/api/admin/stock"),
+      ]);
+      if (resCodes.ok) {
+        const data = await resCodes.json();
+        setCards(data.cards ?? []);
+      }
+      if (stockRes.ok) {
+        const stockData = await stockRes.json();
+        setStockCodes(stockData.codes ?? []);
+      }
+    } catch (e) {
+      console.error("Gagal load cards / stock:", e);
     }
   }
 
   const loadTapLogs = useCallback(async () => {
-    // Baca timestamp kunjungan terakhir SEBELUM update
     const prevVisit = localStorage.getItem(LS_KEY);
     setLastVisitedAt(prevVisit);
 
@@ -76,11 +85,24 @@ export default function AdminDashboard() {
       setNewTapCount(unseen.length);
     }
 
-    // Update timestamp kunjungan sekarang
     localStorage.setItem(LS_KEY, new Date().toISOString());
   }, []);
 
-  useEffect(() => { loadCards(); loadTapLogs(); }, [loadTapLogs]);
+  useEffect(() => {
+    loadCards();
+    loadTapLogs();
+  }, [loadTapLogs]);
+
+  // Handle URL query ?code=... to immediately prefill form and open sheet/modal!
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const queryCode = params.get("code");
+      if (queryCode) {
+        openNewForm(queryCode.trim());
+      }
+    }
+  }, []);
 
   // Lock body scroll when sheet open
   useEffect(() => {
@@ -104,7 +126,6 @@ export default function AdminDashboard() {
     setCode(card.code);
     setStoreName(card.storeName);
     setGoogleReviewUrl(card.googleReviewUrl);
-    // Coba ekstrak Place ID dari URL yang ada
     const match = card.googleReviewUrl.match(/placeid=([^&]+)/);
     setPlaceId(match ? match[1] : "");
     setPrice(card.price ?? 50000);
@@ -115,7 +136,7 @@ export default function AdminDashboard() {
 
   function closeSheet() {
     setShowSheet(false);
-    setTimeout(resetForm, 350); // after animation
+    setTimeout(resetForm, 350);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -138,7 +159,6 @@ export default function AdminDashboard() {
       setSavedCardUrl(cardUrl);
       setMessage(`✅ "${storeName.trim()}" berhasil ${isEditing ? "diupdate" : "disimpan"}!`);
       await loadCards();
-      // Jangan auto-close — biarkan user copy URL dulu
     } else {
       setError(data?.error ?? "Gagal menyimpan. Cek kembali datanya.");
     }
@@ -148,18 +168,18 @@ export default function AdminDashboard() {
     const res = await fetch(`/api/admin/codes/${cardCode}`, { method: "DELETE" });
     if (res.ok) {
       setCards((prev) => prev.filter((c) => c.code !== cardCode));
+      // Refresh tap logs to ensure deleted card is instantly removed
+      loadTapLogs();
     }
     setDeleteConfirm(null);
   }
 
-  async function handleDeleteStock(code: string) {
-    if (!confirm(`Yakin hapus kode stok "${code}"?`)) return;
-    const res = await fetch(`/api/admin/stock/${code}`, { method: "DELETE" });
+  async function handleDeleteStock(scCode: string) {
+    const res = await fetch(`/api/admin/stock/${scCode}`, { method: "DELETE" });
     if (res.ok) {
-      setStockCodes((prev) => prev.filter((c) => c !== code));
-    } else {
-      alert("Gagal menghapus kode stok.");
+      setStockCodes((prev) => prev.filter((c) => c !== scCode));
     }
+    setDeleteStockConfirm(null);
   }
 
   async function handleClearStock() {
@@ -173,11 +193,6 @@ export default function AdminDashboard() {
     }
   }
 
-  async function handleLogout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    window.location.href = "/admin/login";
-  }
-
   function copyToClipboard(text: string, id: string) {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedCode(id);
@@ -185,41 +200,31 @@ export default function AdminDashboard() {
     });
   }
 
-  function formatDate(iso?: string) {
-    if (!iso) return "";
-    return new Date(iso).toLocaleDateString("id-ID", {
-      day: "numeric", month: "short", year: "numeric",
-    });
-  }
-
   function timeAgo(iso: string) {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return "Baru saja";
-    if (mins < 60) return `${mins} menit lalu`;
+    if (mins < 60) return `${mins}m lalu`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs} jam lalu`;
+    if (hrs < 24) return `${hrs}j lalu`;
     const days = Math.floor(hrs / 24);
-    if (days < 7) return `${days} hari lalu`;
-    return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    return days < 7 ? `${days} hari lalu` : new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
   }
 
-  const filtered = cards.filter(
-    (c) =>
-      c.storeName.toLowerCase().includes(search.toLowerCase()) ||
-      c.code.toLowerCase().includes(search.toLowerCase())
-  );
+  // Active cards and calculations
+  const totalTaps = useMemo(() => cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0), [cards]);
+  const totalRevenue = useMemo(() => cards.reduce((sum, c) => sum + (c.price ?? 50000), 0), [cards]);
 
-  const totalTaps = cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0);
+  const monthlyRevenueObj = useMemo(() => {
+    return cards.reduce((acc, card) => {
+      const d = new Date(card.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      acc[key] = (acc[key] || 0) + (card.price ?? 50000);
+      return acc;
+    }, {} as Record<string, number>);
+  }, [cards]);
 
-  const monthlyRevenueObj = cards.reduce((acc, card) => {
-    const d = new Date(card.createdAt);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    acc[key] = (acc[key] || 0) + (card.price ?? 50000);
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const allMonthKeys = Object.keys(monthlyRevenueObj).sort((a, b) => b.localeCompare(a));
+  const allMonthKeys = useMemo(() => Object.keys(monthlyRevenueObj).sort((a, b) => b.localeCompare(a)), [monthlyRevenueObj]);
   const sortedMonthKeys = selectedMonth ? allMonthKeys.filter(k => k === selectedMonth) : allMonthKeys;
 
   const formatMonthKey = (key: string) => {
@@ -228,13 +233,34 @@ export default function AdminDashboard() {
     return date.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
   };
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-
-  // ---- Form content (shared between desktop sidebar & mobile sheet) ----
+  // ── Form content (shared between desktop sidebar & mobile sheet) ──
   const formContent = (
     <form onSubmit={handleSubmit}>
       <div className="form-group">
-        <label className="label" htmlFor="card-code">Kode Kartu (NFC/QR)</label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label className="label" htmlFor="card-code">Kode Kartu (NFC/QR)</label>
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              style={{
+                background: "rgba(99,102,241,0.15)",
+                border: "1px solid rgba(99,102,241,0.3)",
+                color: "#A5B4FC",
+                borderRadius: 6,
+                padding: "2px 8px",
+                fontSize: "0.72rem",
+                cursor: "pointer",
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              📷 Scan Kamera
+            </button>
+          )}
+        </div>
         <input
           id="card-code"
           className="input"
@@ -246,40 +272,40 @@ export default function AdminDashboard() {
           autoCapitalize="none"
           autoCorrect="off"
           readOnly={isEditing}
-          style={isEditing ? { opacity: 0.55, cursor: "not-allowed" } : {}}
+          style={isEditing ? { opacity: 0.6, cursor: "not-allowed" } : {}}
         />
         {isEditing && (
           <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-            Kode tidak bisa diubah saat edit.
+            Kode kartu unik tidak dapat diubah saat mengedit.
           </p>
         )}
       </div>
 
       <div className="form-group">
-        <label className="label" htmlFor="store-name">Nama Toko</label>
+        <label className="label" htmlFor="store-name">Nama Toko / Resto</label>
         <input
           id="store-name"
           className="input"
           value={storeName}
           onChange={(e) => setStoreName(e.target.value)}
-          placeholder="cth: Kedai Kopi Sudirman"
+          placeholder="cth: Cafe Kopi Senja"
           maxLength={100}
           required
         />
       </div>
 
       <div className="form-group">
-        <label className="label" htmlFor="place-id">
-          Google Place ID
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label className="label" htmlFor="place-id">Google Place ID</label>
           <a
             href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ marginLeft: 8, fontSize: "0.65rem", color: "#A5B4FC", fontWeight: 400 }}
+            style={{ fontSize: "0.68rem", color: "#A5B4FC", textDecoration: "none", fontWeight: 600 }}
           >
             🔍 Cari Place ID ↗
           </a>
-        </label>
+        </div>
 
         <input
           id="place-id"
@@ -291,19 +317,19 @@ export default function AdminDashboard() {
             if (pid.startsWith("ChIJ") || pid.startsWith("Eh")) {
               setGoogleReviewUrl(`https://search.google.com/local/writereview?placeid=${pid}`);
             } else {
-              setGoogleReviewUrl(""); // Reset if invalid
+              setGoogleReviewUrl("");
             }
           }}
           placeholder="cth: ChIJxxxxxxxxxxxxxxxxx"
-          maxLength={100}
+          maxLength={120}
           required
           autoCapitalize="none"
           autoCorrect="off"
         />
         {googleReviewUrl && (
-          <p style={{ fontSize: "0.7rem", color: "#6EE7B7", marginTop: 4 }}>
-            ✅ URL Review otomatis terbuat!
-          </p>
+          <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+            <span>✅</span> URL Review Google siap digunakan
+          </div>
         )}
       </div>
 
@@ -318,32 +344,32 @@ export default function AdminDashboard() {
           placeholder="50000"
           required
         />
-        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
-          Default: Rp 50.000 (Akan dihitung ke Total Pendapatan).
+        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
+          Default: Rp 50.000. Dihitung ke Total Pendapatan.
         </p>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
 
-      {/* NFC URL box — muncul setelah berhasil simpan */}
+      {/* NFC URL Box upon save */}
       {savedCardUrl && (
         <div style={{
           background: "rgba(16,185,129,0.08)",
           border: "1px solid rgba(16,185,129,0.3)",
           borderRadius: 12,
           padding: "14px 16px",
-          marginBottom: 14,
+          marginBottom: 16,
         }}>
-          <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#34D399", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            📱 URL untuk NFC Tools
+          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#34D399", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+            <span>📱 URL untuk Chip NFC (NFC Tools)</span>
           </div>
           <div style={{
             fontFamily: "monospace",
             fontSize: "0.82rem",
             color: "#F0F0FF",
             wordBreak: "break-all",
-            background: "rgba(0,0,0,0.3)",
+            background: "rgba(0,0,0,0.4)",
             padding: "8px 10px",
             borderRadius: 6,
             marginBottom: 10,
@@ -360,29 +386,24 @@ export default function AdminDashboard() {
                 setTimeout(() => setCopiedNfc(false), 3000);
               });
             }}
+            className="btn btn-primary"
             style={{
               width: "100%",
-              padding: "11px",
-              background: copiedNfc ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.15)",
-              border: "1px solid rgba(16,185,129,0.4)",
-              borderRadius: 8,
-              color: "#34D399",
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              transition: "all 0.2s",
+              justifyContent: "center",
+              background: copiedNfc ? "#059669" : "#10B981",
+              fontSize: "0.85rem",
+              padding: "10px",
             }}
           >
-            {copiedNfc ? "✅ Disalin! Buka NFC Tools → paste" : "📋 Salin URL untuk NFC Tools"}
+            {copiedNfc ? "✅ URL Tersalin! Paste di NFC Tools" : "📋 Salin URL NFC"}
           </button>
           <button
             type="button"
             onClick={closeSheet}
             className="btn btn-ghost"
-            style={{ width: "100%", justifyContent: "center", marginTop: 8, fontSize: "0.8rem" }}
+            style={{ width: "100%", justifyContent: "center", marginTop: 8, fontSize: "0.78rem" }}
           >
-            Selesai, tutup
+            Selesai, Tutup Form
           </button>
         </div>
       )}
@@ -392,12 +413,12 @@ export default function AdminDashboard() {
           type="submit"
           className="btn btn-primary"
           disabled={loading}
-          style={{ width: "100%", justifyContent: "center", padding: "13px 20px", fontSize: "0.95rem" }}
+          style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: "0.92rem", marginTop: 6 }}
         >
           {loading ? (
             <><div className="spinner" /> Menyimpan...</>
           ) : (
-            isEditing ? "Update Kartu →" : "Simpan Kartu →"
+            isEditing ? "Update Perubahan →" : "Simpan & Hubungkan Kartu →"
           )}
         </button>
       )}
@@ -406,10 +427,18 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className="gradient-bg">
-        <div className="gradient-blob blob-1" />
-        <div className="gradient-blob blob-2" />
-      </div>
+      <AdminNav active="dashboard" />
+
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <QRScanner
+          onScan={(scannedCode) => {
+            openNewForm(scannedCode);
+            setShowScanner(false);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       {/* Mobile bottom sheet backdrop */}
       <div
@@ -420,41 +449,37 @@ export default function AdminDashboard() {
       {/* Mobile bottom sheet */}
       <div className={`sheet ${showSheet ? "open" : ""}`}>
         <div className="sheet-handle" />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
-            {isEditing ? "✏️ Edit Kartu" : "➕ Assign Kartu ke Toko"}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <h2 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--text-primary)" }}>
+            {isEditing ? "✏️ Edit Kartu Toko" : "➕ Hubungkan Kartu ke Toko"}
           </h2>
-          <button onClick={closeSheet} className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: "0.8rem" }}>
+          <button onClick={closeSheet} className="btn btn-ghost" style={{ padding: "5px 10px", fontSize: "0.78rem" }}>
             ✕ Tutup
           </button>
         </div>
         {formContent}
       </div>
 
-      {/* Delete confirmation modal */}
+      {/* Delete Card Confirmation Modal */}
       {deleteConfirm && (
         <>
           <div
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, backdropFilter: "blur(4px)" }}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, backdropFilter: "blur(6px)" }}
             onClick={() => setDeleteConfirm(null)}
           />
           <div style={{
-            position: "fixed",
-            top: "50%", left: "50%",
-            transform: "translate(-50%, -50%)",
-            zIndex: 301,
-            background: "#16161F",
-            border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: 16,
-            padding: "28px 24px",
-            width: "min(90vw, 360px)",
-            textAlign: "center",
+            position: "fixed", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)", zIndex: 301,
+            background: "#14141E", border: "1px solid rgba(239,68,68,0.35)",
+            borderRadius: 18, padding: "28px 24px",
+            width: "min(92vw, 380px)", textAlign: "center",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
           }}>
-            <div style={{ fontSize: "2rem", marginBottom: 12 }}>🗑️</div>
-            <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Hapus Kartu?</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: 20 }}>
-              Kode <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteConfirm}</span> akan
-              dihapus permanen. Link kartu ini tidak akan aktif lagi.
+            <div style={{ fontSize: "2.4rem", marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontWeight: 800, fontSize: "1.15rem", marginBottom: 8, color: "#F0F0FF" }}>Hapus Kartu Ini?</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 22, lineHeight: 1.5 }}>
+              Kode <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteConfirm}</strong> akan dihapus permanen.
+              Link redirect ulasan tidak akan aktif lagi, dan riwayat tap kartu ini akan dibersihkan dari leaderboard.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button
@@ -469,6 +494,37 @@ export default function AdminDashboard() {
                 style={{ flex: 1, justifyContent: "center" }}
                 onClick={() => handleDelete(deleteConfirm)}
               >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Delete Stock Confirmation Modal */}
+      {deleteStockConfirm && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, backdropFilter: "blur(6px)" }}
+            onClick={() => setDeleteStockConfirm(null)}
+          />
+          <div style={{
+            position: "fixed", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)", zIndex: 301,
+            background: "#14141E", border: "1px solid rgba(239,68,68,0.35)",
+            borderRadius: 18, padding: "28px 24px",
+            width: "min(92vw, 360px)", textAlign: "center",
+          }}>
+            <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>📦</div>
+            <h3 style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: 6, color: "#F0F0FF" }}>Hapus Kode Stok?</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 20 }}>
+              Kode stok <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteStockConfirm}</strong> akan dihapus dari antrean cetak.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => setDeleteStockConfirm(null)}>
+                Batal
+              </button>
+              <button className="btn btn-danger" style={{ flex: 1, justifyContent: "center" }} onClick={() => handleDeleteStock(deleteStockConfirm)}>
                 Hapus
               </button>
             </div>
@@ -476,109 +532,151 @@ export default function AdminDashboard() {
         </>
       )}
 
-      <div style={{ position: "relative", zIndex: 1, minHeight: "100vh" }}>
-        {/* ---- Header ---- */}
-        <header style={{
-          borderBottom: "1px solid var(--border)",
-          background: "rgba(10,10,15,0.85)",
-          backdropFilter: "blur(16px)",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-        }}>
-          <div style={{
-            maxWidth: 980,
-            margin: "0 auto",
-            padding: "12px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{
-                width: 34, height: 34,
-                background: "linear-gradient(135deg, #4F46E5, #8B5CF6)",
-                borderRadius: 10,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "0.9rem", flexShrink: 0,
-              }}>⭐</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--text-primary)", lineHeight: 1.2 }}>
-                  Review Card
-                </div>
-                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Admin Panel</div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="badge badge-green" style={{ fontSize: "0.65rem" }}>● Online</span>
-              <button
-                onClick={handleLogout}
-                className="btn btn-ghost"
-                style={{ padding: "7px 14px", fontSize: "0.8rem" }}
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </header>
+      {/* Main Page Layout */}
+      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
+        <main style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
-        {/* ---- Main ---- */}
-        <main style={{ maxWidth: 980, margin: "0 auto", padding: "20px 16px 100px" }}>
-
-          {/* Stats */}
-          <div className="stats-grid">
+          {/* Quick Stats Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14, marginBottom: 24 }}>
             {[
-              { label: "Kartu Aktif", value: cards.length, icon: "💳", color: "#4F46E5" },
-              { label: "Stok Tersedia", value: stockCodes.length, icon: "📦", color: "#06B6D4" },
-              { label: "Pendapatan", value: "Rp " + cards.reduce((sum, c) => sum + (c.price ?? 50000), 0).toLocaleString("id-ID"), icon: "💰", color: "#10B981" },
-              { label: "Total Tap", value: totalTaps, icon: "👆", color: "#F59E0B" },
+              { label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#4F46E5", sub: "Terhubung ke Google Review" },
+              { label: "Stok Kode Tersedia", value: stockCodes.length, icon: "📦", color: "#06B6D4", sub: "Siap di-assign ke toko baru" },
+              { label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString("id-ID")}`, icon: "💰", color: "#10B981", sub: "Penjualan fisik kartu" },
+              { label: "Total Tap Pelanggan", value: totalTaps, icon: "👆", color: "#F59E0B", sub: "Scan QR & tap NFC aktif" },
             ].map((s) => (
-              <div key={s.label} className="card" style={{ padding: "14px 16px" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: 6 }}>{s.icon}</div>
-                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
+              <div
+                key={s.label}
+                className="card"
+                style={{
+                  padding: "16px 18px",
+                  background: "linear-gradient(180deg, rgba(255,255,255,0.03), #111118)",
+                  borderColor: "rgba(255,255,255,0.08)",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {s.label}
+                  </span>
+                  <span style={{ fontSize: "1.3rem" }}>{s.icon}</span>
+                </div>
+                <div style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.1 }}>
                   {s.value}
                 </div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 3, lineHeight: 1.3 }}>
-                  {s.label}
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 6 }}>
+                  {s.sub}
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
-            <a 
-              href="/admin/print" 
-              className="btn" 
-              style={{ 
-                background: "linear-gradient(135deg, #4F46E5, #8B5CF6)", 
-                color: "white", 
-                textDecoration: "none", 
-                padding: "10px 16px", 
-                borderRadius: "8px",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                boxShadow: "0 4px 14px rgba(79,70,229,0.3)"
+          {/* Quick Action Navigation Bar */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 12,
+            marginBottom: 26,
+          }}>
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)",
+                borderRadius: 14, cursor: "pointer", color: "var(--text-primary)",
+                textAlign: "left", width: "100%", fontFamily: "inherit",
+                transition: "all 0.2s",
               }}
             >
-              🖨️ Buka Mesin Cetak QR Code
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(16,185,129,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
+                📷
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#34D399" }}>Scan QR Kartu</div>
+                <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>Pindai cepat untuk assign</div>
+              </div>
+            </button>
+
+            <a
+              href="/admin/cards"
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)",
+                borderRadius: 14, textDecoration: "none", color: "var(--text-primary)",
+                transition: "all 0.2s",
+              }}
+            >
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
+                🗂️
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF" }}>Manajemen Kartu</div>
+                <div style={{ fontSize: "0.72rem", color: "#A5B4FC" }}>{cards.length} kartu aktif · Cetak PNG</div>
+              </div>
+            </a>
+
+            <a
+              href="/admin/taps"
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
+                borderRadius: 14, textDecoration: "none", color: "var(--text-primary)",
+                transition: "all 0.2s",
+              }}
+            >
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
+                📈
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF" }}>Leaderboard Tap</div>
+                <div style={{ fontSize: "0.72rem", color: "#FCD34D" }}>Peringkat terbanyak per bulan</div>
+              </div>
+            </a>
+
+            <a
+              href="/admin/print"
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.25)",
+                borderRadius: 14, textDecoration: "none", color: "var(--text-primary)",
+                transition: "all 0.2s",
+              }}
+            >
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(6,182,212,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>
+                🖨️
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#F0F0FF" }}>Mesin Cetak QR</div>
+                <div style={{ fontSize: "0.72rem", color: "#67E8F9" }}>Generate batch &amp; stok</div>
+              </div>
             </a>
           </div>
 
+          {/* Grid Layout: Desktop Form (Left) & Widgets (Right) */}
           <div className="admin-grid">
-            {/* ---- FORM: desktop only ---- */}
-            <div className="card desktop-form" style={{ position: "sticky", top: 72 }}>
-              <h2 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 4, color: "var(--text-primary)" }}>
-                {isEditing ? "✏️ Edit Kartu" : "Assign Kartu ke Toko"}
-              </h2>
-              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.5 }}>
+
+            {/* Desktop Left Form */}
+            <div className="card desktop-form" style={{ position: "sticky", top: 80 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {isEditing ? "✏️ Edit Kartu Toko" : "➕ Hubungkan Kartu ke Toko"}
+                </h2>
+                {isEditing && (
+                  <span className="badge badge-purple" style={{ fontSize: "0.65rem" }}>Edit Mode</span>
+                )}
+              </div>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.5 }}>
                 {isEditing
-                  ? "Ubah nama toko atau link Google Review."
-                  : "Tautkan kode kartu NFC/QR ke toko client."}
+                  ? "Perbarui nama toko atau Google Place ID."
+                  : "Tautkan kode fisik kartu NFC/QR ke profil Google Review toko."}
               </p>
+
               {formContent}
+
               {isEditing && (
                 <button
+                  type="button"
                   onClick={resetForm}
                   className="btn btn-ghost"
                   style={{ width: "100%", justifyContent: "center", marginTop: 8, fontSize: "0.8rem" }}
@@ -588,86 +686,93 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* ---- UX DASHBOARD REPLACEMENT ---- */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              {/* QUICK ACTIONS */}
-              <div className="card" style={{ padding: "20px" }}>
-                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>⚡ Quick Actions</h2>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <a href="/admin/cards" className="btn" style={{ background: "#374151", color: "white", flex: 1, minWidth: 140, textDecoration: "none", textAlign: "center" }}>
-                    🗂️ Manajemen Kartu
-                  </a>
-                  <a href="/admin/print" className="btn" style={{ background: "#374151", color: "white", flex: 1, minWidth: 140, textDecoration: "none", textAlign: "center" }}>
-                    🖨️ Cetak QR
-                  </a>
-                </div>
-              </div>
+            {/* Right Column Widgets */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-              {/* INVENTORY STOK KARTU */}
+              {/* STOK INVENTORY WIDGET */}
               <div className="card" style={{ padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                    📦 Inventori Stok Kartu ({stockCodes.length})
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    📦 Stok Kode Belum Di-Assign ({stockCodes.length})
                   </h2>
-                  {stockCodes.length > 0 && (
-                    <button
-                      onClick={handleClearStock}
-                      className="btn btn-ghost"
-                      style={{ padding: "4px 10px", fontSize: "0.75rem", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.2)" }}
-                    >
-                      🗑️ Hapus Semua
-                    </button>
-                  )}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <a href="/admin/print" className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: "0.75rem" }}>
+                      + Buat Stok
+                    </a>
+                    {stockCodes.length > 0 && (
+                      <button
+                        onClick={handleClearStock}
+                        className="btn btn-ghost"
+                        style={{ padding: "4px 10px", fontSize: "0.75rem", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.2)" }}
+                      >
+                        Hapus Semua
+                      </button>
+                    )}
+                  </div>
                 </div>
-                
+
                 {stockCodes.length === 0 ? (
-                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada stok. Buka menu Cetak QR untuk generate kartu baru.</p>
+                  <div style={{ textAlign: "center", padding: "24px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 10, border: "1px dashed rgba(255,255,255,0.07)" }}>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
+                      Belum ada kode stok yang tersimpan. Buka <a href="/admin/print" style={{ color: "#A5B4FC" }}>Mesin Cetak QR</a> untuk generate sekumpulan kode baru.
+                    </p>
+                  </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {stockCodes.slice(stockPage * 5, (stockPage + 1) * 5).map((sc) => (
-                      <div key={sc} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
-                        <div style={{ fontFamily: "monospace", color: "#A5B4FC", fontSize: "0.95rem", letterSpacing: "0.05em" }}>
-                          {sc}
+                      <div
+                        key={sc}
+                        style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "10px 14px", background: "rgba(255,255,255,0.03)",
+                          borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: "0.8rem" }}>🏷️</span>
+                          <span style={{ fontFamily: "monospace", color: "#A5B4FC", fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.05em" }}>
+                            {sc}
+                          </span>
                         </div>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button
-                            onClick={() => handleDeleteStock(sc)}
+                            onClick={() => setDeleteStockConfirm(sc)}
                             className="btn btn-ghost"
-                            style={{ padding: "4px 8px", fontSize: "0.8rem", color: "#FCA5A5", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 6 }}
+                            style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#FCA5A5" }}
                             title="Hapus stok ini"
                           >
                             🗑️
                           </button>
                           <button
                             onClick={() => openNewForm(sc)}
-                            className="btn btn-emerald"
+                            className="btn btn-primary"
                             style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: 6 }}
                           >
-                            Assign →
+                            Assign ke Toko →
                           </button>
                         </div>
                       </div>
                     ))}
-                    
-                    {/* Pagination Controls */}
+
+                    {/* Pagination */}
                     {stockCodes.length > 5 && (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, padding: "0 4px" }}>
                         <button
                           onClick={() => setStockPage(p => Math.max(0, p - 1))}
                           disabled={stockPage === 0}
                           className="btn btn-ghost"
-                          style={{ padding: "4px 12px", fontSize: "0.8rem", opacity: stockPage === 0 ? 0.3 : 1 }}
+                          style={{ padding: "4px 10px", fontSize: "0.75rem", opacity: stockPage === 0 ? 0.35 : 1 }}
                         >
                           ← Prev
                         </button>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                          Hal {stockPage + 1} dari {Math.ceil(stockCodes.length / 5)}
-                        </div>
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                          Halaman {stockPage + 1} dari {Math.ceil(stockCodes.length / 5)}
+                        </span>
                         <button
                           onClick={() => setStockPage(p => Math.min(Math.ceil(stockCodes.length / 5) - 1, p + 1))}
                           disabled={stockPage >= Math.ceil(stockCodes.length / 5) - 1}
                           className="btn btn-ghost"
-                          style={{ padding: "4px 12px", fontSize: "0.8rem", opacity: stockPage >= Math.ceil(stockCodes.length / 5) - 1 ? 0.3 : 1 }}
+                          style={{ padding: "4px 10px", fontSize: "0.75rem", opacity: stockPage >= Math.ceil(stockCodes.length / 5) - 1 ? 0.35 : 1 }}
                         >
                           Next →
                         </button>
@@ -677,18 +782,22 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-
-              {/* MONTHLY REVENUE */}
+              {/* MONTHLY REVENUE ACCORDION */}
               <div className="card" style={{ padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                    📊 Pendapatan Bulanan
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                    💰 Rekap Pendapatan Kartu
                   </h2>
                   {allMonthKeys.length > 1 && (
                     <select
                       value={selectedMonth}
                       onChange={e => setSelectedMonth(e.target.value)}
-                      style={{ padding: "6px 10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#F0F0FF", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", cursor: "pointer" }}
+                      style={{
+                        padding: "5px 10px", background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+                        color: "#F0F0FF", fontSize: "0.78rem", fontFamily: "inherit",
+                        outline: "none", cursor: "pointer",
+                      }}
                     >
                       <option value="">Semua Bulan</option>
                       {allMonthKeys.map(k => (
@@ -697,108 +806,78 @@ export default function AdminDashboard() {
                     </select>
                   )}
                 </div>
+
                 {sortedMonthKeys.length === 0 ? (
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Belum ada data penjualan.</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Belum ada data penjualan tercatat.</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {sortedMonthKeys.map((key) => (
-                      <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
-                        <div style={{ fontWeight: 600, color: "white", fontSize: "0.9rem" }}>
+                      <div
+                        key={key}
+                        style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "12px 14px", background: "rgba(255,255,255,0.03)",
+                          borderRadius: 8,
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, color: "#F0F0FF", fontSize: "0.88rem" }}>
                           {formatMonthKey(key)}
                         </div>
-                        <div style={{ color: "#10B981", fontWeight: 700, fontSize: "0.95rem" }}>
+                        <div style={{ color: "#10B981", fontWeight: 800, fontSize: "0.95rem" }}>
                           Rp {monthlyRevenueObj[key].toLocaleString("id-ID")}
                         </div>
                       </div>
                     ))}
-                    {selectedMonth && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
-                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Total bulan ini</div>
-                        <div style={{ color: "#34D399", fontWeight: 800 }}>Rp {(monthlyRevenueObj[selectedMonth] ?? 0).toLocaleString("id-ID")}</div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
 
-              {/* TAP LOG */}
+              {/* RECENT TAPS WIDGET */}
               <div className="card" style={{ padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
-                    📲 Tap Baru
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                    📲 Aktivitas Tap Terbaru
                     {newTapCount > 0 && (
-                      <span style={{
-                        fontSize: "0.65rem", fontWeight: 700,
-                        background: "rgba(52,211,153,0.15)", color: "#34D399",
-                        border: "1px solid rgba(52,211,153,0.3)",
-                        padding: "2px 8px", borderRadius: 999,
-                      }}>{newTapCount} baru</span>
+                      <span className="badge badge-green" style={{ fontSize: "0.65rem" }}>
+                        {newTapCount} Baru
+                      </span>
                     )}
                   </h2>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button
-                      onClick={loadTapLogs}
-                      className="btn btn-ghost"
-                      style={{ padding: "4px 10px", fontSize: "0.75rem" }}
-                    >
+                    <button onClick={loadTapLogs} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "0.72rem" }}>
                       🔄 Refresh
                     </button>
                     <a
                       href="/admin/taps"
                       className="btn btn-ghost"
-                      style={{ padding: "4px 10px", fontSize: "0.75rem", textDecoration: "none", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.08)" }}
+                      style={{ padding: "4px 10px", fontSize: "0.72rem", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}
                     >
-                      Lihat Semua →
+                      Buka Riwayat Lengkap →
                     </a>
                   </div>
                 </div>
+
                 {tapLogs.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "20px 0" }}>
-                    <div style={{ fontSize: "1.8rem", marginBottom: 8, opacity: 0.4 }}>✅</div>
-                    <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600, marginBottom: 4 }}>
-                      Tidak ada tap baru
+                  <div style={{ textAlign: "center", padding: "28px 12px" }}>
+                    <div style={{ fontSize: "1.8rem", marginBottom: 6, opacity: 0.4 }}>✨</div>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600 }}>
+                      Belum ada tap baru sejak kunjungan terakhir.
                     </p>
-                    <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginBottom: 12 }}>
-                      {lastVisitedAt
-                        ? `Sejak kunjungan terakhir ${new Date(lastVisitedAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-                        : "Belum ada tap tercatat."}
-                    </p>
-                    <a
-                      href="/admin/taps"
-                      style={{
-                        fontSize: "0.78rem", color: "#FCD34D",
-                        background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)",
-                        padding: "6px 14px", borderRadius: 8, textDecoration: "none", display: "inline-block",
-                      }}
-                    >
-                      Lihat Semua Riwayat →
-                    </a>
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {tapLogs.map((log, i) => (
+                    {tapLogs.slice(0, 6).map((log, i) => (
                       <div
                         key={`${log.code}-${log.tappedAt}-${i}`}
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "10px 12px",
-                          background: "rgba(52,211,153,0.04)",
-                          borderLeft: "3px solid #34D399",
-                          borderRadius: "0 8px 8px 0",
-                          gap: 8,
-                          flexWrap: "wrap",
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "10px 14px", background: "rgba(52,211,153,0.04)",
+                          borderLeft: "3px solid #34D399", borderRadius: "0 8px 8px 0",
+                          gap: 10,
                         }}
                       >
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: "#F0F0FF", fontSize: "0.88rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{
-                              fontSize: "0.58rem", fontWeight: 700,
-                              background: "rgba(52,211,153,0.15)", color: "#34D399",
-                              border: "1px solid rgba(52,211,153,0.3)",
-                              padding: "1px 5px", borderRadius: 999, flexShrink: 0,
-                            }}>BARU</span>
+                          <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {log.storeName}
                           </div>
                           <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
@@ -806,14 +885,9 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         <span style={{
-                          fontSize: "0.72rem",
-                          color: "#34D399",
-                          background: "rgba(52,211,153,0.1)",
-                          border: "1px solid rgba(52,211,153,0.2)",
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          whiteSpace: "nowrap",
-                          flexShrink: 0,
+                          fontSize: "0.7rem", fontWeight: 700, color: "#34D399",
+                          background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)",
+                          padding: "3px 8px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0,
                         }}>
                           {timeAgo(log.tappedAt)}
                         </span>
@@ -822,13 +896,16 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+
             </div>
+
           </div>
+
         </main>
       </div>
 
-      {/* Mobile FAB */}
-      <button className="fab" onClick={() => openNewForm()} title="Assign kartu baru">
+      {/* Mobile Floating Action Button (FAB) */}
+      <button className="fab" onClick={() => openNewForm()} title="Assign Kartu Baru">
         +
       </button>
     </>

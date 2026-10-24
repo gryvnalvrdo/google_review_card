@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import AdminNav from "../components/AdminNav";
 
 type TapLogEntry = {
   code: string;
@@ -15,7 +16,7 @@ type CardRecord = {
   createdAt: string;
 };
 
-// ── SVG Bar Chart (pure, no library) ─────────────────────────────────
+// ── SVG Bar Chart (pure, high-DPI responsive) ───────────────────────
 function BarChart({
   data,
   color = "#F59E0B",
@@ -29,13 +30,13 @@ function BarChart({
 }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   const W = 800;
-  const H = 180;
-  const PAD_B = 28;
-  const PAD_T = 18;
+  const H = 190;
+  const PAD_B = 30;
+  const PAD_T = 20;
   const chartH = H - PAD_B - PAD_T;
   const totalW = W - 20;
   const slotW = totalW / data.length;
-  const barW = Math.max(Math.floor(slotW * 0.7), 4);
+  const barW = Math.max(Math.floor(slotW * 0.72), 4);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
@@ -44,25 +45,26 @@ function BarChart({
           key={f}
           x1={10} y1={PAD_T + chartH * (1 - f)}
           x2={W - 10} y2={PAD_T + chartH * (1 - f)}
-          stroke="rgba(255,255,255,0.05)" strokeWidth={1}
+          stroke="rgba(255,255,255,0.06)" strokeWidth={1}
+          strokeDasharray="4 4"
         />
       ))}
       {data.map((d, i) => {
-        const barH = Math.max((d.value / max) * chartH, d.value > 0 ? 2 : 0);
+        const barH = Math.max((d.value / max) * chartH, d.value > 0 ? 3 : 0);
         const x = 10 + i * slotW + (slotW - barW) / 2;
         const y = PAD_T + chartH - barH;
         const isHighlight = d.highlight;
-        const barColor = isHighlight ? "#34D399" : d.value === 0 ? "rgba(255,255,255,0.06)" : color;
+        const barColor = isHighlight ? "#10B981" : d.value === 0 ? "rgba(255,255,255,0.05)" : color;
         return (
           <g key={i}>
-            <rect x={x} y={y} width={barW} height={barH} rx={3} fill={barColor} />
+            <rect x={x} y={y} width={barW} height={barH} rx={4} fill={barColor} />
             {showValue && d.value > 0 && (
-              <text x={x + barW / 2} y={y - 5} fill="#F0F0FF" fontSize={9} textAnchor="middle">
+              <text x={x + barW / 2} y={y - 6} fill="#F0F0FF" fontSize={9.5} fontWeight={700} textAnchor="middle">
                 {d.value}
               </text>
             )}
             {i % labelEvery === 0 && (
-              <text x={x + barW / 2} y={H - 4} fill="#5A5A72" fontSize={9} textAnchor="middle">
+              <text x={x + barW / 2} y={H - 5} fill="#7A7A95" fontSize={9} fontWeight={500} textAnchor="middle">
                 {d.label}
               </text>
             )}
@@ -80,44 +82,47 @@ function TapItem({ log, accentColor = "#34D399", timeAgo, formatFull }: {
   timeAgo: (iso: string) => string;
   formatFull: (iso: string) => string;
 }) {
-  // generate a stable hue from storeName for the icon gradient
   const hue = log.storeName.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 12,
-      padding: "11px 14px",
+      padding: "12px 14px",
       background: "#111118",
-      border: "1px solid rgba(255,255,255,0.06)",
+      borderBottom: "1px solid rgba(255,255,255,0.04)",
       borderLeft: `3px solid ${accentColor}`,
-      borderRadius: "0 10px 10px 0",
-      marginBottom: 5,
-      transition: "border-left-color 0.2s",
+      transition: "background 0.15s",
     }}>
-      {/* Ikon kotak gradien */}
+      {/* Avatar Icon */}
       <div style={{
-        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-        background: `linear-gradient(135deg, hsl(${hue},60%,28%), hsl(${(hue+40)%360},55%,42%))`,
-        border: `1px solid hsl(${hue},50%,35%)`,
+        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+        background: `linear-gradient(135deg, hsl(${hue},65%,26%), hsl(${(hue+45)%360},60%,38%))`,
+        border: `1px solid hsl(${hue},50%,38%)`,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "1rem",
+        fontSize: "1.05rem",
+        boxShadow: `0 2px 10px hsla(${hue},60%,20%,0.4)`,
       }}>📲</div>
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {log.storeName}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {log.storeName}
+          </span>
+          <span style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "#818CF8", background: "rgba(99,102,241,0.12)", padding: "1px 6px", borderRadius: 4 }}>
+            {log.code}
+          </span>
         </div>
-        <div style={{ fontSize: "0.72rem", color: "#6A6A82", marginTop: 2 }}>
+        <div style={{ fontSize: "0.72rem", color: "#7A7A95", marginTop: 2 }}>
           {formatFull(log.tappedAt)}
         </div>
       </div>
 
-      {/* Badge waktu */}
+      {/* Time pill */}
       <span style={{
-        fontSize: "0.72rem", fontWeight: 600,
+        fontSize: "0.72rem", fontWeight: 700,
         color: accentColor,
-        background: `${accentColor}18`,
-        border: `1px solid ${accentColor}40`,
+        background: `${accentColor}15`,
+        border: `1px solid ${accentColor}35`,
         padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0,
       }}>
         {timeAgo(log.tappedAt)}
@@ -129,7 +134,6 @@ function TapItem({ log, accentColor = "#34D399", timeAgo, formatFull }: {
 // ── Collapsible period section ─────────────────────────────────────────
 function PeriodSection({
   title,
-  dot,
   entries,
   defaultOpen = false,
   accentColor = "#F59E0B",
@@ -137,7 +141,6 @@ function PeriodSection({
   timeAgo,
 }: {
   title: string;
-  dot?: string;
   entries: TapLogEntry[];
   defaultOpen?: boolean;
   accentColor?: string;
@@ -148,36 +151,32 @@ function PeriodSection({
   if (entries.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: 6 }}>
-      {/* ── Header bar — mirip gambar 2 ── */}
+    <div style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
           width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "10px 16px",
-          background: "#0E0E16",
-          border: "1px solid rgba(255,255,255,0.06)",
-          borderLeft: `3px solid ${accentColor}`,
-          borderRadius: open ? "0 10px 0 0" : "0 10px 10px 0",
+          padding: "12px 16px",
+          background: "#13131C",
+          border: "none",
+          borderLeft: `4px solid ${accentColor}`,
           cursor: "pointer", color: "#F0F0FF", fontFamily: "inherit",
           transition: "background 0.15s",
         }}
       >
-        {/* Kiri: dot + label */}
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <span style={{
             width: 8, height: 8, borderRadius: "50%",
-            background: accentColor, flexShrink: 0, boxShadow: `0 0 6px ${accentColor}80`,
+            background: accentColor, flexShrink: 0, boxShadow: `0 0 8px ${accentColor}99`,
           }} />
-          <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", color: "#C0C0D8" }}>
+          <span style={{ fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: "#E0E0F0" }}>
             {title}
           </span>
         </span>
 
-        {/* Kanan: badge count + chevron */}
         <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
-            fontSize: "0.68rem", fontWeight: 800,
+            fontSize: "0.72rem", fontWeight: 800,
             color: accentColor,
             background: `${accentColor}18`,
             border: `1px solid ${accentColor}40`,
@@ -186,19 +185,15 @@ function PeriodSection({
             {entries.length} TAP
           </span>
           <span style={{
-            fontSize: "0.65rem", color: "#5A5A72",
+            fontSize: "0.7rem", color: "#7A7A95",
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 0.25s", display: "inline-block",
           }}>▼</span>
         </span>
       </button>
 
-      {/* ── Items ── */}
       {open && (
-        <div style={{
-          border: "1px solid rgba(255,255,255,0.06)", borderTop: "none",
-          borderRadius: "0 0 10px 10px", overflow: "hidden",
-        }}>
+        <div style={{ background: "#0E0E16" }}>
           {entries.map((log, i) => (
             <TapItem key={`${log.code}-${log.tappedAt}-${i}`} log={log} accentColor={accentColor} timeAgo={timeAgo} formatFull={formatFull} />
           ))}
@@ -215,7 +210,7 @@ export default function TapsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState<"harian" | "bulanan" | "tren" | "tidur">("harian");
+  const [activeTab, setActiveTab] = useState<"bulanan" | "harian" | "tren" | "tidur">("bulanan");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
 
@@ -235,12 +230,6 @@ export default function TapsPage() {
   }
 
   useEffect(() => { fetchData(); }, []);
-  useEffect(() => {
-    if (activeTab === "bulanan" && logs.length > 0) {
-      setExpandedMonth(getMonthKey(new Date().toISOString()));
-    }
-    setExpandedStore(null);
-  }, [activeTab, logs]);
 
   // ── Helpers ──────────────────────────────────────────────────────────
   function getMonthKey(iso: string) {
@@ -256,11 +245,11 @@ export default function TapsPage() {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return "Baru saja";
-    if (mins < 60) return `${mins} menit lalu`;
+    if (mins < 60) return `${mins}m lalu`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs} jam lalu`;
+    if (hrs < 24) return `${hrs}j lalu`;
     const days = Math.floor(hrs / 24);
-    return days < 7 ? `${days} hari lalu` : new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    return days < 7 ? `${days} hari lalu` : new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
   }
   function formatFull(iso: string) {
     return new Date(iso).toLocaleString("id-ID", {
@@ -268,22 +257,48 @@ export default function TapsPage() {
     });
   }
 
-  // ── Derived data ──────────────────────────────────────────────────────
+  // ── CRITICAL FIX: Filter out any logs from deleted cards! ───────────
+  // Active cards are the single source of truth.
+  const activeCardMap = useMemo(() => new Map(cards.map(c => [c.code, c.storeName])), [cards]);
+  const activeCodesSet = useMemo(() => new Set(cards.map(c => c.code)), [cards]);
+
+  const validLogs = useMemo(() => {
+    // If cards have loaded, only keep logs whose code exists in active cards
+    if (cards.length === 0) return logs;
+    return logs
+      .filter(l => activeCodesSet.has(l.code))
+      .map(l => ({
+        ...l,
+        storeName: activeCardMap.get(l.code) || l.storeName,
+      }));
+  }, [logs, cards, activeCodesSet, activeCardMap]);
+
   const thisMonthKey = getMonthKey(new Date().toISOString());
   const lastMonthKey = (() => {
     const d = new Date(); d.setMonth(d.getMonth() - 1);
     return getMonthKey(d.toISOString());
   })();
 
-  // Stats
+  useEffect(() => {
+    if (activeTab === "bulanan" && validLogs.length > 0) {
+      setExpandedMonth(getMonthKey(new Date().toISOString()));
+    }
+    setExpandedStore(null);
+  }, [activeTab, validLogs]);
+
+  // Stats (Using validLogs only)
   const todayCount = useMemo(() => {
     const todayStr = new Date().toDateString();
-    return logs.filter(l => new Date(l.tappedAt).toDateString() === todayStr).length;
-  }, [logs]);
-  const thisMonthCount = useMemo(() => logs.filter(l => getMonthKey(l.tappedAt) === thisMonthKey).length, [logs]);
+    return validLogs.filter(l => new Date(l.tappedAt).toDateString() === todayStr).length;
+  }, [validLogs]);
+
+  const thisMonthCount = useMemo(() => validLogs.filter(l => getMonthKey(l.tappedAt) === thisMonthKey).length, [validLogs, thisMonthKey]);
 
   // ── Harian: split by period ──────────────────────────────────────────
-  const filtered = useMemo(() => logs.filter(l => l.storeName.toLowerCase().includes(search.toLowerCase())), [logs, search]);
+  const filtered = useMemo(() => validLogs.filter(l =>
+    l.storeName.toLowerCase().includes(search.toLowerCase()) ||
+    l.code.toLowerCase().includes(search.toLowerCase())
+  ), [validLogs, search]);
 
   const hariianPeriods = useMemo(() => {
     const now = new Date();
@@ -295,8 +310,8 @@ export default function TapsPage() {
 
     const today: TapLogEntry[] = [];
     const yest: TapLogEntry[] = [];
-    const last7: TapLogEntry[] = [];   // 2–7 days ago (excluding yesterday)
-    const thisMonth: TapLogEntry[] = []; // this month but older than 7 days
+    const last7: TapLogEntry[] = [];
+    const thisMonth: TapLogEntry[] = [];
     const older: TapLogEntry[] = [];
 
     for (const entry of filtered) {
@@ -311,32 +326,50 @@ export default function TapsPage() {
     return { today, yest, last7, thisMonth, older };
   }, [filtered]);
 
-  // ── Tab: Bulanan ──────────────────────────────────────────────────────
-  type MonthGroup = { monthKey: string; label: string; total: number; byStore: { storeName: string; count: number; lastMonthCount: number }[] };
+  // ── Tab: Bulanan (Leaderboard Tanpa Kartu Terhapus) ───────────────────
+  type MonthGroup = {
+    monthKey: string;
+    label: string;
+    total: number;
+    byStore: { storeName: string; code: string; count: number; lastMonthCount: number }[];
+  };
+
   const monthlyGroups = useMemo((): MonthGroup[] => {
-    const map = new Map<string, Map<string, number>>();
-    for (const entry of logs) {
+    // Map: monthKey -> (storeName -> count & latest code)
+    const map = new Map<string, Map<string, { count: number; code: string }>>();
+    for (const entry of validLogs) {
       const mk = getMonthKey(entry.tappedAt);
       if (!map.has(mk)) map.set(mk, new Map());
       const sm = map.get(mk)!;
-      sm.set(entry.storeName, (sm.get(entry.storeName) ?? 0) + 1);
+      const current = sm.get(entry.storeName) || { count: 0, code: entry.code };
+      sm.set(entry.storeName, { count: current.count + 1, code: entry.code });
     }
-    const lastMonthMap = map.get(lastMonthKey) ?? new Map<string, number>();
+
+    const lastMonthMap = map.get(lastMonthKey) ?? new Map<string, { count: number; code: string }>();
     const sorted = Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+
     return sorted.map(([monthKey, sm]) => {
       const byStore = Array.from(sm.entries())
-        .map(([storeName, count]) => ({
-          storeName, count,
-          lastMonthCount: monthKey === thisMonthKey ? (lastMonthMap.get(storeName) ?? 0) : 0,
+        .map(([storeName, info]) => ({
+          storeName,
+          code: info.code,
+          count: info.count,
+          lastMonthCount: monthKey === thisMonthKey ? (lastMonthMap.get(storeName)?.count ?? 0) : 0,
         }))
         .sort((a, b) => b.count - a.count);
-      return { monthKey, label: formatMonthLabel(monthKey), total: byStore.reduce((s, x) => s + x.count, 0), byStore };
+
+      return {
+        monthKey,
+        label: formatMonthLabel(monthKey),
+        total: byStore.reduce((s, x) => s + x.count, 0),
+        byStore,
+      };
     });
-  }, [logs]);
+  }, [validLogs, lastMonthKey, thisMonthKey]);
 
   const tapsByStoreMonth = useMemo(() => {
     const map = new Map<string, TapLogEntry[]>();
-    for (const entry of logs) {
+    for (const entry of validLogs) {
       const mk = getMonthKey(entry.tappedAt);
       const key = `${mk}::${entry.storeName}`;
       if (!map.has(key)) map.set(key, []);
@@ -344,14 +377,20 @@ export default function TapsPage() {
     }
     map.forEach((arr) => arr.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime()));
     return map;
-  }, [logs]);
+  }, [validLogs]);
 
   const filteredMonthly = useMemo(() =>
-    monthlyGroups.map(mg => ({
-      ...mg,
-      byStore: mg.byStore.filter(s => s.storeName.toLowerCase().includes(search.toLowerCase())),
-      total: mg.byStore.filter(s => s.storeName.toLowerCase().includes(search.toLowerCase())).reduce((s, x) => s + x.count, 0),
-    })).filter(mg => mg.byStore.length > 0),
+    monthlyGroups.map(mg => {
+      const matchingStores = mg.byStore.filter(s =>
+        s.storeName.toLowerCase().includes(search.toLowerCase()) ||
+        s.code.toLowerCase().includes(search.toLowerCase())
+      );
+      return {
+        ...mg,
+        byStore: matchingStores,
+        total: matchingStores.reduce((s, x) => s + x.count, 0),
+      };
+    }).filter(mg => mg.byStore.length > 0),
     [monthlyGroups, search]
   );
 
@@ -361,37 +400,40 @@ export default function TapsPage() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
       const next = new Date(d); next.setDate(next.getDate() + 1);
-      const count = logs.filter(l => { const t = new Date(l.tappedAt); return t >= d && t < next; }).length;
+      const count = validLogs.filter(l => { const t = new Date(l.tappedAt); return t >= d && t < next; }).length;
       const label = i === 0 ? "Hari ini" : i % 7 === 0 ? d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : "";
       days.push({ label, value: count });
     }
     return days;
-  }, [logs]);
+  }, [validLogs]);
 
   const hourData = useMemo(() => {
     const counts = Array(24).fill(0);
-    logs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
+    validLogs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
     const maxH = Math.max(...counts);
     return counts.map((v, i) => ({
       label: i % 4 === 0 ? `${String(i).padStart(2, "0")}.00` : "",
       value: v,
       highlight: v === maxH && maxH > 0,
     }));
-  }, [logs]);
+  }, [validLogs]);
 
   const peakHour = useMemo(() => {
     const counts = Array(24).fill(0);
-    logs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
+    validLogs.forEach(l => { counts[new Date(l.tappedAt).getHours()]++; });
     const max = Math.max(...counts);
     if (max === 0) return null;
     const h = counts.indexOf(max);
     return { hour: h, count: max, label: `${String(h).padStart(2, "0")}.00–${String(h + 1).padStart(2, "0")}.00` };
-  }, [logs]);
+  }, [validLogs]);
 
-  // ── Tab: Kartu Tidur ─────────────────────────────────────────────────
-  const tappedCodes = useMemo(() => new Set(logs.map(l => l.code)), [logs]);
+  // ── Tab: Kartu Tidur (Belum Pernah Tap) ──────────────────────────────
+  const tappedCodes = useMemo(() => new Set(validLogs.map(l => l.code)), [validLogs]);
   const sleepingCards = useMemo(() =>
-    cards.filter(c => !tappedCodes.has(c.code) && c.storeName.toLowerCase().includes(search.toLowerCase())),
+    cards.filter(c => !tappedCodes.has(c.code) && (
+      c.storeName.toLowerCase().includes(search.toLowerCase()) ||
+      c.code.toLowerCase().includes(search.toLowerCase())
+    )),
     [cards, tappedCodes, search]
   );
   const activeCards = useMemo(() =>
@@ -399,489 +441,608 @@ export default function TapsPage() {
     [cards, tappedCodes]
   );
 
-  const CSS = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0A0A0F; color: #F0F0FF; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-
-    /* ── Layout ── */
-    .pw { max-width: 860px; margin: 0 auto; padding: 18px 14px 80px; }
-    .back { display: inline-flex; align-items: center; gap: 5px; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 8px; color: #C0C0D8; text-decoration: none; font-size: 0.78rem; font-weight: 500; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
-    .back:hover { background: rgba(255,255,255,0.09); color: #F0F0FF; }
-
-    /* ── Stats ── */
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
-    .sc { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 12px 14px; }
-    .sv { font-size: 1.35rem; font-weight: 800; margin-bottom: 3px; line-height: 1; }
-    .sl { font-size: 0.62rem; color: #5A5A72; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; line-height: 1.3; }
-
-    /* ── Tabs ── */
-    .tabs-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 16px; }
-    .tabs-scroll::-webkit-scrollbar { display: none; }
-    .tabs { display: inline-flex; gap: 4px; padding-bottom: 10px; white-space: nowrap; min-width: 100%; }
-    .tab { padding: 7px 13px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; background: transparent; color: #9A9AB0; border: 1px solid transparent; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
-    .tab.act { background: rgba(245,158,11,0.12); color: #FCD34D; border-color: rgba(245,158,11,0.3); }
-    .tab.act-red { background: rgba(239,68,68,0.1); color: #FCA5A5; border-color: rgba(239,68,68,0.25); }
-    .tab:hover:not(.act):not(.act-red) { color: #F0F0FF; background: rgba(255,255,255,0.05); }
-
-    /* ── Toolbar ── */
-    .toolbar { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; }
-    .sbx { flex: 1; min-width: 0; padding: 10px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #F0F0FF; font-size: 0.85rem; outline: none; font-family: inherit; transition: border-color .2s; }
-    .sbx:focus { border-color: rgba(245,158,11,.5); }
-    .last-refresh { font-size: 0.68rem; color: #5A5A72; white-space: nowrap; flex-shrink: 0; }
-    .refresh-btn { display: inline-flex; align-items: center; gap: 5px; padding: 9px 13px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; color: #FCD34D; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
-    .refresh-btn:hover { background: rgba(245,158,11,0.18); }
-    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* ── Tap item ── */
-    .tap-item { display: flex; align-items: center; gap: 10px; padding: 11px 13px; background: #111118; border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid #F59E0B; border-radius: 0 10px 10px 0; margin-bottom: 5px; transition: border-left-color 0.2s; }
-    .tap-item:hover { border-left-color: #FCD34D; }
-    .tap-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
-    .tap-info { flex: 1; min-width: 0; }
-    .tap-store { font-size: 0.88rem; font-weight: 700; color: #F0F0FF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tap-time { font-size: 0.7rem; color: #6A6A82; margin-top: 2px; line-height: 1.4; }
-    .tap-badge { font-size: 0.68rem; color: #FCD34D; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
-
-    /* ── Bulanan ── */
-    .month-card { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s; }
-    .month-card:hover { border-color: rgba(245,158,11,0.2); }
-    .month-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; gap: 10px; user-select: none; }
-    .month-title { font-size: 0.95rem; font-weight: 700; color: #F0F0FF; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-    .bulan-ini-badge { font-size: 0.62rem; background: rgba(245,158,11,0.15); color: #FCD34D; border: 1px solid rgba(245,158,11,0.3); border-radius: 999px; padding: 2px 7px; font-weight: 600; flex-shrink: 0; }
-    .month-sub { font-size: 0.68rem; color: #5A5A72; margin-top: 3px; }
-    .month-total { font-size: 1.05rem; font-weight: 800; color: #FCD34D; white-space: nowrap; }
-    .chevron { font-size: 0.75rem; color: #5A5A72; transition: transform 0.2s; display: inline-block; flex-shrink: 0; }
-    .chevron.open { transform: rotate(180deg); }
-    .month-body { padding: 0 16px 14px; border-top: 1px solid rgba(255,255,255,0.05); }
-
-    /* ── Store row ── */
-    .store-row { display: flex; align-items: center; gap: 8px; padding: 9px 6px; margin: 0 -6px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; border-radius: 6px; transition: background 0.15s; user-select: none; }
-    .store-row:last-of-type { border-bottom: none; }
-    .store-row:hover { background: rgba(255,255,255,0.04); }
-    .store-rank { font-size: 0.7rem; font-weight: 700; color: #5A5A72; width: 20px; text-align: center; flex-shrink: 0; }
-    .store-name { flex: 1; font-size: 0.85rem; font-weight: 600; color: #E0E0F0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .store-bar-wrap { width: 80px; flex-shrink: 0; }
-    .store-bar-bg { background: rgba(255,255,255,0.05); border-radius: 999px; height: 4px; overflow: hidden; }
-    .store-bar-fill { background: linear-gradient(90deg, #F59E0B, #FCD34D); border-radius: 999px; height: 4px; transition: width 0.4s ease; }
-    .store-count { font-size: 0.8rem; font-weight: 700; color: #FCD34D; width: 26px; text-align: right; flex-shrink: 0; }
-    .delta-pos { font-size: 0.65rem; color: #34D399; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 1px 5px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
-    .delta-neg { font-size: 0.65rem; color: #FCA5A5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 1px 5px; border-radius: 999px; flex-shrink: 0; white-space: nowrap; }
-    .delta-zero { font-size: 0.65rem; color: #5A5A72; padding: 1px 5px; flex-shrink: 0; }
-    .store-chevron { font-size: 0.68rem; flex-shrink: 0; transition: transform 0.2s; display: inline-block; }
-
-    /* ── Store detail dropdown ── */
-    .store-detail { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.15); border-radius: 10px; margin: 2px 0 10px; padding: 10px 12px; animation: fadeIn 0.18s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-    .detail-header { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #F59E0B; margin-bottom: 8px; }
-    .detail-tap-item { display: grid; grid-template-columns: 20px 1fr auto; align-items: start; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); gap: 6px; }
-    .detail-tap-item:last-child { border-bottom: none; }
-    .detail-tap-num { font-size: 0.68rem; color: #5A5A72; font-weight: 700; padding-top: 1px; }
-    .detail-tap-info { min-width: 0; }
-    .detail-tap-date { font-size: 0.78rem; color: #C0C0D8; font-weight: 500; }
-    .detail-tap-time { font-size: 0.72rem; color: #FCD34D; font-weight: 600; margin-top: 2px; }
-    .detail-tap-ago { font-size: 0.65rem; color: #5A5A72; white-space: nowrap; padding-top: 2px; text-align: right; }
-
-    /* ── Charts ── */
-    .chart-card { background: #111118; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
-    .chart-title { font-size: 0.88rem; font-weight: 700; color: #F0F0FF; margin-bottom: 3px; }
-    .chart-sub { font-size: 0.72rem; color: #5A5A72; margin-bottom: 14px; }
-    .insight-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-    .insight-pill { padding: 7px 12px; border-radius: 9px; font-size: 0.78rem; font-weight: 600; }
-
-    /* ── Kartu Tidur ── */
-    .sleep-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #111118; border: 1px solid rgba(239,68,68,0.15); border-left: 3px solid #EF4444; border-radius: 0 10px 10px 0; margin-bottom: 5px; }
-    .sleep-icon { width: 32px; height: 32px; border-radius: 9px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
-    .sleep-name { font-size: 0.88rem; font-weight: 700; color: #F0F0FF; }
-    .sleep-sub { font-size: 0.68rem; color: #6A6A82; margin-top: 2px; }
-    .badge-sleep { font-size: 0.68rem; color: #FCA5A5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
-
-    /* ── Today section ── */
-    .today-header { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #5A5A72; padding: 6px 0 8px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-
-    /* ── Misc ── */
-    .empty { text-align: center; padding: 50px 20px; color: #5A5A72; }
-    .empty-icon { font-size: 2.8rem; margin-bottom: 14px; }
-    .sep { text-align: center; font-size: 0.72rem; color: #5A5A72; margin-top: 24px; line-height: 1.6; }
-
-    /* ── Responsive ── */
-    @media (max-width: 700px) {
-      .stats { grid-template-columns: repeat(2, 1fr); }
-      .store-bar-wrap { width: 54px; }
-      .insight-pill { font-size: 0.74rem; padding: 6px 10px; }
-    }
-    @media (max-width: 420px) {
-      .sv { font-size: 1.1rem; }
-      .sl { font-size: 0.58rem; }
-      .last-refresh { display: none; }
-      .store-bar-wrap { display: none; }
-      .detail-tap-date { font-size: 0.72rem; }
-    }
-  `;
-
-  const Separator = () => (
-    <p className="sep">
-      Data dari {logs.length} tap tersimpan · tracking aktif sejak fitur ini di-deploy
-    </p>
-  );
-
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      <div style={{ background: "#0A0A0F", minHeight: "100vh" }}>
-        <div className="pw">
+      <AdminNav active="taps" />
 
-          {/* ── Header ── */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18 }}>
+      <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "100px" }}>
+        <div style={{ maxWidth: 940, margin: "0 auto", padding: "24px 16px" }}>
+
+          {/* Top Title & Quick Description */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
             <div>
-              <h1 style={{ fontSize: "1.25rem", fontWeight: 800, lineHeight: 1.2 }}>📲 Riwayat Tap</h1>
-              <p style={{ color: "#9A9AB0", fontSize: "0.75rem", marginTop: 3 }}>Pantau aktivitas tap kartu NFC/QR — harian, bulanan, analitik.</p>
+              <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
+                📲 Riwayat &amp; Analitik Tap
+              </h1>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: 4 }}>
+                Pantau performa kartu pelanggan, leaderboard terbanyak per bulan, dan tren aktivitas jam ramai.
+              </p>
             </div>
-            <a href="/admin" className="back">← Dashboard</a>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                Update: {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="btn btn-ghost"
+                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+              >
+                {loading ? "⏳" : "🔄"} Refresh
+              </button>
+            </div>
           </div>
 
-          {/* ── Stats (4 kartu) ── */}
-          <div className="stats">
-            <div className="sc">
-              <div className="sv" style={{ color: "#34D399" }}>{todayCount}</div>
-              <div className="sl">☀️ Hari Ini</div>
+          {/* KPI Stat Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
+            <div className="card" style={{ padding: "16px", borderColor: "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(16,185,129,0.06), #111118)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Hari Ini</span>
+                <span style={{ fontSize: "1.2rem" }}>☀️</span>
+              </div>
+              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#34D399", lineHeight: 1 }}>{todayCount}</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Tap tercatat hari ini</div>
             </div>
-            <div className="sc">
-              <div className="sv" style={{ color: "#FCD34D" }}>{thisMonthCount}</div>
-              <div className="sl">📅 Bulan Ini</div>
+
+            <div className="card" style={{ padding: "16px", borderColor: "rgba(245,158,11,0.25)", background: "linear-gradient(180deg, rgba(245,158,11,0.06), #111118)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#FCD34D", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bulan Ini</span>
+                <span style={{ fontSize: "1.2rem" }}>📅</span>
+              </div>
+              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#FCD34D", lineHeight: 1 }}>{thisMonthCount}</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>{formatMonthLabel(thisMonthKey)}</div>
             </div>
-            <div className="sc">
-              <div className="sv" style={{ color: "#A5B4FC" }}>{logs.length}</div>
-              <div className="sl">📲 Total Tap</div>
+
+            <div className="card" style={{ padding: "16px", borderColor: "rgba(99,102,241,0.25)", background: "linear-gradient(180deg, rgba(99,102,241,0.06), #111118)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Tap</span>
+                <span style={{ fontSize: "1.2rem" }}>📲</span>
+              </div>
+              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#A5B4FC", lineHeight: 1 }}>{validLogs.length}</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Kartu aktif terdaftar</div>
             </div>
-            <div className="sc">
-              <div className="sv" style={{ color: sleepingCards.length > 0 ? "#FCA5A5" : "#6EE7B7" }}>
+
+            <div className="card" style={{ padding: "16px", borderColor: sleepingCards.length > 0 ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)", background: "linear-gradient(180deg, rgba(255,255,255,0.02), #111118)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", textTransform: "uppercase", letterSpacing: "0.05em" }}>Belum Ada Tap</span>
+                <span style={{ fontSize: "1.2rem" }}>😴</span>
+              </div>
+              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399", lineHeight: 1 }}>
                 {sleepingCards.length}
               </div>
-              <div className="sl">😴 Kartu Tidur</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>Perlu follow up/promosi</div>
             </div>
           </div>
 
-          {/* ── Tabs ── */}
-          <div className="tabs-scroll">
-            <div className="tabs">
-              <button className={`tab ${activeTab === "harian" ? "act" : ""}`} onClick={() => setActiveTab("harian")}>
-                📋 Harian
-              </button>
-              <button className={`tab ${activeTab === "bulanan" ? "act" : ""}`} onClick={() => setActiveTab("bulanan")}>
-                📊 Per Bulan
-              </button>
-              <button className={`tab ${activeTab === "tren" ? "act" : ""}`} onClick={() => setActiveTab("tren")}>
-                📈 Tren &amp; Jam Ramai
-              </button>
-              <button
-                className={`tab ${activeTab === "tidur" ? "act-red" : ""}`}
-                onClick={() => setActiveTab("tidur")}
-              >
-                ⚠️ Kartu Tidur{sleepingCards.length > 0 ? ` (${sleepingCards.length})` : ""}
-              </button>
-            </div>
-          </div>
-
-          {/* ── Toolbar ── */}
-          <div className="toolbar">
-            <input
-              type="text"
-              className="sbx"
-              placeholder="🔍 Cari nama cafe..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            <span className="last-refresh">
-              {lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <button className="refresh-btn" onClick={fetchData} disabled={loading}>
-              {loading ? "⏳" : "🔄"} Refresh
+          {/* Sub Navigation Tabs */}
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, marginBottom: 18, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <button
+              onClick={() => setActiveTab("bulanan")}
+              className={`btn ${activeTab === "bulanan" ? "btn-primary" : "btn-ghost"}`}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
+            >
+              🏆 Peringkat Per Bulan
+            </button>
+            <button
+              onClick={() => setActiveTab("harian")}
+              className={`btn ${activeTab === "harian" ? "btn-primary" : "btn-ghost"}`}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
+            >
+              📋 Feed Harian
+            </button>
+            <button
+              onClick={() => setActiveTab("tren")}
+              className={`btn ${activeTab === "tren" ? "btn-primary" : "btn-ghost"}`}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
+            >
+              📈 Tren &amp; Jam Ramai
+            </button>
+            <button
+              onClick={() => setActiveTab("tidur")}
+              className={`btn ${activeTab === "tidur" ? "btn-danger" : "btn-ghost"}`}
+              style={{ padding: "8px 16px", fontSize: "0.85rem", borderRadius: 10 }}
+            >
+              😴 Kartu Belum Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
             </button>
           </div>
 
-          {/* ═══ TAB: HARIAN ═══ */}
-          {activeTab === "harian" && (
-            loading
-              ? <div className="empty"><div className="empty-icon">⏳</div><p>Memuat...</p></div>
-              : filtered.length === 0
-                ? (
-                  <div className="empty">
-                    <div className="empty-icon">{search ? "🔍" : "📲"}</div>
-                    <p style={{ fontWeight: 600, color: "#9A9AB0", marginBottom: 8 }}>
-                      {search ? "Tidak ada hasil." : "Belum ada tap tercatat."}
-                    </p>
-                    <p style={{ fontSize: "0.82rem" }}>{search ? "Coba kata kunci lain." : "Tap pada kartu NFC/QR akan muncul di sini."}</p>
-                  </div>
-                ) : (
-                  <div>
-                    {/* ── Semua periode sebagai collapsible dropdown — Hari Ini default open ── */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                      <PeriodSection
-                        title="Hari Ini"
-                        entries={hariianPeriods.today}
-                        defaultOpen={true}
-                        accentColor="#34D399"
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="Kemarin"
-                        entries={hariianPeriods.yest}
-                        defaultOpen={false}
-                        accentColor="#F59E0B"
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="7 Hari Terakhir"
-                        entries={hariianPeriods.last7}
-                        defaultOpen={false}
-                        accentColor="#8B5CF6"
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="Bulan Ini"
-                        entries={hariianPeriods.thisMonth}
-                        defaultOpen={false}
-                        accentColor="#3B82F6"
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                      <PeriodSection
-                        title="Lebih Lama"
-                        entries={hariianPeriods.older}
-                        defaultOpen={false}
-                        accentColor="#6B7280"
-                        formatFull={formatFull}
-                        timeAgo={timeAgo}
-                      />
-                    </div>
+          {/* Search bar */}
+          <div style={{ position: "relative", marginBottom: 20 }}>
+            <input
+              type="text"
+              className="input"
+              placeholder="🔍 Cari nama cafe, resto, atau kode kartu..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ paddingLeft: 14, paddingRight: search ? 38 : 14, background: "rgba(255,255,255,0.03)" }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                style={{
+                  position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                  background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.9rem",
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-                    {/* placeholder kalau hari ini kosong & semua periode ada isi */}
-                    {hariianPeriods.today.length === 0 && filtered.length > 0 && (
-                      <div style={{
-                        display: "flex", alignItems: "center", gap: 8,
-                        padding: "12px 16px", marginBottom: 6,
-                        background: "rgba(52,211,153,0.03)", border: "1px dashed rgba(52,211,153,0.18)",
-                        borderRadius: 10, color: "#5A5A72", fontSize: "0.8rem",
-                      }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34D399", opacity: 0.4, flexShrink: 0 }} />
-                        Belum ada tap hari ini
-                      </div>
-                    )}
-
-                    <Separator />
-                  </div>
-                )
-          )}
-
-          {/* ═══ TAB: BULANAN ═══ */}
+          {/* ═════════ TAB 1: BULANAN (LEADERBOARD) ═════════ */}
           {activeTab === "bulanan" && (
-            loading ? <div className="empty"><div className="empty-icon">⏳</div><p>Memuat...</p></div>
-            : filteredMonthly.length === 0 ? (
-              <div className="empty">
-                <div className="empty-icon">{search ? "🔍" : "📊"}</div>
-                <p style={{ fontWeight: 600, color: "#9A9AB0", marginBottom: 8 }}>{search ? "Tidak ada hasil." : "Belum ada data tap."}</p>
+            loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                <p style={{ color: "var(--text-muted)" }}>Memuat data ranking bulanan...</p>
+              </div>
+            ) : filteredMonthly.length === 0 ? (
+              <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>🏆</div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Belum Ada Data Tap</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 420, margin: "0 auto" }}>
+                  {search
+                    ? `Tidak ada toko yang cocok dengan pencarian "${search}".`
+                    : "Tap kartu NFC atau scan QR code pada kartu aktif untuk mulai merekam leaderboard."}
+                </p>
               </div>
             ) : (
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {filteredMonthly.map((mg) => {
                   const isOpen = expandedMonth === mg.monthKey;
                   const isThisMonth = mg.monthKey === thisMonthKey;
-                  const max = Math.max(...mg.byStore.map(s => s.count), 1);
+                  const maxCount = Math.max(...mg.byStore.map(s => s.count), 1);
+
                   return (
-                    <div key={mg.monthKey} className="month-card" style={isThisMonth ? { borderColor: "rgba(245,158,11,0.35)" } : {}}>
-                      <div className="month-header" onClick={() => { setExpandedMonth(isOpen ? null : mg.monthKey); setExpandedStore(null); }}>
+                    <div
+                      key={mg.monthKey}
+                      className="card"
+                      style={{
+                        padding: 0,
+                        overflow: "hidden",
+                        borderColor: isThisMonth ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)",
+                        background: "#111118",
+                      }}
+                    >
+                      {/* Month Header Accordion */}
+                      <div
+                        onClick={() => { setExpandedMonth(isOpen ? null : mg.monthKey); setExpandedStore(null); }}
+                        style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "16px 20px", cursor: "pointer", userSelect: "none",
+                          background: isThisMonth ? "rgba(245,158,11,0.06)" : "transparent",
+                          borderBottom: isOpen ? "1px solid rgba(255,255,255,0.06)" : "none",
+                        }}
+                      >
                         <div>
-                          <div className="month-title">
-                            {isThisMonth && <span className="bulan-ini-badge">Bulan Ini</span>}
-                            {mg.label}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontWeight: 800, fontSize: "1.05rem", color: "#F0F0FF" }}>
+                              {mg.label}
+                            </span>
+                            {isThisMonth && (
+                              <span style={{
+                                fontSize: "0.65rem", fontWeight: 800,
+                                background: "rgba(245,158,11,0.18)", color: "#FCD34D",
+                                border: "1px solid rgba(245,158,11,0.4)",
+                                padding: "2px 8px", borderRadius: 999, textTransform: "uppercase",
+                              }}>
+                                Bulan Berjalan
+                              </span>
+                            )}
                           </div>
-                          <div className="month-sub">{mg.byStore.length} cafe · {mg.total} tap</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4 }}>
+                            {mg.byStore.length} Toko Terdaftar Aktif · Total {mg.total} Tap
+                          </div>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div className="month-total">{mg.total}×</div>
-                          <span className={`chevron ${isOpen ? "open" : ""}`}>▼</span>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FCD34D" }}>
+                            {mg.total}×
+                          </span>
+                          <span style={{
+                            fontSize: "0.8rem", color: "var(--text-muted)",
+                            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s",
+                          }}>▼</span>
                         </div>
                       </div>
 
+                      {/* Store Rankings List */}
                       {isOpen && (
-                        <div className="month-body">
-                          <div style={{ paddingTop: 12 }}>
-                            {mg.byStore.map((s, idx) => {
-                              const delta = s.lastMonthCount > 0 ? s.count - s.lastMonthCount : null;
-                              const storeKey = `${mg.monthKey}::${s.storeName}`;
-                              const isStoreOpen = expandedStore === storeKey;
-                              const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
-                              return (
-                                <div key={s.storeName}>
-                                  <div
-                                    className="store-row"
-                                    onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
-                                    title={isStoreOpen ? "Tutup detail" : "Lihat detail tap"}
-                                  >
-                                    <div className="store-rank">#{idx + 1}</div>
-                                    <div className="store-name">{s.storeName}</div>
-                                    <div className="store-bar-wrap">
-                                      <div className="store-bar-bg">
-                                        <div className="store-bar-fill" style={{ width: `${(s.count / max) * 100}%` }} />
-                                      </div>
-                                    </div>
-                                    <div className="store-count">{s.count}×</div>
-                                    {isThisMonth && (
-                                      delta === null ? <span className="delta-zero">baru</span>
-                                      : delta > 0 ? <span className="delta-pos">+{delta}</span>
-                                      : delta < 0 ? <span className="delta-neg">{delta}</span>
-                                      : <span className="delta-zero">±0</span>
-                                    )}
-                                    <span style={{ fontSize: "0.7rem", color: isStoreOpen ? "#FCD34D" : "#5A5A72", marginLeft: 4, transition: "transform 0.2s", display: "inline-block", transform: isStoreOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                                  </div>
-                                  {isStoreOpen && (
-                                    <div className="store-detail">
-                                      <div className="detail-title">📋 Riwayat {storeTaps.length} tap — {s.storeName}</div>
-                                      {storeTaps.map((tap, ti) => {
-                                        const d = new Date(tap.tappedAt);
-                                        const dateStr = d.toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-                                        const timeStr = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-                                        return (
-                                          <div key={`${tap.tappedAt}-${ti}`} className="detail-tap-item">
-                                            <span className="detail-tap-num">{ti + 1}.</span>
-                                            <span className="detail-tap-date">{dateStr}</span>
-                                            <span className="detail-tap-time">{timeStr}</span>
-                                            <span className="detail-tap-ago">{timeAgo(tap.tappedAt)}</span>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                        <div style={{ padding: "8px 16px 16px" }}>
+                          <div style={{
+                            display: "grid", gridTemplateColumns: "36px 1fr 100px 60px 70px",
+                            padding: "10px 8px", fontSize: "0.68rem", fontWeight: 700,
+                            textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)",
+                            borderBottom: "1px solid rgba(255,255,255,0.05)",
+                          }}>
+                            <span>Rank</span>
+                            <span>Nama Toko</span>
+                            <span style={{ textAlign: "center" }}>Volume Tap</span>
+                            <span style={{ textAlign: "right" }}>Jumlah</span>
+                            <span style={{ textAlign: "right" }}>Delta</span>
                           </div>
+
+                          {mg.byStore.map((s, idx) => {
+                            const delta = s.lastMonthCount > 0 ? s.count - s.lastMonthCount : null;
+                            const storeKey = `${mg.monthKey}::${s.storeName}`;
+                            const isStoreOpen = expandedStore === storeKey;
+                            const storeTaps = tapsByStoreMonth.get(storeKey) ?? [];
+                            const percent = Math.round((s.count / maxCount) * 100);
+
+                            const rankMedal =
+                              idx === 0 ? "🥇" :
+                              idx === 1 ? "🥈" :
+                              idx === 2 ? "🥉" : `#${idx + 1}`;
+
+                            const medalClass =
+                              idx === 0 ? "badge-gold" :
+                              idx === 1 ? "badge-silver" :
+                              idx === 2 ? "badge-bronze" : "";
+
+                            return (
+                              <div key={s.storeName}>
+                                <div
+                                  onClick={() => setExpandedStore(isStoreOpen ? null : storeKey)}
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "36px 1fr 100px 60px 70px",
+                                    alignItems: "center",
+                                    padding: "12px 8px",
+                                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                                    cursor: "pointer",
+                                    borderRadius: 8,
+                                    background: isStoreOpen ? "rgba(99,102,241,0.05)" : "transparent",
+                                    transition: "background 0.15s",
+                                  }}
+                                  title="Klik untuk melihat rincian riwayat jam tap"
+                                >
+                                  {/* Rank */}
+                                  <div>
+                                    {idx < 3 ? (
+                                      <span style={{ fontSize: "1.1rem" }}>{rankMedal}</span>
+                                    ) : (
+                                      <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                                        {rankMedal}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Store Name + NFC Code */}
+                                  <div style={{ minWidth: 0, paddingRight: 8 }}>
+                                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#F0F0FF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                      {s.storeName}
+                                    </div>
+                                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{s.code}</span>
+                                      <span>· {isStoreOpen ? "Tutup detail ▲" : "Lihat jam tap ▼"}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Visual Progress Bar */}
+                                  <div style={{ padding: "0 6px" }}>
+                                    <div style={{ background: "rgba(255,255,255,0.06)", height: 6, borderRadius: 999, overflow: "hidden" }}>
+                                      <div
+                                        style={{
+                                          width: `${percent}%`,
+                                          height: "100%",
+                                          background: idx === 0
+                                            ? "linear-gradient(90deg, #F59E0B, #FCD34D)"
+                                            : "linear-gradient(90deg, #4F46E5, #818CF8)",
+                                          borderRadius: 999,
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Count */}
+                                  <div style={{ textAlign: "right", fontWeight: 800, fontSize: "0.9rem", color: idx === 0 ? "#FCD34D" : "#E0E0F0" }}>
+                                    {s.count}×
+                                  </div>
+
+                                  {/* Delta */}
+                                  <div style={{ textAlign: "right" }}>
+                                    {isThisMonth ? (
+                                      delta === null ? (
+                                        <span style={{ fontSize: "0.65rem", color: "#A5B4FC", background: "rgba(99,102,241,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                          baru
+                                        </span>
+                                      ) : delta > 0 ? (
+                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#34D399", background: "rgba(16,185,129,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                          +{delta}
+                                        </span>
+                                      ) : delta < 0 ? (
+                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#FCA5A5", background: "rgba(239,68,68,0.12)", padding: "2px 6px", borderRadius: 999 }}>
+                                          {delta}
+                                        </span>
+                                      ) : (
+                                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>±0</span>
+                                      )
+                                    ) : (
+                                      <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>selesai</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Expanded Store Tap Drilldown */}
+                                {isStoreOpen && (
+                                  <div style={{
+                                    margin: "6px 0 12px 36px",
+                                    padding: "12px 14px",
+                                    background: "rgba(0,0,0,0.3)",
+                                    border: "1px solid rgba(255,255,255,0.06)",
+                                    borderRadius: 10,
+                                  }}>
+                                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#FCD34D", marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                                      <span>📋 Riwayat {storeTaps.length} Tap — {s.storeName}</span>
+                                      <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>/c/{s.code}</span>
+                                    </div>
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
+                                      {storeTaps.map((t, ti) => (
+                                        <div key={`${t.tappedAt}-${ti}`} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#C0C0D8", borderBottom: "1px solid rgba(255,255,255,0.03)", paddingBottom: 4 }}>
+                                          <span>
+                                            <strong style={{ color: "#7A7A95", marginRight: 6 }}>#{ti + 1}</strong>
+                                            {formatFull(t.tappedAt)}
+                                          </span>
+                                          <span style={{ color: "#34D399", fontWeight: 600 }}>{timeAgo(t.tappedAt)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+
                           {isThisMonth && mg.byStore.some(s => s.lastMonthCount > 0) && (
-                            <p style={{ fontSize: "0.7rem", color: "#5A5A72", marginTop: 10 }}>
-                              * Delta +/− dibandingkan bulan lalu ({formatMonthLabel(lastMonthKey)})
-                            </p>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 12, paddingLeft: 8 }}>
+                              * Delta (+/−) menunjukkan perbandingan aktivitas tap dibanding bulan lalu ({formatMonthLabel(lastMonthKey)}).
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
                   );
                 })}
-                <Separator />
               </div>
             )
           )}
 
-          {/* ═══ TAB: TREN & JAM RAMAI ═══ */}
-          {activeTab === "tren" && (
-            loading ? <div className="empty"><div className="empty-icon">⏳</div><p>Memuat...</p></div>
-            : logs.length === 0 ? (
-              <div className="empty">
-                <div className="empty-icon">📈</div>
-                <p style={{ fontWeight: 600, color: "#9A9AB0", marginBottom: 8 }}>Belum ada data tap.</p>
-                <p style={{ fontSize: "0.82rem" }}>Grafik akan muncul setelah ada aktivitas tap.</p>
+          {/* ═════════ TAB 2: HARIAN ═════════ */}
+          {activeTab === "harian" && (
+            loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                <p style={{ color: "var(--text-muted)" }}>Memuat aktivitas harian...</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>📲</div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Tidak Ada Data</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  {search ? `Tidak ditemukan tap untuk "${search}".` : "Belum ada aktivitas tap yang tercatat."}
+                </p>
               </div>
             ) : (
-              <>
-                <div className="chart-card">
-                  <div className="chart-title">📈 Tren Tap 30 Hari Terakhir</div>
-                  <div className="chart-sub">Jumlah tap per hari. Label muncul setiap 7 hari.</div>
-                  <div className="insight-row">
-                    <div className="insight-pill" style={{ background: "rgba(245,158,11,0.1)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.2)" }}>
-                      Total: {trendData.reduce((s, d) => s + d.value, 0)} tap
+              <div>
+                <PeriodSection
+                  title="Hari Ini"
+                  entries={hariianPeriods.today}
+                  defaultOpen={true}
+                  accentColor="#10B981"
+                  formatFull={formatFull}
+                  timeAgo={timeAgo}
+                />
+                <PeriodSection
+                  title="Kemarin"
+                  entries={hariianPeriods.yest}
+                  defaultOpen={false}
+                  accentColor="#F59E0B"
+                  formatFull={formatFull}
+                  timeAgo={timeAgo}
+                />
+                <PeriodSection
+                  title="7 Hari Terakhir"
+                  entries={hariianPeriods.last7}
+                  defaultOpen={false}
+                  accentColor="#6366F1"
+                  formatFull={formatFull}
+                  timeAgo={timeAgo}
+                />
+                <PeriodSection
+                  title="Bulan Ini"
+                  entries={hariianPeriods.thisMonth}
+                  defaultOpen={false}
+                  accentColor="#3B82F6"
+                  formatFull={formatFull}
+                  timeAgo={timeAgo}
+                />
+                <PeriodSection
+                  title="Lebih Lama"
+                  entries={hariianPeriods.older}
+                  defaultOpen={false}
+                  accentColor="#6B7280"
+                  formatFull={formatFull}
+                  timeAgo={timeAgo}
+                />
+
+                {hariianPeriods.today.length === 0 && filtered.length > 0 && (
+                  <div style={{
+                    padding: "14px 18px", marginTop: 10,
+                    background: "rgba(16,185,129,0.04)", border: "1px dashed rgba(16,185,129,0.2)",
+                    borderRadius: 12, color: "#9A9AB0", fontSize: "0.82rem",
+                    display: "flex", alignItems: "center", gap: 8,
+                  }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981", opacity: 0.5 }} />
+                    Belum ada tap yang masuk hari ini. Tap akan otomatis muncul di bagian teratas.
+                  </div>
+                )}
+              </div>
+            )
+          )}
+
+          {/* ═════════ TAB 3: TREN & JAM RAMAI ═════════ */}
+          {activeTab === "tren" && (
+            loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                <p style={{ color: "var(--text-muted)" }}>Menghitung analitik tren...</p>
+              </div>
+            ) : validLogs.length === 0 ? (
+              <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>📈</div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 6 }}>Belum Ada Data Tap</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  Grafik tren harian dan distribusi jam akan otomatis digambar setelah ada tap.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {/* 30 Day Trend */}
+                <div className="card" style={{ padding: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>📈 Tren Aktivitas 30 Hari Terakhir</h3>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        Jumlah tap per hari pada semua kartu aktif.
+                      </p>
                     </div>
-                    <div className="insight-pill" style={{ background: "rgba(52,211,153,0.08)", color: "#34D399", border: "1px solid rgba(52,211,153,0.2)" }}>
-                      Hari ini: {trendData[trendData.length - 1].value} tap
-                    </div>
-                    <div className="insight-pill" style={{ background: "rgba(99,102,241,0.08)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.2)" }}>
-                      Rata-rata: {(trendData.reduce((s, d) => s + d.value, 0) / 30).toFixed(1)} tap/hari
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <span className="badge badge-orange">
+                        Total 30 Hari: {trendData.reduce((s, d) => s + d.value, 0)} tap
+                      </span>
+                      <span className="badge badge-green">
+                        Rata-rata: {(trendData.reduce((s, d) => s + d.value, 0) / 30).toFixed(1)} tap/hari
+                      </span>
                     </div>
                   </div>
                   <BarChart data={trendData} color="#F59E0B" labelEvery={7} showValue={false} />
                 </div>
 
-                <div className="chart-card">
-                  <div className="chart-title">🕐 Jam Paling Ramai</div>
-                  <div className="chart-sub">Distribusi tap berdasarkan jam dalam sehari (semua waktu).</div>
-                  {peakHour && (
-                    <div className="insight-row">
-                      <div className="insight-pill" style={{ background: "rgba(52,211,153,0.08)", color: "#34D399", border: "1px solid rgba(52,211,153,0.2)" }}>
-                        🏆 Puncak: {peakHour.label} ({peakHour.count} tap)
-                      </div>
-                      <div className="insight-pill" style={{ background: "rgba(245,158,11,0.08)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.2)" }}>
-                        Aktif {hourData.filter(h => h.value > 0).length} jam dari 24 jam
-                      </div>
+                {/* Peak Hours */}
+                <div className="card" style={{ padding: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#F0F0FF" }}>🕐 Distribusi Jam Paling Ramai</h3>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        Analisis jam berapa pelanggan paling sering men-tap kartu / scan QR review.
+                      </p>
                     </div>
-                  )}
-                  <BarChart data={hourData} color="#8B5CF6" labelEvery={1} showValue={false} />
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "#5A5A72", marginTop: 4, paddingLeft: 10 }}>
-                    <span>00.00</span><span>06.00</span><span>12.00</span><span>18.00</span><span>23.00</span>
+                    {peakHour && (
+                      <span className="badge badge-green">
+                        🏆 Jam Puncak: {peakHour.label} ({peakHour.count} tap)
+                      </span>
+                    )}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: "0.72rem", color: "#5A5A72" }}>
-                    <div style={{ width: 12, height: 12, borderRadius: 3, background: "#34D399", flexShrink: 0 }} />
-                    <span>Jam paling ramai</span>
-                    <div style={{ width: 12, height: 12, borderRadius: 3, background: "#8B5CF6", flexShrink: 0, marginLeft: 8 }} />
-                    <span>Jam aktif lainnya</span>
+                  <BarChart data={hourData} color="#6366F1" labelEvery={1} showValue={false} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 6, padding: "0 10px" }}>
+                    <span>00.00</span><span>06.00</span><span>12.00 (Siang)</span><span>18.00 (Sore)</span><span>23.00</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981" }} />
+                      <span>Jam puncak tertinggi</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: "#6366F1" }} />
+                      <span>Aktivitas normal</span>
+                    </div>
                   </div>
                 </div>
-
-                <Separator />
-              </>
+              </div>
             )
           )}
 
-          {/* ═══ TAB: KARTU TIDUR ═══ */}
+          {/* ═════════ TAB 4: KARTU TIDUR ═════════ */}
           {activeTab === "tidur" && (
-            loading ? <div className="empty"><div className="empty-icon">⏳</div><p>Memuat...</p></div>
-            : (
-              <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-                  <div className="sc" style={{ borderColor: "rgba(239,68,68,0.2)" }}>
-                    <div className="sv" style={{ color: "#FCA5A5" }}>{sleepingCards.length}</div>
-                    <div className="sl">😴 Kartu Tidur</div>
-                  </div>
-                  <div className="sc" style={{ borderColor: "rgba(16,185,129,0.2)" }}>
-                    <div className="sv" style={{ color: "#34D399" }}>{activeCards.length}</div>
-                    <div className="sl">✅ Sudah Ada Tap</div>
-                  </div>
-                </div>
-
-                <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: "0.8rem", color: "#FCD34D", lineHeight: 1.6 }}>
-                  ℹ️ <strong>Catatan:</strong> &quot;Kartu Tidur&quot; = kartu yang belum pernah di-tap <em>sejak fitur tap log ini aktif</em>. Tap sebelumnya tidak terhitung. Data ini akan makin akurat seiring waktu.
+            loading ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
+                <p style={{ color: "var(--text-muted)" }}>Memeriksa kartu tidur...</p>
+              </div>
+            ) : (
+              <div>
+                <div style={{
+                  padding: "14px 18px", marginBottom: 16,
+                  background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)",
+                  borderRadius: 12, color: "#FCD34D", fontSize: "0.82rem", lineHeight: 1.6,
+                }}>
+                  💡 <strong>Informasi Follow-Up:</strong> Daftar toko di bawah sudah membeli/menerima kartu, namun belum mencatat tap sama sekali sejak pelacakan tap aktif. Anda dapat menghubungi mereka untuk memastikan kartu sudah dipajang di kasir/meja.
                 </div>
 
                 {sleepingCards.length === 0 ? (
-                  <div className="empty">
-                    <div className="empty-icon">🎉</div>
-                    <p style={{ fontWeight: 600, color: "#34D399", marginBottom: 8 }}>Semua kartu sudah aktif di-tap!</p>
-                    <p style={{ fontSize: "0.82rem" }}>Tidak ada kartu yang tidur{search ? " untuk pencarian ini" : ""}.</p>
+                  <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+                    <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🎉</div>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#34D399", marginBottom: 6 }}>
+                      Luar Biasa! Semua Kartu Sudah Aktif
+                    </h3>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                      Tidak ada kartu tidur. Semua toko binaan sudah mendapatkan minimal 1 tap ulasan Google!
+                    </p>
                   </div>
                 ) : (
-                  <div>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#5A5A72", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 12 }}>
-                      {sleepingCards.length} kartu belum ada tap tercatat
-                    </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {sleepingCards.map((card) => (
-                      <div key={card.code} className="sleep-item">
-                        <div className="sleep-icon">😴</div>
-                        <div className="tap-info">
-                          <div className="sleep-name">{card.storeName}</div>
-                          <div className="sleep-sub">
-                            Kode: <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</span>
-                            {" · "}Assign: {new Date(card.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      <div
+                        key={card.code}
+                        className="card"
+                        style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "14px 18px", borderLeft: "4px solid #EF4444",
+                          flexWrap: "wrap", gap: 10,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{
+                            width: 38, height: 38, borderRadius: 10,
+                            background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
+                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem",
+                          }}>😴</div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#F0F0FF" }}>
+                              {card.storeName}
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
+                              <span>Kode: <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</strong></span>
+                              <span>·</span>
+                              <span>Assign: {new Date(card.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                            </div>
                           </div>
                         </div>
-                        <span className="badge-sleep">Belum ada tap</span>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{
+                            fontSize: "0.72rem", fontWeight: 600,
+                            color: "#FCA5A5", background: "rgba(239,68,68,0.12)",
+                            border: "1px solid rgba(239,68,68,0.25)",
+                            padding: "4px 10px", borderRadius: 999,
+                          }}>
+                            Belum Ada Tap
+                          </span>
+                          <a
+                            href={`/c/${card.code}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 12px", fontSize: "0.75rem" }}
+                            title="Buka link kartu untuk uji coba"
+                          >
+                            Tes Link ↗
+                          </a>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
-                <Separator />
-              </>
+              </div>
             )
           )}
+
+          {/* Footer note */}
+          <div style={{ textAlign: "center", marginTop: 36, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+            Review Card Tap Analytics · Sinkronisasi realtime dengan Google Review Card Engine
+          </div>
 
         </div>
       </div>

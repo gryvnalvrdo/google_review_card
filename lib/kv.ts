@@ -77,6 +77,27 @@ export async function setCard(record: CardRecord): Promise<void> {
 
 export async function deleteCard(code: string): Promise<void> {
   if (hasKv && vercelKv) {
+    try {
+      const rawLogs = await vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1);
+      if (rawLogs && rawLogs.length > 0) {
+        const remaining = rawLogs
+          .map((item) => {
+            if (typeof item === "string") {
+              try { return JSON.parse(item) as TapLogEntry; } catch { return null; }
+            }
+            return item as unknown as TapLogEntry;
+          })
+          .filter((e): e is TapLogEntry => e !== null && e.code !== code);
+
+        await vercelKv.del(TAP_LOG_KEY);
+        if (remaining.length > 0) {
+          await vercelKv.rpush(TAP_LOG_KEY, ...remaining.map((e) => JSON.stringify(e)));
+        }
+      }
+    } catch (e) {
+      console.error("Gagal membersihkan tap_log untuk kode", code, e);
+    }
+
     await Promise.all([
       vercelKv.del(KEY_PREFIX + code),
       vercelKv.del(TAP_PREFIX + code),
@@ -86,6 +107,11 @@ export async function deleteCard(code: string): Promise<void> {
   }
   memoryStore.delete(code);
   tapStore.delete(code);
+  for (let i = tapLogStore.length - 1; i >= 0; i--) {
+    if (tapLogStore[i].code === code) {
+      tapLogStore.splice(i, 1);
+    }
+  }
 }
 
 export async function incrementTapCount(code: string): Promise<void> {
@@ -178,18 +204,55 @@ export async function addTapLog(entry: TapLogEntry): Promise<void> {
   if (tapLogStore.length > TAP_LOG_MAX) tapLogStore.splice(TAP_LOG_MAX);
 }
 
-/** Ambil N entri tap terbaru. */
+/** Ambil N entri tap terbaru (hanya untuk kartu yang masih aktif). */
 export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
   if (hasKv && vercelKv) {
-    const raw = await vercelKv.lrange<string>(TAP_LOG_KEY, 0, limit - 1);
-    if (!raw) return [];
-    return raw.map((item) => {
+    const [activeCodesList, raw] = await Promise.all([
+      vercelKv.smembers<string[]>(INDEX_KEY),
+      vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1),
+    ]);
+
+    const activeCodes = new Set(activeCodesList ?? []);
+    if (!raw || raw.length === 0) return [];
+
+    let hasOrphan = false;
+    const validLogs: TapLogEntry[] = [];
+
+    for (const item of raw) {
+      let entry: TapLogEntry | null = null;
       if (typeof item === "string") {
-        try { return JSON.parse(item) as TapLogEntry; } catch { return null; }
+        try { entry = JSON.parse(item) as TapLogEntry; } catch { entry = null; }
+      } else {
+        entry = item as unknown as TapLogEntry;
       }
-      // @vercel/kv kadang auto-parse JSON — handle both
-      return item as unknown as TapLogEntry;
-    }).filter((e): e is TapLogEntry => e !== null);
+
+      if (entry && entry.code) {
+        if (activeCodes.has(entry.code)) {
+          validLogs.push(entry);
+        } else {
+          hasOrphan = true;
+        }
+      }
+    }
+
+    // Jika ada orphan log dari kartu yang sudah dihapus sebelumnya, bersihkan di Redis secara async
+    if (hasOrphan) {
+      (async () => {
+        try {
+          await vercelKv.del(TAP_LOG_KEY);
+          if (validLogs.length > 0) {
+            await vercelKv.rpush(TAP_LOG_KEY, ...validLogs.map((e) => JSON.stringify(e)));
+          }
+        } catch (err) {
+          console.error("Gagal auto-clean orphan tap_log:", err);
+        }
+      })();
+    }
+
+    return validLogs.slice(0, limit);
   }
-  return tapLogStore.slice(0, limit);
+
+  const activeCodes = new Set(memoryStore.keys());
+  const valid = tapLogStore.filter((e) => activeCodes.has(e.code));
+  return valid.slice(0, limit);
 }
