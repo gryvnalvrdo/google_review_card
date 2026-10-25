@@ -730,6 +730,14 @@ export default function PrintQRCodes() {
             </div>
           </div>
 
+          {/* Banner Notifikasi Layar Kecil / Mobile */}
+          <div className="print-mobile-notice">
+            <span style={{ fontSize: "1.1rem" }}>💻</span>
+            <span>
+              <strong>Mode Desktop Direkomendasikan:</strong> Pengaturan posisi presisi kartu &amp; ekspor ZIP dirancang untuk layar PC/laptop.
+            </span>
+          </div>
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", flexWrap: "wrap", gap: 10 }}>
             <div>
               <div className="print-panel-title">🎴 Mesin Cetak QR Code &amp; Desain Kartu</div>

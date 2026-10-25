@@ -26,7 +26,7 @@ export default function AdminNav({ active }: AdminNavProps) {
     { id: "dashboard", label: "Dashboard", shortLabel: "Dashboard", href: "/admin", icon: "📊" },
     { id: "cards", label: "Kartu Toko", shortLabel: "Kartu", href: "/admin/cards", icon: "💳" },
     { id: "taps", label: "Riwayat Tap", shortLabel: "Riwayat", href: "/admin/taps", icon: "📈" },
-    { id: "print", label: "Mesin Cetak QR", shortLabel: "Cetak QR", href: "/admin/print", icon: "🖨️" },
+    { id: "print", label: "Mesin Cetak QR", shortLabel: "Cetak QR", href: "/admin/print", icon: "🖨️", desktopOnly: true },
   ];
 
   return (
@@ -92,23 +92,25 @@ export default function AdminNav({ active }: AdminNavProps) {
         </div>
       </header>
 
-      {/* Mobile Floating Bottom Bar */}
+      {/* Mobile Floating Bottom Bar - Mesin Cetak QR disembunyikan khusus mobile */}
       <nav className="admin-mobile-dock" aria-label="Navigasi Bawah">
         <div className="dock-container">
-          {navItems.map((item) => {
-            const isActive = currentTab === item.id;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={`dock-item ${isActive ? "dock-active" : ""}`}
-              >
-                <span className="dock-icon">{item.icon}</span>
-                <span className="dock-label">{item.shortLabel}</span>
-                {isActive && <span className="dock-dot" />}
-              </Link>
-            );
-          })}
+          {navItems
+            .filter((item) => !item.desktopOnly)
+            .map((item) => {
+              const isActive = currentTab === item.id;
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={`dock-item ${isActive ? "dock-active" : ""}`}
+                >
+                  <span className="dock-icon">{item.icon}</span>
+                  <span className="dock-label">{item.shortLabel}</span>
+                  {isActive && <span className="dock-dot" />}
+                </Link>
+              );
+            })}
         </div>
       </nav>
     </>
