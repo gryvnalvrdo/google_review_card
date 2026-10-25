@@ -385,189 +385,6 @@ export default function PrintQRCodes() {
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0a0a0f; font-family: 'Inter', system-ui, sans-serif; color: white; min-height: 100vh; }
-
-        .panel {
-          background: rgba(14,14,22,0.98);
-          border-bottom: 1px solid rgba(255,255,255,0.07);
-          backdrop-filter: blur(20px);
-          padding: 18px 24px;
-          position: sticky; top: 0; z-index: 100;
-        }
-        .panel-inner { max-width: 1140px; margin: 0 auto; }
-        .panel-title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 2px; }
-        .panel-sub   { font-size: 0.78rem; color: #94A3B8; margin-bottom: 14px; }
-        .controls    { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-        .ctrl-label { font-size: 0.8rem; color: rgba(255,255,255,0.55); white-space: nowrap; font-weight: 600; }
-        .ctrl-input {
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 8px; color: white;
-          padding: 8px 10px; font-family: inherit;
-          font-size: 0.85rem; width: 72px; outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .ctrl-input:focus { border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
-
-        .number-input-wrap {
-          display: flex; align-items: center;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 8px; overflow: hidden;
-          transition: border-color 0.2s, box-shadow 0.2s;
-          height: 38px;
-        }
-        .number-input-wrap:focus-within {
-          border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
-        }
-        .num-btn {
-          background: transparent; border: none;
-          color: rgba(255,255,255,0.5);
-          width: 32px; height: 100%; cursor: pointer;
-          font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
-          transition: background 0.15s, color 0.15s;
-        }
-        .num-btn:hover { background: rgba(255,255,255,0.08); color: white; }
-        .ctrl-input.num-no-spin {
-          border: none; background: transparent; width: 46px;
-          text-align: center; padding: 0; box-shadow: none !important;
-          font-weight: 700; font-size: 0.92rem;
-        }
-        .ctrl-input.num-no-spin::-webkit-inner-spin-button,
-        .ctrl-input.num-no-spin::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .ctrl-input.num-no-spin { -moz-appearance: textfield; }
-
-        .btn {
-          display: inline-flex; align-items: center; gap: 6px;
-          border: none; border-radius: 8px; font-family: inherit;
-          font-size: 0.82rem; font-weight: 600; cursor: pointer;
-          padding: 9px 16px; transition: all 0.18s; white-space: nowrap;
-          text-decoration: none;
-        }
-        .btn:active:not(:disabled) { transform: scale(0.97); }
-        .btn-indigo  { background: linear-gradient(135deg,#4F46E5,#7C3AED); color: white; box-shadow: 0 4px 14px rgba(79,70,229,0.35); }
-        .btn-indigo:hover:not(:disabled)  { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,70,229,0.5); }
-        .btn-indigo:disabled  { opacity: 0.45; cursor: not-allowed; }
-        .btn-amber   { background: linear-gradient(135deg,#b45309,#F59E0B); color: white; }
-        .btn-amber:hover:not(:disabled)   { transform: translateY(-1px); }
-        .btn-amber:disabled   { opacity: 0.45; cursor: not-allowed; }
-        .btn-emerald { background: linear-gradient(135deg,#047857,#10B981); color: white; }
-        .btn-emerald:hover:not(:disabled) { transform: translateY(-1px); }
-        .btn-cyan    { background: linear-gradient(135deg,#0369a1,#06B6D4); color: white; }
-        .btn-cyan:hover:not(:disabled)    { transform: translateY(-1px); }
-        .btn-cyan:disabled    { opacity: 0.45; cursor: not-allowed; }
-        .btn-ghost {
-          background: transparent; color: rgba(165,180,252,0.65);
-          border: 1px solid rgba(99,102,241,0.18); font-size: 0.78rem;
-        }
-        .btn-ghost:hover { color: #A5B4FC; border-color: rgba(99,102,241,0.35); }
-
-        .count-badge {
-          display: inline-flex; align-items: center;
-          background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);
-          color: #A5B4FC; border-radius: 999px; padding: 4px 12px;
-          font-size: 0.75rem; font-weight: 700;
-        }
-
-        .progress-pill {
-          display: inline-flex; align-items: center; gap: 8px;
-          background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);
-          color: #A5B4FC; border-radius: 999px; padding: 6px 14px;
-          font-size: 0.75rem; font-weight: 600;
-        }
-        .spin { display: inline-block; width: 10px; height: 10px; border: 2px solid rgba(165,180,252,0.3); border-top-color: #A5B4FC; border-radius: 50%; animation: spin 0.7s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .save-toast {
-          margin-top: 10px; font-size: 0.8rem; padding: 8px 14px; border-radius: 8px;
-          background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #6EE7B7; display: inline-block;
-        }
-        .save-toast.err { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.25); color: #FCA5A5; }
-
-        /* Template Switcher Bar */
-        .template-bar {
-          display: flex; align-items: center; justify-content: space-between; gap: 12px;
-          background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; flex-wrap: wrap;
-        }
-        .template-toggle-group {
-          display: inline-flex; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 8px; padding: 3px; gap: 3px;
-        }
-        .template-toggle-btn {
-          background: transparent; border: none; color: #94A3B8; padding: 6px 12px;
-          border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease;
-        }
-        .template-toggle-btn.active {
-          background: #4F46E5; color: #FFF; box-shadow: 0 2px 8px rgba(79,70,229,0.4);
-        }
-
-        /* QR Placement Box Editor */
-        .placement-editor {
-          background: rgba(99, 102, 241, 0.05);
-          border: 1px solid rgba(99, 102, 241, 0.25);
-          border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
-        }
-        .slider-row {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 16px; margin-top: 12px;
-        }
-        .slider-item { display: flex; flex-direction: column; gap: 6px; }
-        .slider-header { display: flex; justify-content: space-between; font-size: 0.76rem; color: #CBD5E1; font-weight: 600; }
-        .slider-input {
-          -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px;
-          background: rgba(255,255,255,0.12); outline: none; transition: background 0.2s;
-        }
-        .slider-input::-webkit-slider-thumb {
-          -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
-          border-radius: 50%; background: #6366F1; cursor: pointer; box-shadow: 0 0 8px rgba(99,102,241,0.8);
-        }
-
-        .grid-area { max-width: 1140px; margin: 0 auto; padding: 24px 20px 100px; }
-        .grid-meta { font-size: 0.78rem; color: rgba(255,255,255,0.3); margin-bottom: 18px; }
-        .cards-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
-          gap: 20px;
-        }
-        .card-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
-        .card-wrap:hover .card-thumb {
-          transform: translateY(-4px);
-          box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.15) !important;
-        }
-        .card-wrap:hover .dl-hint { opacity: 1; }
-        .dl-hint { opacity: 0; font-size: 0.67rem; color: rgba(165,180,252,0.7); transition: opacity 0.2s; }
-
-        .empty {
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
-          min-height: 55vh; gap: 14px; text-align: center;
-        }
-        .empty-icon  { font-size: 3.5rem; opacity: 0.22; }
-        .empty-title { font-size: 1rem; font-weight: 600; color: rgba(255,255,255,0.35); }
-        .empty-sub   { font-size: 0.82rem; color: rgba(255,255,255,0.2); max-width: 320px; line-height: 1.7; }
-
-        @media print {
-          .panel { display: none !important; }
-          .grid-area { padding: 5mm !important; max-width: none !important; }
-          .cards-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 5mm !important; }
-          .dl-hint { display: none !important; }
-          .card-thumb { box-shadow: none !important; }
-        }
-        @media (max-width: 600px) {
-          .panel { position: relative; padding: 14px; }
-          .controls { gap: 8px; }
-          .btn { padding: 8px 12px; font-size: 0.8rem; justify-content: center; }
-          .btn-indigo, .btn-cyan, .btn-amber, .btn-emerald { flex: 1; min-width: 130px; }
-          .ctrl-label { display: none; }
-          .template-bar { flex-direction: column; align-items: stretch; }
-          .template-toggle-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
-        }
-      `}</style>
-
       <AdminNav active="print" />
 
       {/* Hidden File Input for Custom Design Upload */}
@@ -580,12 +397,12 @@ export default function PrintQRCodes() {
       />
 
       {/* ── Panel Kontrol Utama ── */}
-      <div className="panel">
-        <div className="panel-inner">
+      <div className="print-panel">
+        <div className="print-panel-inner">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", flexWrap: "wrap", gap: 10 }}>
             <div>
-              <div className="panel-title">🎴 Mesin Cetak QR Code &amp; Desain Kartu</div>
-              <div className="panel-sub">
+              <div className="print-panel-title">🎴 Mesin Cetak QR Code &amp; Desain Kartu</div>
+              <div className="print-panel-sub">
                 Cetak massal QR code unik di atas template standar maupun desain custom klien (seperti Purs Coffee).
               </div>
             </div>
@@ -624,7 +441,7 @@ export default function PrintQRCodes() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="btn btn-ghost"
+                className="print-btn print-btn-ghost"
                 style={{ fontSize: "0.76rem", padding: "6px 12px" }}
               >
                 📁 Upload Gambar Desain {customImg ? "Baru" : ""}
@@ -635,7 +452,7 @@ export default function PrintQRCodes() {
             <button
               type="button"
               onClick={() => setShowPlacementEditor((v) => !v)}
-              className="btn btn-ghost"
+              className="print-btn print-btn-ghost"
               style={{
                 fontSize: "0.76rem",
                 padding: "6px 12px",
@@ -663,13 +480,13 @@ export default function PrintQRCodes() {
 
                 {/* Quick Auto Center Buttons */}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button type="button" onClick={handleCenterHorizontal} className="btn btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem" }} title="Pusatkan posisi QR secara horizontal">
+                  <button type="button" onClick={handleCenterHorizontal} className="print-btn print-btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem" }} title="Pusatkan posisi QR secara horizontal">
                     🎯 Auto-Center X
                   </button>
-                  <button type="button" onClick={handleCenterVertical} className="btn btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem" }} title="Pusatkan posisi QR secara vertikal">
+                  <button type="button" onClick={handleCenterVertical} className="print-btn print-btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem" }} title="Pusatkan posisi QR secara vertikal">
                     🎯 Auto-Center Y
                   </button>
-                  <button type="button" onClick={handleCenterFull} className="btn btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#34D399", borderColor: "rgba(16,185,129,0.3)" }} title="Pusatkan tepat di tengah-tengah kartu">
+                  <button type="button" onClick={handleCenterFull} className="print-btn print-btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#34D399", borderColor: "rgba(16,185,129,0.3)" }} title="Pusatkan tepat di tengah-tengah kartu">
                     ✨ Tengah Penuh
                   </button>
                 </div>
@@ -737,7 +554,7 @@ export default function PrintQRCodes() {
                     <button
                       type="button"
                       onClick={() => setPlacement((p) => ({ ...p, style: "transparent" }))}
-                      className="btn"
+                      className="print-btn"
                       style={{
                         flex: 1, padding: "5px 8px", fontSize: "0.72rem",
                         background: placement.style === "transparent" ? "rgba(245, 158, 11, 0.2)" : "rgba(255,255,255,0.04)",
@@ -750,7 +567,7 @@ export default function PrintQRCodes() {
                     <button
                       type="button"
                       onClick={() => setPlacement((p) => ({ ...p, style: "white_box" }))}
-                      className="btn"
+                      className="print-btn"
                       style={{
                         flex: 1, padding: "5px 8px", fontSize: "0.72rem",
                         background: placement.style === "white_box" ? "rgba(99, 102, 241, 0.2)" : "rgba(255,255,255,0.04)",
@@ -767,19 +584,19 @@ export default function PrintQRCodes() {
           )}
 
           {/* ── Tombol Generator & Aksi ── */}
-          <div className="controls">
-            <span className="ctrl-label">Jumlah kartu:</span>
+          <div className="print-controls">
+            <span className="print-ctrl-label">Jumlah kartu:</span>
 
-            <div className="number-input-wrap">
-              <button className="num-btn" onClick={() => setCount((c) => Math.max(1, c - 1))}>−</button>
+            <div className="print-number-input-wrap">
+              <button className="print-num-btn" onClick={() => setCount((c) => Math.max(1, c - 1))}>−</button>
               <input
                 type="number"
-                className="ctrl-input num-no-spin"
+                className="print-ctrl-input num-no-spin"
                 value={count}
                 onChange={(e) => setCount(Math.max(1, Math.min(200, Number(e.target.value))))}
                 min={1} max={200}
               />
-              <button className="num-btn" onClick={() => setCount((c) => Math.min(200, c + 1))}>+</button>
+              <button className="print-num-btn" onClick={() => setCount((c) => Math.min(200, c + 1))}>+</button>
             </div>
 
             {/* Quick Presets */}
@@ -788,7 +605,7 @@ export default function PrintQRCodes() {
                 <button
                   key={n}
                   onClick={() => setCount(n)}
-                  className="btn btn-ghost"
+                  className="print-btn print-btn-ghost"
                   style={{
                     padding: "6px 10px", fontSize: "0.75rem", borderRadius: 6,
                     background: count === n ? "rgba(99,102,241,0.25)" : "transparent",
@@ -802,31 +619,31 @@ export default function PrintQRCodes() {
             </div>
 
             {/* Badge count real-time */}
-            {codes.length > 0 && <span className="count-badge">{codes.length} kartu</span>}
+            {codes.length > 0 && <span className="print-count-badge">{codes.length} kartu</span>}
 
-            <button className="btn btn-indigo" onClick={handleGenerate} disabled={!bgLoaded}>
+            <button className="print-btn print-btn-indigo" onClick={handleGenerate} disabled={!bgLoaded}>
               {bgLoaded ? "✨ Generate Kartu" : "⏳ Loading..."}
             </button>
 
             {codes.length > 0 && !isZipping && !isSaving && (
               <>
-                <button className="btn btn-cyan" onClick={handleSaveToStok}>
+                <button className="print-btn print-btn-cyan" onClick={handleSaveToStok}>
                   💾 Simpan ke Stok
                 </button>
 
-                <button className="btn btn-amber" onClick={handleDownloadZip}>
+                <button className="print-btn print-btn-amber" onClick={handleDownloadZip}>
                   📦 Download ZIP
                 </button>
 
-                <button className="btn btn-emerald" onClick={() => window.print()}>
+                <button className="print-btn print-btn-emerald" onClick={() => window.print()}>
                   🖨️ Print
                 </button>
               </>
             )}
 
             {(isZipping || isSaving) && (
-              <div className="progress-pill">
-                <span className="spin" />
+              <div className="print-progress-pill">
+                <span className="print-spin" />
                 {isSaving ? "Menyimpan ke stok..." : progress}
               </div>
             )}
@@ -834,7 +651,7 @@ export default function PrintQRCodes() {
 
           {/* Save result toast */}
           {saveResult && (
-            <div className={`save-toast ${saveResult.startsWith("❌") ? "err" : ""}`}>
+            <div className={`print-save-toast ${saveResult.startsWith("❌") ? "err" : ""}`}>
               {saveResult}
             </div>
           )}
@@ -842,12 +659,12 @@ export default function PrintQRCodes() {
       </div>
 
       {/* ── Grid Kartu ── */}
-      <div className="grid-area">
+      <div className="print-grid-area">
         {codes.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">🎴</div>
-            <div className="empty-title">Belum ada kartu di-generate</div>
-            <div className="empty-sub">
+          <div className="print-empty">
+            <div className="print-empty-icon">🎴</div>
+            <div className="print-empty-title">Belum ada kartu di-generate</div>
+            <div className="print-empty-sub">
               {templateMode === "custom"
                 ? "Upload desain kustom dari klien, sesuaikan posisi QR agar pas di kotaknya, lalu klik Generate Kartu."
                 : "Atur jumlah lalu klik Generate Kartu. Anda juga bisa mengunggah desain kartu khusus dari klien lewat tombol di atas."}
@@ -855,7 +672,7 @@ export default function PrintQRCodes() {
           </div>
         ) : (
           <>
-            <div className="grid-meta">
+            <div className="print-grid-meta">
               {codes.length} kartu · klik kartu untuk download satu PNG resolusi tinggi ({cardW} × {cardH} px)
             </div>
             <div className="cards-grid">
