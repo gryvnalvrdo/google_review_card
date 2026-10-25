@@ -912,6 +912,13 @@ export default function TapsPage() {
           const newest = incomingLogs[0];
           lastKnownTapRef.current = newest.tappedAt;
         }
+
+        // Sinkronisasi status sudah dilihat ke dashboard
+        try {
+          const nowIso = new Date().toISOString();
+          localStorage.setItem("admin_taps_last_seen", nowIso);
+          localStorage.setItem("admin_dashboard_last_visited", nowIso);
+        } catch {}
       }
       if (cardRes.ok) setCards((await cardRes.json()).cards ?? []);
       setLastRefresh(new Date());

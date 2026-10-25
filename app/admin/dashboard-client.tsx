@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import AdminNav from "./components/AdminNav";
 import QRScanner from "./components/QRScanner";
 
@@ -79,39 +80,68 @@ export default function AdminDashboard() {
   }
 
   const loadTapLogs = useCallback(async () => {
-    const prevVisit = localStorage.getItem(LS_KEY);
+    // Sinkronisasi dengan halaman Riwayat Tap (/admin/taps)
+    const prevVisit = localStorage.getItem("admin_taps_last_seen") || localStorage.getItem(LS_KEY);
     setLastVisitedAt(prevVisit);
 
-    const res = await fetch("/api/admin/taps?limit=50");
-    if (res.ok) {
-      const data = await res.json();
-      const all: TapLogEntry[] = data.logs ?? [];
+    try {
+      const res = await fetch("/api/admin/taps?limit=50");
+      if (res.ok) {
+        const data = await res.json();
+        const all: TapLogEntry[] = data.logs ?? [];
 
-      // Filter: hanya yang sesudah kunjungan terakhir
-      const prevDate = prevVisit ? new Date(prevVisit) : null;
-      const isValidPrevDate = prevDate && !isNaN(prevDate.getTime());
-      const unseen = isValidPrevDate
-        ? all.filter(l => new Date(l.tappedAt).getTime() > prevDate.getTime())
-        : all;
+        // Selalu simpan riwayat tap riil terbaru (sama persis dengan di Riwayat Tap)
+        setTapLogs(all);
 
-      setTapLogs(unseen);
-      setNewTapCount(unseen.length);
+        // Hitung notifikasi tap baru yang belum pernah dilihat di riwayat
+        const prevDate = prevVisit ? new Date(prevVisit) : null;
+        const isValidPrevDate = prevDate && !isNaN(prevDate.getTime());
+        const unseen = isValidPrevDate
+          ? all.filter(l => new Date(l.tappedAt).getTime() > prevDate.getTime())
+          : [];
+
+        setNewTapCount(unseen.length);
+      }
+    } catch (e) {
+      console.error("Gagal load tap logs:", e);
     }
-
-    localStorage.setItem(LS_KEY, new Date().toISOString());
   }, []);
 
   useEffect(() => {
     loadCards();
     loadTapLogs();
 
-    // Auto-refresh data quietly in background every 30 seconds
+    // Auto-refresh otomatis saat admin kembali ke tab dashboard dari riwayat tap
+    function handleSync() {
+      loadCards();
+      loadTapLogs();
+    }
+
+    window.addEventListener("focus", handleSync);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") handleSync();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "admin_taps_last_seen" || e.key === LS_KEY) {
+        loadTapLogs();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    // Auto-refresh background tiap 20 detik
     const interval = setInterval(() => {
       loadCards();
       loadTapLogs();
-    }, 30000);
+    }, 20000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleSync);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [loadTapLogs]);
 
   // Handle URL query ?code=... to immediately prefill form and open sheet/modal!
@@ -583,23 +613,35 @@ export default function AdminDashboard() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
                   <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
                     📲 Aktivitas Tap Terbaru
-                    {newTapCount > 0 && (
-                      <span className="badge badge-green" style={{ fontSize: "0.65rem" }}>
+                    {newTapCount > 0 ? (
+                      <span className="badge badge-green" style={{ fontSize: "0.65rem", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }} />
                         {newTapCount} Baru
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: "0.68rem", color: "#94A3B8", fontWeight: 500 }}>
+                        ✓ Terupdate
                       </span>
                     )}
                   </h2>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={loadTapLogs} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "0.72rem" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <button onClick={loadTapLogs} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "0.72rem" }} title="Refresh log tap terbaru">
                       🔄 Refresh
                     </button>
-                    <a
+                    <Link
                       href="/admin/taps"
+                      onClick={() => {
+                        const now = new Date().toISOString();
+                        try {
+                          localStorage.setItem("admin_taps_last_seen", now);
+                          localStorage.setItem("admin_dashboard_last_visited", now);
+                        } catch {}
+                      }}
                       className="btn btn-ghost"
                       style={{ padding: "4px 10px", fontSize: "0.72rem", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}
                     >
                       Buka Riwayat Lengkap →
-                    </a>
+                    </Link>
                   </div>
                 </div>
 
@@ -607,26 +649,36 @@ export default function AdminDashboard() {
                   <div style={{ textAlign: "center", padding: "28px 12px" }}>
                     <div style={{ fontSize: "1.8rem", marginBottom: 6, opacity: 0.4 }}>✨</div>
                     <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600 }}>
-                      Belum ada tap baru sejak kunjungan terakhir.
+                      Belum ada aktivitas tap yang tercatat.
                     </p>
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {tapLogs.slice(0, 6).map((log, i) => {
+                      const isNew = lastVisitedAt && new Date(log.tappedAt).getTime() > new Date(lastVisitedAt).getTime();
                       return (
                         <div
                           key={`${log.code}-${log.tappedAt}-${i}`}
                           style={{
                             display: "flex", justifyContent: "space-between", alignItems: "center",
-                            padding: "10px 14px", background: "rgba(52,211,153,0.04)",
-                            borderLeft: "3px solid #34D399", borderRadius: "0 8px 8px 0",
+                            padding: "10px 14px",
+                            background: isNew ? "rgba(52,211,153,0.08)" : "rgba(255,255,255,0.02)",
+                            borderLeft: isNew ? "3px solid #10B981" : "3px solid rgba(255,255,255,0.12)",
+                            borderRadius: "0 8px 8px 0",
                             gap: 10,
                             flexWrap: "wrap",
                           }}
                         >
                           <div style={{ minWidth: 0, flex: "1 1 180px" }}>
-                            <div style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", wordBreak: "break-word", lineHeight: 1.3 }}>
-                              {log.storeName}
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", wordBreak: "break-word", lineHeight: 1.3 }}>
+                                {log.storeName}
+                              </span>
+                              {isNew && (
+                                <span style={{ fontSize: "0.6rem", padding: "1px 5px", background: "rgba(16,185,129,0.2)", color: "#6EE7B7", borderRadius: 4, fontWeight: 700 }}>
+                                  BARU
+                                </span>
+                              )}
                             </div>
                             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
                               {(() => {
