@@ -355,6 +355,13 @@ html, body {
   gap: 16px;
 }
 
+.admin-nav-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .admin-nav-brand {
   display: flex;
   align-items: center;
@@ -629,12 +636,73 @@ html, body {
     position: sticky;
     top: 0;
     z-index: 100;
+    height: 56px;
+    background: rgba(10, 10, 18, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .admin-nav-container {
-    padding: 10px 16px;
+    height: 100%;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap !important;
     gap: 10px;
   }
+  .admin-nav-brand-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .admin-nav-brand {
+    gap: 8px;
+  }
+  .brand-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .brand-title {
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
+  .brand-badge {
+    font-size: 0.58rem;
+    letter-spacing: 0.03em;
+  }
+  .admin-header-back-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+  .admin-nav-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .logout-btn {
+    padding: 6px 12px;
+    font-size: 0.74rem;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #FCA5A5;
+    white-space: nowrap;
+    gap: 5px;
+  }
   .admin-desktop-tabs {
+    display: none !important;
+  }
+  .live-status-pill {
     display: none !important;
   }
   .admin-mobile-dock { display: block !important; }

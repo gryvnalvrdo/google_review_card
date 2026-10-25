@@ -34,7 +34,7 @@ export default function AdminNav({ active }: AdminNavProps) {
       <header className="admin-nav-header">
         <div className="admin-nav-container">
           {/* Brand & Back Button */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="admin-nav-brand-group">
             {currentTab !== "dashboard" && (
               <Link
                 href="/admin"
@@ -73,13 +73,8 @@ export default function AdminNav({ active }: AdminNavProps) {
             })}
           </nav>
 
-          {/* Actions */}
+          {/* Actions: Keluar (Online pill removed) */}
           <div className="admin-nav-actions">
-            <div className="live-status-pill">
-              <span className="live-dot" />
-              <span className="live-text">Online</span>
-            </div>
-
             <button
               onClick={handleLogout}
               className="logout-btn"
