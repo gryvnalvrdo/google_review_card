@@ -309,210 +309,6 @@ function renderStyledQR(
   });
 }
 
-// ─── 3D Acrylic Tabletop Mockup Canvas Generator ──────────────────────────────
-function createAcrylicMockupCanvas(cardCanvas: HTMLCanvasElement): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1200;
-  canvas.height = 1000;
-  const ctx = canvas.getContext("2d")!;
-
-  // 1. Warm Café Ambient Gradient Background
-  const bgGrad = ctx.createRadialGradient(600, 360, 80, 600, 450, 750);
-  bgGrad.addColorStop(0, "#3A2114"); // Warm coffee lamp glow
-  bgGrad.addColorStop(0.55, "#1F1109"); // Dark mahogany wood
-  bgGrad.addColorStop(1, "#0A0503"); // Deep vignette
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, 1200, 1000);
-
-  // Subtle wood tabletop horizon at y = 740
-  const tableTopGrad = ctx.createLinearGradient(0, 740, 0, 1000);
-  tableTopGrad.addColorStop(0, "rgba(25, 12, 6, 0.95)");
-  tableTopGrad.addColorStop(1, "rgba(10, 5, 2, 0.98)");
-  ctx.fillStyle = tableTopGrad;
-  ctx.fillRect(0, 740, 1200, 260);
-
-  // Table edge bevel highlight
-  ctx.strokeStyle = "rgba(180, 110, 60, 0.35)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, 740);
-  ctx.lineTo(1200, 740);
-  ctx.stroke();
-
-  // 2. Realistic Soft Drop Shadow under acrylic base
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(600, 775, 290, 26, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-  ctx.filter = "blur(18px)";
-  ctx.fill();
-  ctx.restore();
-
-  // Contact shadow directly beneath the base
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(600, 762, 230, 8, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
-  ctx.filter = "blur(4px)";
-  ctx.fill();
-  ctx.restore();
-
-  // 3. Acrylic Standee Frame Geometry
-  const cardW = cardCanvas.width;
-  const cardH = cardCanvas.height;
-  const cardAspect = cardW / cardH;
-
-  let standCardW = 460;
-  let standCardH = Math.round(standCardW / cardAspect);
-  if (standCardH > 520) {
-    standCardH = 520;
-    standCardW = Math.round(standCardH * cardAspect);
-  }
-
-  const borderPad = 14;
-  const standTotalW = standCardW + borderPad * 2;
-  const standTotalH = standCardH + borderPad * 2;
-  const standX = Math.round((1200 - standTotalW) / 2);
-  const standY = 745 - standTotalH;
-  const cardX = standX + borderPad;
-  const cardY = standY + borderPad;
-
-  // Clear Acrylic Back Plate (Glass)
-  ctx.save();
-  ctx.beginPath();
-  const rad = 14;
-  ctx.moveTo(standX + rad, standY);
-  ctx.lineTo(standX + standTotalW - rad, standY);
-  ctx.arcTo(standX + standTotalW, standY, standX + standTotalW, standY + rad, rad);
-  ctx.lineTo(standX + standTotalW, standY + standTotalH);
-  ctx.lineTo(standX, standY + standTotalH);
-  ctx.lineTo(standX, standY + rad);
-  ctx.arcTo(standX, standY, standX + rad, standY, rad);
-  ctx.closePath();
-
-  ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-  ctx.fill();
-
-  // Acrylic Edge Polish Border
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-  ctx.stroke();
-  ctx.restore();
-
-  // 4. Draw the Card Image inside the Acrylic Frame
-  ctx.save();
-  ctx.beginPath();
-  const cRad = 8;
-  ctx.moveTo(cardX + cRad, cardY);
-  ctx.lineTo(cardX + standCardW - cRad, cardY);
-  ctx.arcTo(cardX + standCardW, cardY, cardX + standCardW, cardY + cRad, cRad);
-  ctx.lineTo(cardX + standCardW, cardY + standCardH - cRad);
-  ctx.arcTo(cardX + standCardW, cardY + standCardH, cardX + standCardW - cRad, cardY + standCardH, cRad);
-  ctx.lineTo(cardX + cRad, cardY + standCardH);
-  ctx.arcTo(cardX, cardY + standCardH, cardX, cardY + standCardH - cRad, cRad);
-  ctx.lineTo(cardX, cardY + cRad);
-  ctx.arcTo(cardX, cardY, cardX + cRad, cardY, cRad);
-  ctx.closePath();
-  ctx.clip();
-
-  ctx.drawImage(cardCanvas, cardX, cardY, standCardW, standCardH);
-  ctx.restore();
-
-  // 5. Realistic Diagonal Glass Reflection / Sheen
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(standX, standY);
-  ctx.lineTo(standX + standTotalW, standY);
-  ctx.lineTo(standX + standTotalW, standY + standTotalH);
-  ctx.lineTo(standX, standY + standTotalH);
-  ctx.closePath();
-  ctx.clip();
-
-  const sheenGrad = ctx.createLinearGradient(standX, standY, standX + standTotalW, standY + standTotalH);
-  sheenGrad.addColorStop(0, "rgba(255, 255, 255, 0.32)");
-  sheenGrad.addColorStop(0.25, "rgba(255, 255, 255, 0.08)");
-  sheenGrad.addColorStop(0.42, "rgba(255, 255, 255, 0.0)");
-  sheenGrad.addColorStop(0.65, "rgba(255, 255, 255, 0.03)");
-  sheenGrad.addColorStop(0.85, "rgba(255, 255, 255, 0.15)");
-  sheenGrad.addColorStop(1, "rgba(255, 255, 255, 0.04)");
-
-  ctx.fillStyle = sheenGrad;
-  ctx.fillRect(standX, standY, standTotalW, standTotalH);
-
-  // Sharp Glint diagonal light ray
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(standX + standTotalW * 0.1, standY);
-  ctx.lineTo(standX + standTotalW * 0.6, standY + standTotalH);
-  ctx.stroke();
-  ctx.restore();
-
-  // 6. Acrylic Base Pedestal (T-Stand Base)
-  const baseW = Math.max(standTotalW * 0.88, 380);
-  const baseH = 26;
-  const baseX = Math.round((1200 - baseW) / 2);
-  const baseY = 738;
-  const baseRad = 6;
-
-  ctx.save();
-  ctx.beginPath();
-  if (ctx.roundRect) {
-    ctx.roundRect(baseX, baseY, baseW, baseH, baseRad);
-  } else {
-    ctx.rect(baseX, baseY, baseW, baseH);
-  }
-  ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
-  ctx.fill();
-
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-  ctx.stroke();
-
-  // Top highlight line on acrylic base
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(baseX + 10, baseY + 2);
-  ctx.lineTo(baseX + baseW - 10, baseY + 2);
-  ctx.stroke();
-  ctx.restore();
-
-  // 7. Sleek Title & Badge Overlays
-  ctx.save();
-  ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  const badgeText = "STAND AKRILIK MEJA CAFÉ · UKURAN 10 × 10 CM";
-  const metrics = ctx.measureText(badgeText);
-  const bW = metrics.width + 36;
-  const bH = 34;
-  const bX = (1200 - bW) / 2;
-  const bY = 50;
-
-  ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
-  if (ctx.roundRect) {
-    ctx.roundRect(bX, bY, bW, bH, 17);
-  } else {
-    ctx.rect(bX, bY, bW, bH);
-  }
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = "#F3F4F6";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(badgeText, 600, bY + bH / 2);
-
-  // Bottom brand note
-  ctx.font = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
-  ctx.fillText("Hantic NFC & QR Review System · Ready to Print & Tap", 600, 940);
-  ctx.restore();
-
-  return canvas;
-}
-
 // ─── CardItem ────────────────────────────────────────────────────────────────
 interface CardItemProps {
   code: string;
@@ -595,8 +391,6 @@ export default function PrintQRCodes() {
   // QR Placement State
   const [placement, setPlacement] = useState<QRPlacementConfig>(DEFAULT_PLACEMENT);
   const [showPlacementEditor, setShowPlacementEditor] = useState(false);
-  const [showMockup, setShowMockup] = useState(false);
-  const [mockupCopied, setMockupCopied] = useState(false);
 
   const [isZipping, setIsZipping] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -606,7 +400,6 @@ export default function PrintQRCodes() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const liveQrCanvasRef = useRef<HTMLCanvasElement>(null);
-  const mockupPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   // Helper untuk update posisi dari pointer drag / click langsung di kartu
@@ -687,7 +480,9 @@ export default function PrintQRCodes() {
           const savedConfig = localStorage.getItem("custom_qr_placement");
           if (savedConfig) {
             const parsed = JSON.parse(savedConfig);
-            if (parsed.placement) setPlacement(parsed.placement);
+            if (parsed.placement) {
+              setPlacement({ ...parsed.placement, fgColor: "#000000" });
+            }
           }
         } catch {}
       } else {
@@ -783,79 +578,6 @@ export default function PrintQRCodes() {
       x: Math.round((cardW - prev.size) / 2),
       y: Math.round((cardH - prev.size) / 2),
     }));
-  }
-
-  // Helper untuk mendapatkan canvas kartu (untuk export maupun mockup akrilik)
-  const getMockupCardCanvas = useCallback((): HTMLCanvasElement | null => {
-    if (composedCanvases.current.size > 0) {
-      const first = composedCanvases.current.values().next().value;
-      if (first) return first;
-    }
-    if (!bgImage) return null;
-    const currentPlacement = templateMode === "default" ? DEFAULT_PLACEMENT : placement;
-    const qrCanvas = document.createElement("canvas");
-    const qrRes = Math.max(currentPlacement.size, 512);
-    renderStyledQR(
-      qrCanvas,
-      `${baseUrl || "https://hantic.id"}/c/demo`,
-      qrRes,
-      currentPlacement.dotStyle || "dots",
-      currentPlacement.fgColor || "#000000",
-      currentPlacement.style === "white_box" ? "#FFFFFF" : "transparent"
-    );
-    return compositeCard(bgImage, qrCanvas, currentPlacement);
-  }, [bgImage, placement, templateMode, baseUrl]);
-
-  // Download Mockup PNG 1200x1000
-  function handleDownloadMockupPNG() {
-    const card = getMockupCardCanvas();
-    if (!card) return;
-    const scene = createAcrylicMockupCanvas(card);
-    scene.toBlob((blob) => {
-      if (blob) {
-        const name = customImageName
-          ? `Mockup_Akrilik_${customImageName.replace(/\.[^/.]+$/, "")}.png`
-          : "Mockup_Akrilik_Meja_Cafe.png";
-        saveAs(blob, name);
-      }
-    }, "image/png");
-  }
-
-  // Salin pesan WhatsApp untuk minta approval klien
-  function handleCopyWhatsAppText() {
-    const brandName = customImageName
-      ? customImageName.replace(/[-_]/g, " ").replace(/\.[^/.]+$/, "").toUpperCase()
-      : "Purs Coffee";
-
-    const waText = `Halo Kak! 👋
-
-Berikut preview mockup Kartu Google Review NFC & QR Code di Stand Akrilik Meja Café (Ukuran 10 × 10 cm) untuk ${brandName}.
-
-✨ Fitur & Spesifikasi:
-• Chip NFC NTAG213 (Tinggal tap HP langsung terbuka ulasan bintang 5 Google Maps)
-• QR Code Estetik (Modul titik bulat modern, langsung discan kamera HP)
-• Stand Akrilik Bening Tebal 3mm (Tahan air, kokoh di meja, & tahan tumpahan minuman)
-
-Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami masukkan ke proses cetak fisik ya kak. Terima kasih! 🙏`;
-
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(waText);
-    } else {
-      const textArea = document.createElement("textarea");
-      textArea.value = waText;
-      textArea.style.position = "fixed";
-      textArea.style.left = "-9999px";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        document.execCommand("copy");
-      } catch {}
-      document.body.removeChild(textArea);
-    }
-
-    setMockupCopied(true);
-    setTimeout(() => setMockupCopied(false), 2500);
   }
 
   // ── Reactive count: tambah/kurangi kartu saat angka berubah ──────────────
@@ -978,21 +700,6 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
     );
   }, [effectivePlacement.dotStyle, effectivePlacement.fgColor, effectivePlacement.style, qrPrevSize, qrPrevPad]);
 
-  // Render WYSIWYG 3D Tabletop Acrylic Mockup Preview di dalam modal
-  useEffect(() => {
-    if (!showMockup || !mockupPreviewCanvasRef.current) return;
-    const card = getMockupCardCanvas();
-    if (!card) return;
-    const scene = createAcrylicMockupCanvas(card);
-    const prevCanvas = mockupPreviewCanvasRef.current;
-    prevCanvas.width = 640;
-    prevCanvas.height = 533; // Proporsional dari 1200x1000
-    const ctx = prevCanvas.getContext("2d");
-    if (ctx) {
-      ctx.drawImage(scene, 0, 0, prevCanvas.width, prevCanvas.height);
-    }
-  }, [showMockup, getMockupCardCanvas]);
-
   return (
     <>
       <AdminNav active="print" />
@@ -1027,7 +734,7 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
             <div>
               <div className="print-panel-title">🎴 Mesin Cetak QR Code &amp; Desain Kartu</div>
               <div className="print-panel-sub">
-                Cetak massal QR code unik di atas template standar maupun desain custom klien (seperti Purs Coffee).
+                Cetak massal QR code unik di atas template standar maupun desain kustom klien.
               </div>
             </div>
 
@@ -1090,24 +797,6 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {/* Tombol Preview Mockup Akrilik Meja (Fitur Nomor 6) */}
-              <button
-                type="button"
-                onClick={() => setShowMockup(true)}
-                className="print-btn"
-                style={{
-                  fontSize: "0.76rem",
-                  padding: "6px 14px",
-                  background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
-                  border: "1px solid rgba(167, 139, 250, 0.4)",
-                  color: "#FFF",
-                  fontWeight: 700,
-                  boxShadow: "0 2px 10px rgba(99, 102, 241, 0.35)",
-                }}
-              >
-                ☕ 📸 Mockup Akrilik Meja (WhatsApp)
-              </button>
-
               {/* Toggle Editor Penyesuaian QR - HANYA TAMPIL DI MODE CUSTOM (Desain default tidak diganggu) */}
               {templateMode === "custom" ? (
                 <button
@@ -1429,50 +1118,12 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                         </div>
                       </div>
 
-                      {/* Warna QR Code */}
-                      <div className="slider-item">
-                        <div className="slider-header">
-                          <span>Warna QR Code:</span>
-                          <strong style={{ color: placement.fgColor === "#3D2213" ? "#FCD34D" : "#FFF" }}>
-                            {placement.fgColor === "#3D2213" ? "☕ Cokelat Purs" : "⬛ Hitam Pekat"}
-                          </strong>
-                        </div>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button
-                            type="button"
-                            onClick={() => setPlacement((p) => ({ ...p, fgColor: "#000000" }))}
-                            className="print-btn"
-                            style={{
-                              flex: 1, padding: "7px 8px", fontSize: "0.72rem", justifyContent: "center",
-                              background: (!placement.fgColor || placement.fgColor === "#000000") ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
-                              border: (!placement.fgColor || placement.fgColor === "#000000") ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
-                              color: "#FFF",
-                            }}
-                          >
-                            ⬛ Hitam
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPlacement((p) => ({ ...p, fgColor: "#3D2213" }))}
-                            className="print-btn"
-                            style={{
-                              flex: 1, padding: "7px 8px", fontSize: "0.72rem", justifyContent: "center",
-                              background: placement.fgColor === "#3D2213" ? "rgba(180, 83, 9, 0.3)" : "rgba(255,255,255,0.04)",
-                              border: placement.fgColor === "#3D2213" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
-                              color: "#FCD34D",
-                            }}
-                          >
-                            ☕ Cokelat Purs
-                          </button>
-                        </div>
-                      </div>
-
                       {/* Gaya Latar QR */}
                       <div className="slider-item">
                         <div className="slider-header">
                           <span>Gaya Latar QR:</span>
                           <strong style={{ color: placement.style === "transparent" ? "#FBBF24" : "#A5B4FC" }}>
-                            {placement.style === "transparent" ? "Transparan (Purs)" : "Kotak Putih Rounded"}
+                            {placement.style === "transparent" ? "Transparan" : "Kotak Putih Rounded"}
                           </strong>
                         </div>
                         <div style={{ display: "flex", gap: 6 }}>
@@ -1487,7 +1138,7 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                               color: placement.style === "transparent" ? "#FCD34D" : "#94A3B8",
                             }}
                           >
-                            ✨ Transparan (Purs)
+                            ✨ Transparan
                           </button>
                           <button
                             type="button"
@@ -1834,113 +1485,6 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
           </>
         )}
       </div>
-      {/* ── Modal Mockup Akrilik Meja Café 3D (Fitur Nomor 6) ── */}
-      {showMockup && (
-        <div className="mockup-modal-overlay" onClick={() => setShowMockup(false)}>
-          <div className="mockup-modal-card" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="mockup-header">
-              <div>
-                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>☕</span> Preview Mockup Stand Akrilik Meja Café (3D)
-                </div>
-                <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: 2 }}>
-                  Visualisasi realistis kartu NFC &amp; QR Code di atas dudukan akrilik meja café (10 × 10 cm).
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMockup(false)}
-                className="print-btn print-btn-ghost"
-                style={{ padding: "4px 10px", fontSize: "0.9rem" }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Viewport 3D Showcase */}
-            <div className="mockup-scene-viewport">
-              <canvas
-                ref={mockupPreviewCanvasRef}
-                style={{
-                  maxWidth: "100%",
-                  height: "auto",
-                  borderRadius: 14,
-                  boxShadow: "0 20px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1)",
-                  display: "block",
-                }}
-              />
-              <div
-                style={{
-                  marginTop: 14,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: "rgba(0, 0, 0, 0.45)",
-                  border: "1px solid rgba(255, 255, 255, 0.12)",
-                  padding: "4px 14px",
-                  borderRadius: 999,
-                  fontSize: "0.72rem",
-                  color: "#E2E8F0",
-                }}
-              >
-                <span>📐 Rasio 1:1 Persegi (10 × 10 cm)</span>
-                <span style={{ color: "rgba(255,255,255,0.25)" }}>•</span>
-                <span style={{ color: "#34D399" }}>✨ Akrilik Bening 3mm Tabletop</span>
-              </div>
-            </div>
-
-            {/* Footer Aksi */}
-            <div className="mockup-footer">
-              <button
-                type="button"
-                onClick={handleCopyWhatsAppText}
-                className="print-btn"
-                style={{
-                  padding: "8px 14px",
-                  fontSize: "0.78rem",
-                  background: mockupCopied ? "rgba(16, 185, 129, 0.25)" : "rgba(37, 211, 102, 0.15)",
-                  border: mockupCopied ? "1px solid #10B981" : "1px solid rgba(37, 211, 102, 0.4)",
-                  color: mockupCopied ? "#34D399" : "#25D366",
-                  fontWeight: 700,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                {mockupCopied ? "✅ Pesan WhatsApp Disalin!" : "📋 Salin Teks WhatsApp Klien"}
-              </button>
-
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button
-                  type="button"
-                  onClick={handleDownloadMockupPNG}
-                  className="print-btn print-btn-indigo"
-                  style={{
-                    padding: "8px 16px",
-                    fontSize: "0.78rem",
-                    background: "linear-gradient(135deg, #F59E0B, #D97706)",
-                    border: "none",
-                    color: "#FFF",
-                    fontWeight: 700,
-                    boxShadow: "0 2px 12px rgba(245, 158, 11, 0.4)",
-                  }}
-                >
-                  📥 Download Mockup PNG (1200×1000)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowMockup(false)}
-                  className="print-btn print-btn-ghost"
-                  style={{ padding: "8px 14px", fontSize: "0.78rem" }}
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
