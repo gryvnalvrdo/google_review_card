@@ -881,6 +881,11 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
     const newCodes: string[] = [];
     for (let i = 0; i < count; i++) newCodes.push(generateRandomCode());
     setCodes(newCodes);
+
+    // Otomatis scroll halus ke area kartu hasil cetak
+    setTimeout(() => {
+      document.getElementById("cards-grid-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
   }
 
   const handleCanvasReady = useCallback((code: string, canvas: HTMLCanvasElement) => {
@@ -1094,340 +1099,64 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
           {/* ── QR Placement & Position Adjuster Panel ── */}
           {showPlacementEditor && (
             <div className="placement-editor">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 12 }}>
+              <div className="placement-editor-header">
                 <div>
-                  <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
-                    <span>🎯</span> Atur Posisi QR Code Secara Visual Langsung
+                  <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 7 }}>
+                    <span>🎯</span> Studio Desain &amp; Posisi QR Code
                   </div>
-                  <div style={{ fontSize: "0.74rem", color: "#94A3B8" }}>
-                    Klik atau geser langsung kotak QR pada kartu di sebelah kanan, atau gunakan slider dan tombol panah untuk posisi presisi.
+                  <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: 2 }}>
+                    Tarik kotak QR pada kartu atau klik langsung ke posisi baru. Atur gaya titik, warna, dan ukuran secara instan.
                   </div>
                 </div>
 
-                {/* Quick Auto Center Buttons & Smart Snap */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <button
                     type="button"
-                    onClick={handleAutoSnapBox}
-                    className="print-btn print-btn-indigo"
-                    style={{
-                      padding: "6px 12px",
-                      fontSize: "0.75rem",
-                      background: "linear-gradient(135deg, #F59E0B, #D97706)",
-                      border: "none",
-                      color: "#FFF",
-                      boxShadow: "0 2px 10px rgba(245, 158, 11, 0.4)",
-                      fontWeight: 700,
+                    onClick={() => {
+                      if (templateMode === "custom" && customImg) {
+                        const detected = detectBoxInImage(customImg);
+                        setPlacement({
+                          x: detected.x,
+                          y: detected.y,
+                          size: detected.size,
+                          style: "transparent",
+                          fgColor: "#000000",
+                          dotStyle: "dots",
+                          padding: 16,
+                          radius: 16,
+                        });
+                      } else {
+                        setPlacement(DEFAULT_PLACEMENT);
+                      }
                     }}
-                    title="Deteksi kotak kuning pada kartu secara otomatis dan letakkan QR persis di dalamnya!"
+                    className="print-btn print-btn-ghost"
+                    style={{ fontSize: "0.72rem", padding: "5px 10px" }}
+                    title="Kembalikan posisi & ukuran ke setelan bawaan"
                   >
-                    ✨ 🎯 Pas-kan ke Kotak Otomatis (Smart Snap)
+                    ↺ Reset Posisi
                   </button>
-                  <button type="button" onClick={handleCenterHorizontal} className="print-btn print-btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem" }} title="Pusatkan posisi QR secara horizontal">
-                    🎯 Auto-Center X
-                  </button>
-                  <button type="button" onClick={handleCenterVertical} className="print-btn print-btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem" }} title="Pusatkan posisi QR secara vertikal">
-                    🎯 Auto-Center Y
-                  </button>
-                  <button type="button" onClick={handleCenterFull} className="print-btn print-btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#34D399", borderColor: "rgba(16,185,129,0.3)" }} title="Pusatkan tepat di tengah-tengah kartu">
-                    ✨ Tengah Penuh
+                  <button
+                    type="button"
+                    onClick={() => setShowPlacementEditor(false)}
+                    className="print-btn print-btn-ghost"
+                    style={{ fontSize: "0.72rem", padding: "5px 10px" }}
+                  >
+                    ✕ Tutup Studio
                   </button>
                 </div>
               </div>
 
-              <div className="placement-split">
-                {/* Kolom Kiri: Slider, Angka Presisi, & Tombol Geser */}
-                <div className="placement-controls-col">
-                  {/* Sliders Grid */}
-                  <div className="slider-row">
-                    {/* Posisi X */}
-                    <div className="slider-item">
-                      <div className="slider-header">
-                        <span>Posisi X (Kiri ↔ Kanan):</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <input
-                            type="number"
-                            min={0}
-                            max={Math.max(cardW - placement.size, 0)}
-                            value={placement.x}
-                            onChange={(e) => {
-                              const val = Math.max(0, Math.min(cardW - placement.size, Number(e.target.value)));
-                              setPlacement((p) => ({ ...p, x: val }));
-                            }}
-                            className="print-ctrl-input"
-                            style={{ width: 68, padding: "3px 6px", fontSize: "0.75rem", height: 26, textAlign: "right" }}
-                          />
-                          <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>px</span>
-                        </div>
-                      </div>
-                      <input
-                        type="range"
-                        className="slider-input"
-                        min={0}
-                        max={Math.max(cardW - placement.size, 100)}
-                        value={placement.x}
-                        onChange={(e) => setPlacement((p) => ({ ...p, x: Number(e.target.value) }))}
-                      />
-                    </div>
-
-                    {/* Posisi Y */}
-                    <div className="slider-item">
-                      <div className="slider-header">
-                        <span>Posisi Y (Atas ↕ Bawah):</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <input
-                            type="number"
-                            min={0}
-                            max={Math.max(cardH - placement.size, 0)}
-                            value={placement.y}
-                            onChange={(e) => {
-                              const val = Math.max(0, Math.min(cardH - placement.size, Number(e.target.value)));
-                              setPlacement((p) => ({ ...p, y: val }));
-                            }}
-                            className="print-ctrl-input"
-                            style={{ width: 68, padding: "3px 6px", fontSize: "0.75rem", height: 26, textAlign: "right" }}
-                          />
-                          <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>px</span>
-                        </div>
-                      </div>
-                      <input
-                        type="range"
-                        className="slider-input"
-                        min={0}
-                        max={Math.max(cardH - placement.size, 100)}
-                        value={placement.y}
-                        onChange={(e) => setPlacement((p) => ({ ...p, y: Number(e.target.value) }))}
-                      />
-                    </div>
-
-                    {/* Ukuran QR */}
-                    <div className="slider-item">
-                      <div className="slider-header">
-                        <span>Ukuran QR Code:</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <input
-                            type="number"
-                            min={60}
-                            max={Math.min(cardW, cardH)}
-                            value={placement.size}
-                            onChange={(e) => {
-                              const val = Math.max(60, Math.min(Math.min(cardW, cardH), Number(e.target.value)));
-                              setPlacement((p) => ({
-                                ...p,
-                                size: val,
-                                x: Math.min(p.x, cardW - val),
-                                y: Math.min(p.y, cardH - val),
-                              }));
-                            }}
-                            className="print-ctrl-input"
-                            style={{ width: 68, padding: "3px 6px", fontSize: "0.75rem", height: 26, textAlign: "right" }}
-                          />
-                          <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>px</span>
-                        </div>
-                      </div>
-                      <input
-                        type="range"
-                        className="slider-input"
-                        min={60}
-                        max={Math.min(cardW, cardH)}
-                        value={placement.size}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setPlacement((p) => ({
-                            ...p,
-                            size: val,
-                            x: Math.min(p.x, cardW - val),
-                            y: Math.min(p.y, cardH - val),
-                          }));
-                        }}
-                      />
-                    </div>
-
-                    {/* Warna QR Code */}
-                    <div className="slider-item">
-                      <div className="slider-header">
-                        <span>Warna QR Code:</span>
-                        <strong style={{ color: placement.fgColor || "#000000" }}>
-                          {placement.fgColor === "#3D2213" ? "☕ Cokelat Purs" : "⬛ Hitam Pekat"}
-                        </strong>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                        <button
-                          type="button"
-                          onClick={() => setPlacement((p) => ({ ...p, fgColor: "#000000" }))}
-                          className="print-btn"
-                          style={{
-                            flex: 1, padding: "5px 8px", fontSize: "0.72rem",
-                            background: (!placement.fgColor || placement.fgColor === "#000000") ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
-                            border: (!placement.fgColor || placement.fgColor === "#000000") ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
-                            color: "#FFF",
-                          }}
-                        >
-                          ⬛ Hitam
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPlacement((p) => ({ ...p, fgColor: "#3D2213" }))}
-                          className="print-btn"
-                          style={{
-                            flex: 1, padding: "5px 8px", fontSize: "0.72rem",
-                            background: placement.fgColor === "#3D2213" ? "rgba(180, 83, 9, 0.3)" : "rgba(255,255,255,0.04)",
-                            border: placement.fgColor === "#3D2213" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
-                            color: "#FCD34D",
-                          }}
-                        >
-                          ☕ Cokelat Purs
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Gaya Latar QR */}
-                    <div className="slider-item">
-                      <div className="slider-header">
-                        <span>Gaya Latar QR:</span>
-                        <strong style={{ color: placement.style === "transparent" ? "#FBBF24" : "#FFF" }}>
-                          {placement.style === "transparent" ? "Transparan (Purs)" : "Kotak Putih Rounded"}
-                        </strong>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                        <button
-                          type="button"
-                          onClick={() => setPlacement((p) => ({ ...p, style: "transparent" }))}
-                          className="print-btn"
-                          style={{
-                            flex: 1, padding: "5px 8px", fontSize: "0.72rem",
-                            background: placement.style === "transparent" ? "rgba(245, 158, 11, 0.2)" : "rgba(255,255,255,0.04)",
-                            border: placement.style === "transparent" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
-                            color: placement.style === "transparent" ? "#FCD34D" : "#94A3B8",
-                          }}
-                        >
-                          ✨ Transparan (Purs)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPlacement((p) => ({ ...p, style: "white_box" }))}
-                          className="print-btn"
-                          style={{
-                            flex: 1, padding: "5px 8px", fontSize: "0.72rem",
-                            background: placement.style === "white_box" ? "rgba(99, 102, 241, 0.2)" : "rgba(255,255,255,0.04)",
-                            border: placement.style === "white_box" ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
-                            color: placement.style === "white_box" ? "#C4B5FD" : "#94A3B8",
-                          }}
-                        >
-                          ⬜ Kotak Putih
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Gaya Pola QR (Fitur Nomor 5) */}
-                    <div className="slider-item">
-                      <div className="slider-header">
-                        <span>Gaya Pola QR:</span>
-                        <strong style={{ color: placement.dotStyle === "dots" ? "#F59E0B" : placement.dotStyle === "rounded" ? "#A5B4FC" : "#FFF" }}>
-                          {(!placement.dotStyle || placement.dotStyle === "dots")
-                            ? "🔵 Titik Bulat (Modern)"
-                            : placement.dotStyle === "rounded"
-                            ? "✨ Membulat Halus"
-                            : "⬛ Kotak Standar"}
-                        </strong>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                        <button
-                          type="button"
-                          onClick={() => setPlacement((p) => ({ ...p, dotStyle: "dots" }))}
-                          className="print-btn"
-                          style={{
-                            flex: 1, padding: "5px 6px", fontSize: "0.72rem",
-                            background: (!placement.dotStyle || placement.dotStyle === "dots") ? "rgba(245, 158, 11, 0.25)" : "rgba(255,255,255,0.04)",
-                            border: (!placement.dotStyle || placement.dotStyle === "dots") ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
-                            color: (!placement.dotStyle || placement.dotStyle === "dots") ? "#FCD34D" : "#94A3B8",
-                          }}
-                          title="Titik bulat modern estetik café (seperti Purs Coffee / Spotify / Apple)"
-                        >
-                          🔵 Dots (Café)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPlacement((p) => ({ ...p, dotStyle: "rounded" }))}
-                          className="print-btn"
-                          style={{
-                            flex: 1, padding: "5px 6px", fontSize: "0.72rem",
-                            background: placement.dotStyle === "rounded" ? "rgba(99, 102, 241, 0.25)" : "rgba(255,255,255,0.04)",
-                            border: placement.dotStyle === "rounded" ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
-                            color: placement.dotStyle === "rounded" ? "#C7D2FE" : "#94A3B8",
-                          }}
-                          title="Sudut membulat squircle lembut"
-                        >
-                          ✨ Membulat
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPlacement((p) => ({ ...p, dotStyle: "squares" }))}
-                          className="print-btn"
-                          style={{
-                            flex: 1, padding: "5px 6px", fontSize: "0.72rem",
-                            background: placement.dotStyle === "squares" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
-                            border: placement.dotStyle === "squares" ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
-                            color: placement.dotStyle === "squares" ? "#FFF" : "#94A3B8",
-                          }}
-                          title="Modul kotak tajam standar"
-                        >
-                          ⬛ Kotak
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tombol Geser Halus (Nudge) & Presets */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, background: "rgba(255,255,255,0.02)", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <div className="nudge-ctrl-box">
-                      <span style={{ fontSize: "0.74rem", color: "#94A3B8", marginRight: 4, fontWeight: 600 }}>Geser Presisi (±10px):</span>
-                      <button type="button" onClick={() => handleNudge(-10, 0)} className="nudge-btn" title="Geser ke kiri 10px">⬅️ Kiri</button>
-                      <button type="button" onClick={() => handleNudge(10, 0)} className="nudge-btn" title="Geser ke kanan 10px">➡️ Kanan</button>
-                      <button type="button" onClick={() => handleNudge(0, -10)} className="nudge-btn" title="Geser ke atas 10px">⬆️ Atas</button>
-                      <button type="button" onClick={() => handleNudge(0, 10)} className="nudge-btn" title="Geser ke bawah 10px">⬇️ Bawah</button>
-                    </div>
-
-                    {/* Preset Ukuran Cepat */}
-                    <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>Ukuran Cepat:</span>
-                      {[0.28, 0.36, 0.44, 0.52].map((ratio) => {
-                        const sz = Math.round(Math.min(cardW, cardH) * ratio);
-                        return (
-                          <button
-                            key={ratio}
-                            type="button"
-                            onClick={() => {
-                              setPlacement((p) => ({
-                                ...p,
-                                size: sz,
-                                x: Math.min(p.x, cardW - sz),
-                                y: Math.min(p.y, cardH - sz),
-                              }));
-                            }}
-                            className="nudge-btn"
-                            style={{
-                              fontSize: "0.68rem",
-                              padding: "3px 6px",
-                              borderColor: placement.size === sz ? "rgba(99,102,241,0.5)" : undefined,
-                              color: placement.size === sz ? "#A5B4FC" : undefined,
-                            }}
-                          >
-                            {Math.round(ratio * 100)}%
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Kolom Kanan: LIVE INTERACTIVE CARD PREVIEW */}
-                <div className="placement-preview-col">
+              <div className="placement-studio-grid">
+                {/* ── Studio Left (or Top on Mobile): LIVE PREVIEW PANEL ── */}
+                <div className="placement-preview-panel">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                    <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#E0E7FF", display: "flex", alignItems: "center", gap: 5 }}>
-                      <span>🔴</span> Live Preview Kartu
+                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#E0E7FF", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 8px #10B981" }} />
+                      Live Preview Kartu
                     </div>
-                    <span style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Skala Nyata</span>
+                    <span style={{ fontSize: "0.68rem", color: "#94A3B8", background: "rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4 }}>
+                      {cardW} × {cardH} px
+                    </span>
                   </div>
 
                   {/* Canvas Wrap / Interactive Box */}
@@ -1435,25 +1164,10 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                     ref={previewWrapRef}
                     className="live-preview-box"
                     style={{ width: prevW, height: prevH }}
-                    onPointerDown={(e) => {
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                      setIsDragging(true);
+                    onClick={(e) => {
                       updatePlacementFromPointer(e.clientX, e.clientY);
                     }}
-                    onPointerMove={(e) => {
-                      if (!isDragging) return;
-                      updatePlacementFromPointer(e.clientX, e.clientY);
-                    }}
-                    onPointerUp={(e) => {
-                      if (isDragging) {
-                        setIsDragging(false);
-                        try {
-                          e.currentTarget.releasePointerCapture(e.pointerId);
-                        } catch {}
-                      }
-                    }}
-                    onPointerCancel={() => setIsDragging(false)}
-                    title="Klik atau geser langsung di sini untuk memindahkan QR Code ke posisi yang diinginkan"
+                    title="Klik atau geser QR Code ke posisi yang diinginkan"
                   >
                     {/* Background Card Image */}
                     {bgImage ? (
@@ -1473,7 +1187,7 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                       <div style={{ color: "#666", fontSize: "0.8rem" }}>Loading desain...</div>
                     )}
 
-                    {/* QR Code Overlay Box (Interactive Target) */}
+                    {/* QR Code Overlay Box (Interactive Target Dragging) */}
                     <div
                       className="qr-target-overlay"
                       style={{
@@ -1485,6 +1199,29 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                         background: placement.style === "white_box" ? "#FFFFFF" : "transparent",
                         padding: placement.style === "white_box" ? qrPrevPad : 0,
                         boxSizing: "border-box",
+                      }}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        setIsDragging(true);
+                      }}
+                      onPointerMove={(e) => {
+                        if (!isDragging) return;
+                        e.stopPropagation();
+                        updatePlacementFromPointer(e.clientX, e.clientY);
+                      }}
+                      onPointerUp={(e) => {
+                        if (isDragging) {
+                          e.stopPropagation();
+                          setIsDragging(false);
+                          try {
+                            e.currentTarget.releasePointerCapture(e.pointerId);
+                          } catch {}
+                        }
+                      }}
+                      onPointerCancel={(e) => {
+                        e.stopPropagation();
+                        setIsDragging(false);
                       }}
                     >
                       <canvas
@@ -1498,18 +1235,18 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                       <div
                         style={{
                           position: "absolute",
-                          top: -18,
+                          top: -19,
                           left: "50%",
                           transform: "translateX(-50%)",
                           background: "#4F46E5",
                           color: "#FFF",
-                          fontSize: "0.58rem",
+                          fontSize: "0.6rem",
                           fontWeight: 700,
-                          padding: "1px 5px",
+                          padding: "2px 6px",
                           borderRadius: 4,
                           whiteSpace: "nowrap",
                           pointerEvents: "none",
-                          boxShadow: "0 2px 6px rgba(0,0,0,0.6)",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.6)",
                         }}
                       >
                         🎯 QR {placement.size}px
@@ -1521,8 +1258,381 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                   </div>
 
                   {/* Coordinate Tag */}
-                  <div style={{ fontSize: "0.68rem", color: "#94A3B8", textAlign: "center", lineHeight: 1.4 }}>
-                    📍 X: <strong style={{ color: "#A5B4FC" }}>{placement.x}px</strong> · Y: <strong style={{ color: "#A5B4FC" }}>{placement.y}px</strong> · Ukuran: <strong style={{ color: "#34D399" }}>{placement.size}px</strong>
+                  <div style={{
+                    fontSize: "0.72rem",
+                    color: "#94A3B8",
+                    textAlign: "center",
+                    background: "rgba(255,255,255,0.03)",
+                    padding: "5px 12px",
+                    borderRadius: 6,
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "space-around"
+                  }}>
+                    <span>X: <strong style={{ color: "#A5B4FC" }}>{placement.x}px</strong></span>
+                    <span>Y: <strong style={{ color: "#A5B4FC" }}>{placement.y}px</strong></span>
+                    <span>Ukuran: <strong style={{ color: "#34D399" }}>{placement.size}px</strong></span>
+                  </div>
+
+                  {/* Quick Action Buttons Directly Under Card */}
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 7, marginTop: 2 }}>
+                    <button
+                      type="button"
+                      onClick={handleAutoSnapBox}
+                      className="print-btn"
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        fontSize: "0.76rem",
+                        background: "linear-gradient(135deg, #F59E0B, #D97706)",
+                        border: "none",
+                        color: "#FFF",
+                        boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                        fontWeight: 700,
+                        justifyContent: "center",
+                      }}
+                      title="Deteksi kotak kuning pada kartu secara otomatis dan letakkan QR persis di dalamnya!"
+                    >
+                      ✨ 🎯 Pas-kan ke Kotak Otomatis (Smart Snap)
+                    </button>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={handleCenterHorizontal}
+                        className="print-btn print-btn-ghost"
+                        style={{ padding: "6px 8px", fontSize: "0.71rem", justifyContent: "center" }}
+                        title="Pusatkan posisi QR secara horizontal"
+                      >
+                        🎯 Center X
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCenterVertical}
+                        className="print-btn print-btn-ghost"
+                        style={{ padding: "6px 8px", fontSize: "0.71rem", justifyContent: "center" }}
+                        title="Pusatkan posisi QR secara vertikal"
+                      >
+                        🎯 Center Y
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCenterFull}
+                        className="print-btn print-btn-ghost"
+                        style={{ padding: "6px 8px", fontSize: "0.71rem", color: "#34D399", borderColor: "rgba(16,185,129,0.3)", justifyContent: "center" }}
+                        title="Pusatkan tepat di tengah-tengah kartu"
+                      >
+                        ✨ Tengah
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Studio Right: CONTROLS & INSPECTOR PANEL ── */}
+                <div className="placement-controls-panel">
+                  {/* Card 1: Estetika & Tampilan QR */}
+                  <div className="inspector-card">
+                    <div className="inspector-card-title">
+                      <span>🎨</span> Tampilan &amp; Estetika QR Code
+                    </div>
+
+                    <div className="slider-group-grid">
+                      {/* Gaya Pola QR */}
+                      <div className="slider-item">
+                        <div className="slider-header">
+                          <span>Gaya Pola QR:</span>
+                          <strong style={{ color: placement.dotStyle === "dots" ? "#F59E0B" : placement.dotStyle === "rounded" ? "#A5B4FC" : "#FFF" }}>
+                            {(!placement.dotStyle || placement.dotStyle === "dots")
+                              ? "🔵 Dots Café"
+                              : placement.dotStyle === "rounded"
+                              ? "✨ Membulat"
+                              : "⬛ Kotak"}
+                          </strong>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => setPlacement((p) => ({ ...p, dotStyle: "dots" }))}
+                            className="print-btn"
+                            style={{
+                              flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
+                              background: (!placement.dotStyle || placement.dotStyle === "dots") ? "rgba(245, 158, 11, 0.25)" : "rgba(255,255,255,0.04)",
+                              border: (!placement.dotStyle || placement.dotStyle === "dots") ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
+                              color: (!placement.dotStyle || placement.dotStyle === "dots") ? "#FCD34D" : "#94A3B8",
+                            }}
+                          >
+                            🔵 Dots
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPlacement((p) => ({ ...p, dotStyle: "rounded" }))}
+                            className="print-btn"
+                            style={{
+                              flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
+                              background: placement.dotStyle === "rounded" ? "rgba(99, 102, 241, 0.25)" : "rgba(255,255,255,0.04)",
+                              border: placement.dotStyle === "rounded" ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
+                              color: placement.dotStyle === "rounded" ? "#C7D2FE" : "#94A3B8",
+                            }}
+                          >
+                            ✨ Membulat
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPlacement((p) => ({ ...p, dotStyle: "squares" }))}
+                            className="print-btn"
+                            style={{
+                              flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
+                              background: placement.dotStyle === "squares" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                              border: placement.dotStyle === "squares" ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
+                              color: placement.dotStyle === "squares" ? "#FFF" : "#94A3B8",
+                            }}
+                          >
+                            ⬛ Kotak
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Warna QR Code */}
+                      <div className="slider-item">
+                        <div className="slider-header">
+                          <span>Warna QR Code:</span>
+                          <strong style={{ color: placement.fgColor === "#3D2213" ? "#FCD34D" : "#FFF" }}>
+                            {placement.fgColor === "#3D2213" ? "☕ Cokelat Purs" : "⬛ Hitam Pekat"}
+                          </strong>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => setPlacement((p) => ({ ...p, fgColor: "#000000" }))}
+                            className="print-btn"
+                            style={{
+                              flex: 1, padding: "7px 8px", fontSize: "0.72rem", justifyContent: "center",
+                              background: (!placement.fgColor || placement.fgColor === "#000000") ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                              border: (!placement.fgColor || placement.fgColor === "#000000") ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
+                              color: "#FFF",
+                            }}
+                          >
+                            ⬛ Hitam
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPlacement((p) => ({ ...p, fgColor: "#3D2213" }))}
+                            className="print-btn"
+                            style={{
+                              flex: 1, padding: "7px 8px", fontSize: "0.72rem", justifyContent: "center",
+                              background: placement.fgColor === "#3D2213" ? "rgba(180, 83, 9, 0.3)" : "rgba(255,255,255,0.04)",
+                              border: placement.fgColor === "#3D2213" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
+                              color: "#FCD34D",
+                            }}
+                          >
+                            ☕ Cokelat Purs
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Gaya Latar QR */}
+                      <div className="slider-item">
+                        <div className="slider-header">
+                          <span>Gaya Latar QR:</span>
+                          <strong style={{ color: placement.style === "transparent" ? "#FBBF24" : "#A5B4FC" }}>
+                            {placement.style === "transparent" ? "Transparan (Purs)" : "Kotak Putih Rounded"}
+                          </strong>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => setPlacement((p) => ({ ...p, style: "transparent" }))}
+                            className="print-btn"
+                            style={{
+                              flex: 1, padding: "7px 8px", fontSize: "0.72rem", justifyContent: "center",
+                              background: placement.style === "transparent" ? "rgba(245, 158, 11, 0.2)" : "rgba(255,255,255,0.04)",
+                              border: placement.style === "transparent" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
+                              color: placement.style === "transparent" ? "#FCD34D" : "#94A3B8",
+                            }}
+                          >
+                            ✨ Transparan (Purs)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPlacement((p) => ({ ...p, style: "white_box" }))}
+                            className="print-btn"
+                            style={{
+                              flex: 1, padding: "7px 8px", fontSize: "0.72rem", justifyContent: "center",
+                              background: placement.style === "white_box" ? "rgba(99, 102, 241, 0.2)" : "rgba(255,255,255,0.04)",
+                              border: placement.style === "white_box" ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
+                              color: placement.style === "white_box" ? "#C4B5FD" : "#94A3B8",
+                            }}
+                          >
+                            ⬜ Kotak Putih
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Ukuran & Posisi Presisi */}
+                  <div className="inspector-card">
+                    <div className="inspector-card-title">
+                      <span>📏</span> Ukuran &amp; Posisi Presisi
+                    </div>
+
+                    <div className="slider-group-grid">
+                      {/* Ukuran QR */}
+                      <div className="slider-item">
+                        <div className="slider-header">
+                          <span>Ukuran QR Code:</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <input
+                              type="number"
+                              min={60}
+                              max={Math.min(cardW, cardH)}
+                              value={placement.size}
+                              onChange={(e) => {
+                                const val = Math.max(60, Math.min(Math.min(cardW, cardH), Number(e.target.value)));
+                                setPlacement((p) => ({
+                                  ...p,
+                                  size: val,
+                                  x: Math.min(p.x, cardW - val),
+                                  y: Math.min(p.y, cardH - val),
+                                }));
+                              }}
+                              className="print-ctrl-input"
+                              style={{ width: 68, padding: "3px 6px", fontSize: "0.75rem", height: 26, textAlign: "right" }}
+                            />
+                            <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>px</span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          className="slider-input"
+                          min={60}
+                          max={Math.min(cardW, cardH)}
+                          value={placement.size}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setPlacement((p) => ({
+                              ...p,
+                              size: val,
+                              x: Math.min(p.x, cardW - val),
+                              y: Math.min(p.y, cardH - val),
+                            }));
+                          }}
+                        />
+
+                        {/* Presets Ukuran Cepat */}
+                        <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 4 }}>
+                          <span style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Preset:</span>
+                          {[0.28, 0.36, 0.44, 0.52].map((ratio) => {
+                            const sz = Math.round(Math.min(cardW, cardH) * ratio);
+                            const isActive = Math.abs(placement.size - sz) < 5;
+                            return (
+                              <button
+                                key={ratio}
+                                type="button"
+                                onClick={() => {
+                                  setPlacement((p) => ({
+                                    ...p,
+                                    size: sz,
+                                    x: Math.min(p.x, cardW - sz),
+                                    y: Math.min(p.y, cardH - sz),
+                                  }));
+                                }}
+                                className="nudge-btn"
+                                style={{
+                                  fontSize: "0.68rem",
+                                  padding: "3px 7px",
+                                  borderColor: isActive ? "rgba(99,102,241,0.6)" : undefined,
+                                  background: isActive ? "rgba(99,102,241,0.2)" : undefined,
+                                  color: isActive ? "#A5B4FC" : undefined,
+                                }}
+                              >
+                                {Math.round(ratio * 100)}%
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Posisi X */}
+                      <div className="slider-item">
+                        <div className="slider-header">
+                          <span>Posisi X (Kiri ↔ Kanan):</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <input
+                              type="number"
+                              min={0}
+                              max={Math.max(cardW - placement.size, 0)}
+                              value={placement.x}
+                              onChange={(e) => {
+                                const val = Math.max(0, Math.min(cardW - placement.size, Number(e.target.value)));
+                                setPlacement((p) => ({ ...p, x: val }));
+                              }}
+                              className="print-ctrl-input"
+                              style={{ width: 68, padding: "3px 6px", fontSize: "0.75rem", height: 26, textAlign: "right" }}
+                            />
+                            <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>px</span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          className="slider-input"
+                          min={0}
+                          max={Math.max(cardW - placement.size, 100)}
+                          value={placement.x}
+                          onChange={(e) => setPlacement((p) => ({ ...p, x: Number(e.target.value) }))}
+                        />
+                      </div>
+
+                      {/* Posisi Y */}
+                      <div className="slider-item">
+                        <div className="slider-header">
+                          <span>Posisi Y (Atas ↕ Bawah):</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <input
+                              type="number"
+                              min={0}
+                              max={Math.max(cardH - placement.size, 0)}
+                              value={placement.y}
+                              onChange={(e) => {
+                                const val = Math.max(0, Math.min(cardH - placement.size, Number(e.target.value)));
+                                setPlacement((p) => ({ ...p, y: val }));
+                              }}
+                              className="print-ctrl-input"
+                              style={{ width: 68, padding: "3px 6px", fontSize: "0.75rem", height: 26, textAlign: "right" }}
+                            />
+                            <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>px</span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          className="slider-input"
+                          min={0}
+                          max={Math.max(cardH - placement.size, 100)}
+                          value={placement.y}
+                          onChange={(e) => setPlacement((p) => ({ ...p, y: Number(e.target.value) }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* D-Pad Steppers: ±10px and ±2px */}
+                    <div className="dpad-container">
+                      <div className="nudge-ctrl-box">
+                        <span style={{ fontSize: "0.74rem", color: "#94A3B8", fontWeight: 600 }}>Geser (±10px):</span>
+                        <button type="button" onClick={() => handleNudge(-10, 0)} className="nudge-btn" title="Geser ke kiri 10px">⬅️ Kiri</button>
+                        <button type="button" onClick={() => handleNudge(10, 0)} className="nudge-btn" title="Geser ke kanan 10px">➡️ Kanan</button>
+                        <button type="button" onClick={() => handleNudge(0, -10)} className="nudge-btn" title="Geser ke atas 10px">⬆️ Atas</button>
+                        <button type="button" onClick={() => handleNudge(0, 10)} className="nudge-btn" title="Geser ke bawah 10px">⬇️ Bawah</button>
+                      </div>
+
+                      <div className="nudge-ctrl-box">
+                        <span style={{ fontSize: "0.74rem", color: "#94A3B8", fontWeight: 600 }}>Halus (±2px):</span>
+                        <button type="button" onClick={() => handleNudge(-2, 0)} className="nudge-btn" title="Geser ke kiri 2px">◀ 2px</button>
+                        <button type="button" onClick={() => handleNudge(2, 0)} className="nudge-btn" title="Geser ke kanan 2px">2px ▶</button>
+                        <button type="button" onClick={() => handleNudge(0, -2)} className="nudge-btn" title="Geser ke atas 2px">▲ 2px</button>
+                        <button type="button" onClick={() => handleNudge(0, 2)} className="nudge-btn" title="Geser ke bawah 2px">▼ 2px</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1571,6 +1681,17 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
               {bgLoaded ? "✨ Generate Kartu" : "⏳ Loading..."}
             </button>
 
+            {codes.length > 0 && (
+              <button
+                type="button"
+                className="print-btn print-btn-ghost"
+                style={{ borderColor: "rgba(99,102,241,0.5)", color: "#A5B4FC" }}
+                onClick={() => document.getElementById("cards-grid-section")?.scrollIntoView({ behavior: "smooth" })}
+              >
+                ⬇ Lihat {codes.length} Kartu
+              </button>
+            )}
+
             {codes.length > 0 && !isZipping && !isSaving && (
               <>
                 <button className="print-btn print-btn-cyan" onClick={handleSaveToStok}>
@@ -1605,7 +1726,7 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
       </div>
 
       {/* ── Grid Kartu ── */}
-      <div className="print-grid-area">
+      <div className="print-grid-area" id="cards-grid-section">
         {codes.length === 0 ? (
           <div className="print-empty">
             <div className="print-empty-icon">🎴</div>
@@ -1618,9 +1739,48 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
           </div>
         ) : (
           <>
-            <div className="print-grid-meta">
-              {codes.length} kartu · klik kartu untuk download satu PNG resolusi tinggi ({cardW} × {cardH} px)
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 18,
+              padding: "12px 16px",
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 12
+            }}>
+              <div>
+                <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>🎴</span> Hasil Cetak: {codes.length} Kartu Siap Pakai
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+                  Klik kartu untuk download PNG ({cardW} × {cardH} px)
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="print-btn print-btn-amber"
+                  onClick={handleDownloadZip}
+                  disabled={isZipping}
+                  style={{ padding: "7px 14px", fontSize: "0.78rem" }}
+                >
+                  📦 Download ZIP ({codes.length})
+                </button>
+                <button
+                  type="button"
+                  className="print-btn print-btn-ghost"
+                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  style={{ padding: "7px 12px", fontSize: "0.78rem" }}
+                >
+                  ⬆ Ke Atas
+                </button>
+              </div>
             </div>
+
             <div className="cards-grid">
               {codes.map((code) => (
                 <div key={code} className="card-wrap" onClick={() => handleDownloadSingle(code)}>
