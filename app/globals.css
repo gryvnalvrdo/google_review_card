@@ -1034,6 +1034,8 @@ html, body {
 /* === UNIFIED DASHBOARD TOOLBAR (Full Width Balance) === */
 /* === UNIFIED DASHBOARD TOOLBAR (Sleek Single Row & Mobile Grid) === */
 .dashboard-unified-toolbar {
+  position: relative;
+  z-index: 30;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1208,23 +1210,12 @@ html, body {
   }
 
   .custom-date-trigger-wrap {
-    flex: 1 1 calc(50% - 4px) !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
     min-width: 0 !important;
   }
 
   .custom-date-trigger-btn {
-    width: 100% !important;
-    justify-content: center !important;
-    padding: 0 10px !important;
-    font-size: 0.78rem !important;
-  }
-
-  #store-filter-dropdown-wrapper {
-    flex: 1 1 calc(50% - 4px) !important;
-    min-width: 0 !important;
-  }
-
-  .outlet-trigger-btn {
     width: 100% !important;
     justify-content: center !important;
     padding: 0 10px !important;
@@ -3311,95 +3302,7 @@ html, body {
   }
 }
 
-/* ── Outlet Filter Dropdown & Mobile Bottom Sheet ── */
-.outlet-filter-menu {
-  background: #181824 !important;
-  border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(99, 102, 241, 0.2) !important;
-  padding: 10px !important;
-  max-height: 380px !important;
-  overflow-y: auto !important;
-  z-index: 1000 !important;
-  animation: dropdownPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  transform-origin: top right;
-}
 
-.outlet-filter-menu::-webkit-scrollbar {
-  width: 6px;
-}
-.outlet-filter-menu::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 999px;
-}
-.outlet-filter-menu::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.4);
-  border-radius: 999px;
-}
-.outlet-filter-menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.7);
-}
-
-@keyframes dropdownPop {
-  0% {
-    opacity: 0;
-    transform: scale(0.96) translateY(-6px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes slideUpSheet {
-  0% {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 768px) {
-  .outlet-filter-menu {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    max-height: 75vh !important;
-    border-radius: 20px 20px 0 0 !important;
-    border: 1px solid rgba(99, 102, 241, 0.3) !important;
-    border-bottom: none !important;
-    background: #141522 !important;
-    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.85) !important;
-    padding: 16px 18px calc(18px + env(safe-area-inset-bottom, 20px)) !important;
-    z-index: 1000 !important;
-    animation: slideUpSheet 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  }
-  .outlet-sheet-header {
-    display: flex !important;
-  }
-}
-
-@media (min-width: 769px) {
-  .outlet-sheet-header {
-    display: none !important;
-  }
-  .outlet-filter-menu {
-    position: absolute !important;
-    top: calc(100% + 6px) !important;
-    right: 0 !important;
-    left: auto !important;
-    transform-origin: top right !important;
-    min-width: 260px !important;
-    max-width: 320px !important;
-  }
-}
 
 /* Kolom Kanan Sejajar: Time Stack & Tombol Ulasan */
 .tap-row-side {
