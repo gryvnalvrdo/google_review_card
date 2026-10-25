@@ -658,38 +658,38 @@ export default function PrintQRCodes() {
     img.onerror = () => console.error("Gagal load /card-design.png");
     img.crossOrigin = "anonymous";
     img.src = "/card-design.png";
-
-    // Cek jika ada custom template tersimpan di localStorage
-    try {
-      const savedConfig = localStorage.getItem("custom_qr_placement");
-      if (savedConfig) {
-        const parsed = JSON.parse(savedConfig);
-        if (parsed.placement) setPlacement(parsed.placement);
-      }
-    } catch (e) {
-      console.warn("Could not read saved placement:", e);
-    }
   }, []);
 
-  // Auto-save placement to localStorage
+  // Auto-save placement to localStorage HANYA saat di mode custom
   useEffect(() => {
-    try {
-      localStorage.setItem("custom_qr_placement", JSON.stringify({ placement }));
-    } catch {}
-  }, [placement]);
+    if (templateMode === "custom") {
+      try {
+        localStorage.setItem("custom_qr_placement", JSON.stringify({ placement }));
+      } catch {}
+    }
+  }, [placement, templateMode]);
 
   // Handle Switch Mode Template
   function handleSelectMode(mode: "default" | "custom") {
     setTemplateMode(mode);
     composedCanvases.current.clear();
     if (mode === "default") {
+      setShowPlacementEditor(false); // Tutup editor agar desain default standar tidak terganggu
       if (defaultImg) {
         setBgImage(defaultImg);
-        setPlacement(DEFAULT_PLACEMENT);
       }
+      setPlacement(DEFAULT_PLACEMENT); // Selalu kunci ke setelan standar Hantic asli
     } else {
       if (customImg) {
         setBgImage(customImg);
+        // Pulihkan custom placement yang pernah disimpan untuk desain kustom
+        try {
+          const savedConfig = localStorage.getItem("custom_qr_placement");
+          if (savedConfig) {
+            const parsed = JSON.parse(savedConfig);
+            if (parsed.placement) setPlacement(parsed.placement);
+          }
+        } catch {}
       } else {
         // Trigger upload jika belum ada custom template
         fileInputRef.current?.click();
@@ -792,18 +792,19 @@ export default function PrintQRCodes() {
       if (first) return first;
     }
     if (!bgImage) return null;
+    const currentPlacement = templateMode === "default" ? DEFAULT_PLACEMENT : placement;
     const qrCanvas = document.createElement("canvas");
-    const qrRes = Math.max(placement.size, 512);
+    const qrRes = Math.max(currentPlacement.size, 512);
     renderStyledQR(
       qrCanvas,
       `${baseUrl || "https://hantic.id"}/c/demo`,
       qrRes,
-      placement.dotStyle || "dots",
-      placement.fgColor || "#000000",
-      placement.style === "white_box" ? "#FFFFFF" : "transparent"
+      currentPlacement.dotStyle || "dots",
+      currentPlacement.fgColor || "#000000",
+      currentPlacement.style === "white_box" ? "#FFFFFF" : "transparent"
     );
-    return compositeCard(bgImage, qrCanvas, placement);
-  }, [bgImage, placement, baseUrl]);
+    return compositeCard(bgImage, qrCanvas, currentPlacement);
+  }, [bgImage, placement, templateMode, baseUrl]);
 
   // Download Mockup PNG 1200x1000
   function handleDownloadMockupPNG() {
@@ -942,6 +943,8 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
     }
   }
 
+  const effectivePlacement = templateMode === "default" ? DEFAULT_PLACEMENT : placement;
+
   const cardW = bgImage?.naturalWidth || DEFAULT_CARD_W;
   const cardH = bgImage?.naturalHeight || DEFAULT_CARD_H;
 
@@ -955,25 +958,25 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
     prevW = Math.round(prevH * (cardW / cardH));
   }
   const scale = prevW / cardW;
-  const qrPrevLeft = Math.round(placement.x * scale);
-  const qrPrevTop = Math.round(placement.y * scale);
-  const qrPrevSize = Math.max(24, Math.round(placement.size * scale));
-  const qrPrevPad = Math.round((placement.padding || 16) * scale);
-  const qrPrevRad = Math.round((placement.radius || 16) * scale);
+  const qrPrevLeft = Math.round(effectivePlacement.x * scale);
+  const qrPrevTop = Math.round(effectivePlacement.y * scale);
+  const qrPrevSize = Math.max(24, Math.round(effectivePlacement.size * scale));
+  const qrPrevPad = Math.round((effectivePlacement.padding || 16) * scale);
+  const qrPrevRad = Math.round((effectivePlacement.radius || 16) * scale);
 
   // Render live preview QR pada kartu secara real-time dengan gaya dotStyle & fgColor aktif
   useEffect(() => {
     if (!liveQrCanvasRef.current) return;
-    const innerSize = placement.style === "white_box" ? Math.max(16, qrPrevSize - qrPrevPad * 2) : qrPrevSize;
+    const innerSize = effectivePlacement.style === "white_box" ? Math.max(16, qrPrevSize - qrPrevPad * 2) : qrPrevSize;
     renderStyledQR(
       liveQrCanvasRef.current,
       "https://hantic.id/demo",
       innerSize,
-      placement.dotStyle || "dots",
-      placement.fgColor || "#000000",
+      effectivePlacement.dotStyle || "dots",
+      effectivePlacement.fgColor || "#000000",
       "transparent"
     );
-  }, [placement.dotStyle, placement.fgColor, placement.style, qrPrevSize, qrPrevPad]);
+  }, [effectivePlacement.dotStyle, effectivePlacement.fgColor, effectivePlacement.style, qrPrevSize, qrPrevPad]);
 
   // Render WYSIWYG 3D Tabletop Acrylic Mockup Preview di dalam modal
   useEffect(() => {
@@ -1105,26 +1108,32 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                 ☕ 📸 Mockup Akrilik Meja (WhatsApp)
               </button>
 
-              {/* Toggle Editor Penyesuaian QR */}
-              <button
-                type="button"
-                onClick={() => setShowPlacementEditor((v) => !v)}
-                className="print-btn print-btn-ghost"
-                style={{
-                  fontSize: "0.76rem",
-                  padding: "6px 12px",
-                  borderColor: showPlacementEditor ? "rgba(99,102,241,0.5)" : undefined,
-                  background: showPlacementEditor ? "rgba(99,102,241,0.15)" : undefined,
-                  color: showPlacementEditor ? "#A5B4FC" : undefined,
-                }}
-              >
-                {showPlacementEditor ? "✕ Tutup Posisi QR" : "⚙️ Atur Posisi & Ukuran QR"}
-              </button>
+              {/* Toggle Editor Penyesuaian QR - HANYA TAMPIL DI MODE CUSTOM (Desain default tidak diganggu) */}
+              {templateMode === "custom" ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPlacementEditor((v) => !v)}
+                  className="print-btn print-btn-ghost"
+                  style={{
+                    fontSize: "0.76rem",
+                    padding: "6px 12px",
+                    borderColor: showPlacementEditor ? "rgba(99,102,241,0.5)" : undefined,
+                    background: showPlacementEditor ? "rgba(99,102,241,0.15)" : undefined,
+                    color: showPlacementEditor ? "#A5B4FC" : undefined,
+                  }}
+                >
+                  {showPlacementEditor ? "✕ Tutup Posisi QR" : "⚙️ Atur Posisi & Ukuran QR"}
+                </button>
+              ) : (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#94A3B8", background: "rgba(255,255,255,0.03)", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span>🔒</span> Desain Standar Hantic (Presisi Terkalibrasi)
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ── QR Placement & Position Adjuster Panel ── */}
-          {showPlacementEditor && (
+          {/* ── QR Placement & Position Adjuster Panel (HANYA AKTIF DI MODE CUSTOM) ── */}
+          {templateMode === "custom" && showPlacementEditor && (
             <div className="placement-editor">
               <div className="placement-editor-header">
                 <div>
@@ -1815,7 +1824,7 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                     code={code}
                     url={`${baseUrl}/c/${code}`}
                     bgImage={bgImage}
-                    placement={placement}
+                    placement={effectivePlacement}
                     onCanvasReady={handleCanvasReady}
                   />
                   <span className="dl-hint">⬇ download PNG</span>
