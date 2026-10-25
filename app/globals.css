@@ -709,6 +709,9 @@ html, body {
     gap: 8px !important;
     margin-bottom: 12px !important;
   }
+  .archive-month-card {
+    grid-column: 1 / -1 !important;
+  }
   .hour-period-grid button,
   .hour-period-grid > div {
     padding: 10px 10px !important;
@@ -2192,10 +2195,10 @@ html, body {
     color: #94A3B8;
   }
 
-  /* Redesign NO-SCROLL Main View Switcher on Mobile */
+  /* Redesign NO-SCROLL Main View Switcher on Mobile (3 Clean Columns) */
   .main-view-switcher {
     display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     overflow-x: visible !important;
     width: 100% !important;
     gap: 6px !important;
@@ -2825,6 +2828,9 @@ html, body {
   .hour-period-grid {
     grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
+  }
+  .archive-month-card {
+    grid-column: 1 / -1 !important;
   }
 
   .cafe-breakdown-row1 {

@@ -622,8 +622,8 @@ function HourlyCafeBreakdownCard({
   return (
     <div className="cafe-breakdown-card" style={{ marginTop: 22 }}>
       {/* Header dengan Dropdown Pilihan Jam */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
-        <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ flex: "1 1 200px", minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <h4 style={{ fontSize: "0.98rem", fontWeight: 700, color: "#F0F0FF", display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
               <span>🏪</span> Kontribusi Outlet pada Jam {hourLabel}
@@ -634,22 +634,23 @@ function HourlyCafeBreakdownCard({
               </span>
             )}
           </div>
-          <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 3, marginBottom: 0 }}>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4, marginBottom: 0 }}>
             Rincian outlet yang menerima tap pelanggan pada pukul {hourLabel} ({periodName}).
           </p>
         </div>
 
         {/* Dropdown Pilihan Jam */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: 320, flex: "1 1 240px" }}>
           <label htmlFor="hourly-breakdown-select" style={{ fontSize: "0.76rem", color: "#94A3B8", fontWeight: 600, whiteSpace: "nowrap" }}>
             Pilih Jam:
           </label>
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
             <select
               id="hourly-breakdown-select"
               value={hour}
               onChange={(e) => onSelectHour(Number(e.target.value))}
               style={{
+                width: "100%",
                 background: "#181824",
                 border: "1px solid rgba(99, 102, 241, 0.35)",
                 color: "#EDE9FE",
@@ -661,7 +662,6 @@ function HourlyCafeBreakdownCard({
                 appearance: "none",
                 WebkitAppearance: "none",
                 outline: "none",
-                minWidth: 195,
               }}
             >
               {activeHours.length === 0 ? (
@@ -738,23 +738,20 @@ function HourlyCafeBreakdownCard({
                   transition: "all 0.15s ease",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 180px" }}>
                     <span style={{ fontSize: "1rem", width: 24, textAlign: "center", flexShrink: 0, lineHeight: 1 }}>
                       {medals[i] || <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#64748B" }}>#{i + 1}</span>}
                     </span>
-                    <div style={{ minWidth: 0, flex: 1, display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
+                    <div style={{ minWidth: 0, flex: 1, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <span
                         title={store.storeName}
                         style={{
                           fontWeight: 700,
                           fontSize: "0.88rem",
                           color: "#F8FAFC",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          minWidth: 0,
-                          flexShrink: 1,
+                          wordBreak: "break-word",
+                          lineHeight: 1.3,
                         }}
                       >
                         {store.storeName}
@@ -859,8 +856,15 @@ export default function TapsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState<"tren" | "harian" | "bulanan" | "tidur">("tren");
   const [copySuccessToast, setCopySuccessToast] = useState(false);
+  const [activeTab, setActiveTab] = useState<"tren" | "harian" | "bulanan" | "tidur">("harian");
+
+  useEffect(() => {
+    // Pada desktop layar lebar (> 768px), buka tab Tren & Jam secara default
+    if (typeof window !== "undefined" && window.innerWidth > 768) {
+      setActiveTab("tren");
+    }
+  }, []);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
   const showReviewBtn = dailyMode === "today" && !customDate;
@@ -919,14 +923,6 @@ export default function TapsPage() {
 
   useEffect(() => {
     fetchData(false);
-  }, []);
-
-  useEffect(() => {
-    // Sinkronisasi data otomatis di latar belakang setiap 30 detik (default otomatis)
-    const timer = setInterval(() => {
-      fetchData(true);
-    }, 30000);
-    return () => clearInterval(timer);
   }, []);
 
   // ── Tombol Melayang: Scroll Kembali ke Atas ─────────────────────────
@@ -2208,69 +2204,42 @@ export default function TapsPage() {
 
           {/* ═════════ 1. MODERN DASHBOARD HERO (Command Center) ═════════ */}
           <div className="dashboard-hero">
-            <div className="dashboard-hero-top">
-              <div>
-                <h1 className="dashboard-hero-title">
-                  <span>📲</span> Riwayat &amp; Analitik Tap
-                </h1>
-                <p className="dashboard-hero-sub">
+            <div className="dashboard-hero-top" style={{ marginBottom: 18 }}>
+              <div style={{ width: "100%" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%" }}>
+                  <h1 className="dashboard-hero-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>📲</span> Riwayat &amp; Analitik Tap
+                  </h1>
+
+                  {/* Manual refresh / sync button - placed directly beside title on desktop & mobile */}
+                  <button
+                    type="button"
+                    onClick={() => fetchData(true)}
+                    disabled={isUpdating}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: isUpdating ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "#CBD5E1",
+                      cursor: isUpdating ? "not-allowed" : "pointer",
+                      fontSize: "0.95rem",
+                      transition: "all 0.15s ease",
+                      flexShrink: 0,
+                    }}
+                    title="Sinkronisasi Data Sekarang"
+                    aria-label="Sinkronisasi Data"
+                  >
+                    <span style={{ display: "inline-block", transform: isUpdating ? "rotate(180deg)" : "none", transition: "transform 0.5s ease" }}>🔄</span>
+                  </button>
+                </div>
+                <p className="dashboard-hero-sub" style={{ marginTop: 6, marginBottom: 0 }}>
                   Pantau performa kartu pelanggan, tren kunjungan, dan leaderboard ulasan langsung.
                 </p>
-              </div>
-
-              <div className="dashboard-hero-actions">
-                {/* Live Auto-Sync Badge */}
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 7,
-                    padding: "6px 12px",
-                    background: "rgba(16,185,129,0.08)",
-                    border: "1px solid rgba(16,185,129,0.25)",
-                    borderRadius: 999,
-                    fontSize: "0.75rem",
-                  }}
-                  title="Data otomatis diperbarui setiap 30 detik"
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: "#10B981",
-                      boxShadow: "0 0 8px #10B981",
-                      animation: isUpdating ? "none" : "pulseDot 2s infinite",
-                    }}
-                  />
-                  <span style={{ color: "#34D399", fontWeight: 700 }}>
-                    {isUpdating ? "Sinkronisasi..." : "Live (30s)"}
-                  </span>
-                </div>
-
-                {/* Manual refresh button */}
-                <button
-                  type="button"
-                  onClick={() => fetchData(true)}
-                  disabled={isUpdating}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "#CBD5E1",
-                    cursor: isUpdating ? "not-allowed" : "pointer",
-                    fontSize: "0.85rem",
-                    transition: "all 0.15s ease",
-                  }}
-                  title="Perbarui Data Sekarang"
-                >
-                  🔄
-                </button>
               </div>
             </div>
 
@@ -2340,11 +2309,12 @@ export default function TapsPage() {
 
           {/* ═════════ 2. MAIN VIEW SWITCHER (Segmented Controls) ═════════ */}
           <div className="main-view-switcher">
+            {/* Tab Tren & Jam khusus Desktop (Disembunyikan di Mobile) */}
             <button
               id="tab-btn-tren"
               type="button"
               onClick={() => setActiveTab("tren")}
-              className={`main-view-btn ${activeTab === "tren" ? "active" : ""}`}
+              className={`main-view-btn desktop-only ${activeTab === "tren" ? "active" : ""}`}
             >
               <span>📊</span> Tren &amp; Jam
             </button>
@@ -3320,9 +3290,10 @@ export default function TapsPage() {
             )
           )}
 
-          {/* ═════════ TAB 3: TREN & JAM RAMAI ═════════ */}
+          {/* ═════════ TAB 3: TREN & JAM RAMAI (DESKTOP ONLY) ═════════ */}
           {activeTab === "tren" && (
-            loading ? (
+            <div className="desktop-only" style={{ width: "100%" }}>
+              {loading ? (
               <div style={{ textAlign: "center", padding: "60px 0" }}>
                 <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
                 <p style={{ color: "var(--text-muted)" }}>Menghitung analitik tren...</p>
@@ -4115,6 +4086,7 @@ export default function TapsPage() {
 
                               {/* Card 4: Arsip Bulan & Navigasi */}
                               <div
+                                className="archive-month-card"
                                 style={{
                                   display: "flex",
                                   flexDirection: "column",
@@ -4284,8 +4256,9 @@ export default function TapsPage() {
                   </div>
                 )}
               </div>
-            )
-          )}
+            )}
+          </div>
+        )}
 
           {/* ═════════ TAB 4: KARTU TIDUR ═════════ */}
           {activeTab === "tidur" && (
