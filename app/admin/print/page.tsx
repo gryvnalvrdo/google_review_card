@@ -659,6 +659,25 @@ export default function PrintQRCodes() {
     }, "image/png");
   }
 
+  function handleClearAllCards() {
+    if (codes.length === 0) return;
+    if (window.confirm(`Hapus seluruh ${codes.length} kartu yang sudah di-generate?`)) {
+      composedCanvases.current.clear();
+      setCodes([]);
+      setSaveResult(null);
+    }
+  }
+
+  function handleDeleteSingle(codeToDelete: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    composedCanvases.current.delete(codeToDelete);
+    setCodes((prev) => {
+      const next = prev.filter((c) => c !== codeToDelete);
+      setCount(next.length);
+      return next;
+    });
+  }
+
   async function handleDownloadZip() {
     setIsZipping(true);
     const zip = new JSZip();
@@ -1490,6 +1509,16 @@ export default function PrintQRCodes() {
                   <button type="button" className="print-btn print-btn-emerald" onClick={() => window.print()}>
                     🖨️ Print
                   </button>
+
+                  <button
+                    type="button"
+                    className="print-btn print-btn-ghost"
+                    style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#FCA5A5" }}
+                    onClick={handleClearAllCards}
+                    title="Hapus semua kartu yang sudah di-generate"
+                  >
+                    🗑️ Hapus Semua
+                  </button>
                 </>
               )}
 
@@ -1542,7 +1571,7 @@ export default function PrintQRCodes() {
                   <span>🎴</span> Hasil Cetak: {codes.length} Kartu Siap Pakai
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-                  Klik kartu untuk download PNG ({cardW} × {cardH} px)
+                  Klik kartu untuk download PNG ({cardW} × {cardH} px) • Tombol ✕ untuk hapus satuan
                 </div>
               </div>
 
@@ -1559,6 +1588,15 @@ export default function PrintQRCodes() {
                 <button
                   type="button"
                   className="print-btn print-btn-ghost"
+                  style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#FCA5A5", padding: "7px 12px", fontSize: "0.78rem" }}
+                  onClick={handleClearAllCards}
+                  title="Hapus seluruh kartu yang sudah di-generate"
+                >
+                  🗑️ Hapus Semua
+                </button>
+                <button
+                  type="button"
+                  className="print-btn print-btn-ghost"
                   onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                   style={{ padding: "7px 12px", fontSize: "0.78rem" }}
                 >
@@ -1570,6 +1608,14 @@ export default function PrintQRCodes() {
             <div className="cards-grid">
               {codes.map((code) => (
                 <div key={code} className="card-wrap" onClick={() => handleDownloadSingle(code)}>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSingle(code, e)}
+                    className="card-delete-btn"
+                    title={`Hapus kartu ${code}`}
+                  >
+                    ✕
+                  </button>
                   <CardItem
                     code={code}
                     url={`${baseUrl}/c/${code}`}
