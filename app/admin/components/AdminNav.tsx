@@ -33,14 +33,27 @@ export default function AdminNav({ active }: AdminNavProps) {
     <>
       <header className="admin-nav-header">
         <div className="admin-nav-container">
-          {/* Brand */}
-          <Link href="/admin" className="admin-nav-brand">
-            <div className="brand-icon-box">⭐</div>
-            <div className="brand-text-box">
-              <span className="brand-title">Review Card</span>
-              <span className="brand-badge">Hantic Pro</span>
-            </div>
-          </Link>
+          {/* Brand & Back Button */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {currentTab !== "dashboard" && (
+              <Link
+                href="/admin"
+                className="admin-header-back-btn"
+                title="Kembali ke Dashboard Utama"
+                aria-label="Kembali ke Dashboard"
+              >
+                ←
+              </Link>
+            )}
+
+            <Link href="/admin" className="admin-nav-brand">
+              <div className="brand-icon-box">⭐</div>
+              <div className="brand-text-box">
+                <span className="brand-title">Review Card</span>
+                <span className="brand-badge">Hantic Pro</span>
+              </div>
+            </Link>
+          </div>
 
           {/* Desktop Nav Links */}
           <nav className="admin-desktop-tabs">
