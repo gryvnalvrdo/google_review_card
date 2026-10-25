@@ -631,32 +631,11 @@ html, body {
     z-index: 100;
   }
   .admin-nav-container {
-    padding: 10px 14px 8px;
-    flex-wrap: wrap;
-    gap: 8px;
+    padding: 10px 16px;
+    gap: 10px;
   }
   .admin-desktop-tabs {
-    display: flex !important;
-    width: 100%;
-    order: 3;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding: 4px;
-    gap: 5px;
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    margin-top: 2px;
-  }
-  .admin-desktop-tabs::-webkit-scrollbar {
-    display: none;
-  }
-  .admin-nav-tab {
-    padding: 6px 12px;
-    font-size: 0.78rem;
-    flex-shrink: 0;
-    white-space: nowrap;
+    display: none !important;
   }
   .admin-mobile-dock { display: block !important; }
   .admin-grid {
