@@ -3790,15 +3790,15 @@ html, body {
 
 /* === MESIN CETAK QR CODE & CUSTOM CARD PAGE === */
 .print-panel {
-  background: rgba(14,14,22,0.98);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  padding: 22px 24px 28px;
-  position: relative; /* Non-sticky agar halaman bisa discroll lancar tanpa terjebak */
+  background: rgba(14, 14, 22, 0.98);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 24px 28px 30px;
+  position: relative;
   z-index: 10;
 }
-.print-panel-inner { max-width: 1200px; margin: 0 auto; }
-.print-panel-title { font-size: 1.18rem; font-weight: 800; color: #fff; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; }
-.print-panel-sub   { font-size: 0.8rem; color: #94A3B8; margin-bottom: 16px; line-height: 1.5; }
+.print-panel-inner { max-width: 1380px; margin: 0 auto; }
+.print-panel-title { font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.print-panel-sub   { font-size: 0.82rem; color: #94A3B8; margin-bottom: 16px; line-height: 1.5; }
 
 /* Print Subnav & Breadcrumb Bar */
 .print-subnav-bar {
@@ -3808,19 +3808,19 @@ html, body {
   flex-wrap: wrap;
   gap: 10px;
   padding: 0 0 14px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .print-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   color: #A5B4FC;
   background: rgba(99, 102, 241, 0.1);
   border: 1px solid rgba(99, 102, 241, 0.25);
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 8px;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.18s ease;
@@ -3834,8 +3834,8 @@ html, body {
 .print-nav-crumbs {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
+  gap: 8px;
+  font-size: 0.78rem;
   color: #94A3B8;
 }
 .print-nav-crumbs .crumb-link {
@@ -3855,7 +3855,32 @@ html, body {
   font-weight: 600;
 }
 
-.print-controls    { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+/* Command Center Bar */
+.print-controls {
+  background: rgba(18, 22, 38, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 14px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.print-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.print-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
 .print-ctrl-label { font-size: 0.82rem; color: rgba(255,255,255,0.7); white-space: nowrap; font-weight: 600; }
 .print-ctrl-input {
@@ -3897,7 +3922,7 @@ html, body {
 .print-ctrl-input.num-no-spin { -moz-appearance: textfield; }
 
 .print-btn {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; gap: 7px;
   border: none; border-radius: 8px; font-family: inherit;
   font-size: 0.82rem; font-weight: 600; cursor: pointer;
   padding: 9px 16px; transition: all 0.18s; white-space: nowrap;
@@ -3924,8 +3949,8 @@ html, body {
 .print-count-badge {
   display: inline-flex; align-items: center;
   background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25);
-  color: #A5B4FC; border-radius: 999px; padding: 4px 12px;
-  font-size: 0.75rem; font-weight: 700;
+  color: #A5B4FC; border-radius: 999px; padding: 5px 14px;
+  font-size: 0.76rem; font-weight: 700;
 }
 
 .print-progress-pill {
@@ -3945,28 +3970,28 @@ html, body {
 .template-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; flex-wrap: wrap;
+  border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; flex-wrap: wrap;
 }
 .template-toggle-group {
   display: inline-flex; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; padding: 3px; gap: 3px;
 }
 .template-toggle-btn {
-  background: transparent; border: none; color: #94A3B8; padding: 6px 12px;
-  border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease;
+  background: transparent; border: none; color: #94A3B8; padding: 6px 14px;
+  border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease;
 }
 .template-toggle-btn.active {
   background: #4F46E5; color: #FFF; box-shadow: 0 2px 8px rgba(79,70,229,0.4);
 }
 
-/* ── Redesigned Placement Studio ── */
+/* ── Redesigned Placement Studio (Desktop Workstation First) ── */
 .placement-editor {
-  background: #0D101E;
+  background: linear-gradient(165deg, rgba(17, 22, 38, 0.95), rgba(10, 13, 24, 0.98));
   border: 1px solid rgba(99, 102, 241, 0.35);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  border-radius: 18px;
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .placement-editor-header {
@@ -3977,56 +4002,40 @@ html, body {
   gap: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .placement-studio-grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 22px;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
   align-items: start;
 }
 
-@media (max-width: 920px) {
-  .placement-studio-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-  .placement-preview-panel {
-    order: 1 !important; /* Live Preview stays ON TOP on mobile! */
-    width: 100%;
-  }
-  .placement-controls-panel {
-    order: 2 !important;
-    width: 100%;
-  }
-}
-
-/* Studio Left: Preview Panel */
+/* Studio Left: Live Preview Panel */
 .placement-preview-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   padding: 16px;
   gap: 12px;
+  box-shadow: inset 0 2px 12px rgba(0,0,0,0.4);
 }
 
 .live-preview-box {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 16px 45px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.12);
-  background: #111;
+  box-shadow: 0 22px 55px rgba(0,0,0,0.9), 0 0 0 1px rgba(99,102,241,0.25);
+  background: #0A0D18;
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: pan-y; /* CRITICAL: Allows vertical touch scroll on mobile! */
   user-select: none;
-  cursor: pointer;
+  cursor: crosshair;
   max-width: 100%;
 }
 .live-preview-box:hover .live-drag-hint {
@@ -4037,9 +4046,9 @@ html, body {
   bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.78);
+  background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #E0E7FF;
   font-size: 0.68rem;
   font-weight: 600;
@@ -4061,7 +4070,6 @@ html, body {
   cursor: grab;
   transition: box-shadow 0.15s;
   pointer-events: auto;
-  touch-action: none; /* Dragging activates only when touching the QR itself */
 }
 .qr-target-overlay:active {
   cursor: grabbing;
@@ -4069,33 +4077,40 @@ html, body {
   box-shadow: 0 0 20px rgba(56, 189, 248, 0.95), inset 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
-/* Studio Right: Controls Inspector */
+/* Studio Right: Dual-Column Inspector Panel on Desktop */
 .placement-controls-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
 }
 
 .inspector-card {
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 .inspector-card-title {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: #EDE9FE;
-  margin-bottom: 12px;
+  margin-bottom: 2px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 8px;
 }
 
 .slider-group-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .slider-item { display: flex; flex-direction: column; gap: 6px; }
@@ -4114,20 +4129,19 @@ html, body {
 
 .dpad-container {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  background: rgba(0, 0, 0, 0.3);
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
-  padding: 10px 14px;
-  margin-top: 6px;
+  padding: 10px 12px;
+  margin-top: 4px;
 }
 
 .nudge-ctrl-box {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
   flex-wrap: wrap;
 }
@@ -4150,26 +4164,43 @@ html, body {
   transform: scale(0.95);
 }
 
-/* ── Grid Kartu Area ── */
+/* ── Grid Kartu Area (Expanded Desktop View) ── */
 .print-grid-area {
-  max-width: 1200px;
+  max-width: 1380px;
   margin: 0 auto;
-  padding: 28px 20px 140px; /* Extra bottom padding ensures cards are never covered by mobile bottom dock */
+  padding: 28px 24px 100px;
   scroll-margin-top: 20px;
 }
 .print-grid-meta { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 20px; }
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+  gap: 24px;
 }
-.card-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+.card-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 12px 10px 14px;
+  transition: all 0.22s ease;
+}
+.card-wrap:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 102, 241, 0.25);
+}
 .card-wrap:hover .card-thumb {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.15) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.18) !important;
 }
 .card-wrap:hover .dl-hint { opacity: 1; }
-.dl-hint { opacity: 0; font-size: 0.67rem; color: rgba(165,180,252,0.7); transition: opacity 0.2s; }
+.dl-hint { opacity: 0; font-size: 0.68rem; color: #A5B4FC; transition: opacity 0.2s; font-weight: 600; }
 
 .print-empty {
   display: flex; flex-direction: column; align-items: center; justify-content: center;

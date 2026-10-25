@@ -705,9 +705,9 @@ export default function PrintQRCodes() {
   const cardW = bgImage?.naturalWidth || DEFAULT_CARD_W;
   const cardH = bgImage?.naturalHeight || DEFAULT_CARD_H;
 
-  // Live preview scale calculation
-  const maxPrevW = 250;
-  const maxPrevH = 370;
+  // Live preview scale calculation (Desktop Studio Optimized)
+  const maxPrevW = 340;
+  const maxPrevH = 500;
   let prevW = maxPrevW;
   let prevH = Math.round(prevW * (cardH / cardW));
   if (prevH > maxPrevH) {
@@ -880,25 +880,9 @@ export default function PrintQRCodes() {
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (templateMode === "custom" && customImg) {
-                        const detected = detectBoxInImage(customImg);
-                        setPlacement({
-                          x: detected.x,
-                          y: detected.y,
-                          size: detected.size,
-                          style: "transparent",
-                          fgColor: "#000000",
-                          dotStyle: "dots",
-                          padding: 16,
-                          radius: 16,
-                        });
-                      } else {
-                        setPlacement(DEFAULT_PLACEMENT);
-                      }
-                    }}
+                    onClick={handleResetPlacement}
                     className="print-btn print-btn-ghost"
-                    style={{ fontSize: "0.72rem", padding: "5px 10px" }}
+                    style={{ fontSize: "0.72rem", padding: "5px 12px" }}
                     title="Kembalikan posisi & ukuran ke setelan bawaan"
                   >
                     ↺ Reset Posisi
@@ -1435,81 +1419,87 @@ export default function PrintQRCodes() {
             </div>
           )}
 
-          {/* ── Tombol Generator & Aksi ── */}
+          {/* ── Tombol Generator & Aksi (Desktop Command Center) ── */}
           <div className="print-controls">
-            <span className="print-ctrl-label">Jumlah kartu:</span>
+            <div className="print-controls-left">
+              <span className="print-ctrl-label">Jumlah Kartu:</span>
 
-            <div className="print-number-input-wrap">
-              <button className="print-num-btn" onClick={() => setCount((c) => Math.max(1, c - 1))}>−</button>
-              <input
-                type="number"
-                className="print-ctrl-input num-no-spin"
-                value={count}
-                onChange={(e) => setCount(Math.max(1, Math.min(200, Number(e.target.value))))}
-                min={1} max={200}
-              />
-              <button className="print-num-btn" onClick={() => setCount((c) => Math.min(200, c + 1))}>+</button>
-            </div>
-
-            {/* Quick Presets */}
-            <div style={{ display: "flex", gap: 4 }}>
-              {[10, 20, 50, 100].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setCount(n)}
-                  className="print-btn print-btn-ghost"
-                  style={{
-                    padding: "6px 10px", fontSize: "0.75rem", borderRadius: 6,
-                    background: count === n ? "rgba(99,102,241,0.25)" : "transparent",
-                    color: count === n ? "#A5B4FC" : "var(--text-muted)",
-                    borderColor: count === n ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.08)",
-                  }}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-
-            {/* Badge count real-time */}
-            {codes.length > 0 && <span className="print-count-badge">{codes.length} kartu</span>}
-
-            <button className="print-btn print-btn-indigo" onClick={handleGenerate} disabled={!bgLoaded}>
-              {bgLoaded ? "✨ Generate Kartu" : "⏳ Loading..."}
-            </button>
-
-            {codes.length > 0 && (
-              <button
-                type="button"
-                className="print-btn print-btn-ghost"
-                style={{ borderColor: "rgba(99,102,241,0.5)", color: "#A5B4FC" }}
-                onClick={() => document.getElementById("cards-grid-section")?.scrollIntoView({ behavior: "smooth" })}
-              >
-                ⬇ Lihat {codes.length} Kartu
-              </button>
-            )}
-
-            {codes.length > 0 && !isZipping && !isSaving && (
-              <>
-                <button className="print-btn print-btn-cyan" onClick={handleSaveToStok}>
-                  💾 Simpan ke Stok
-                </button>
-
-                <button className="print-btn print-btn-amber" onClick={handleDownloadZip}>
-                  📦 Download ZIP
-                </button>
-
-                <button className="print-btn print-btn-emerald" onClick={() => window.print()}>
-                  🖨️ Print
-                </button>
-              </>
-            )}
-
-            {(isZipping || isSaving) && (
-              <div className="print-progress-pill">
-                <span className="print-spin" />
-                {isSaving ? "Menyimpan ke stok..." : progress}
+              <div className="print-number-input-wrap">
+                <button type="button" className="print-num-btn" onClick={() => setCount((c) => Math.max(1, c - 1))}>−</button>
+                <input
+                  type="number"
+                  className="print-ctrl-input num-no-spin"
+                  value={count}
+                  onChange={(e) => setCount(Math.max(1, Math.min(200, Number(e.target.value))))}
+                  min={1} max={200}
+                />
+                <button type="button" className="print-num-btn" onClick={() => setCount((c) => Math.min(200, c + 1))}>+</button>
               </div>
-            )}
+
+              {/* Quick Presets */}
+              <div style={{ display: "flex", gap: 5 }}>
+                {[10, 25, 50, 100, 200].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setCount(n)}
+                    className="print-btn print-btn-ghost"
+                    style={{
+                      padding: "6px 11px", fontSize: "0.75rem", borderRadius: 7,
+                      background: count === n ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.03)",
+                      color: count === n ? "#A5B4FC" : "#94A3B8",
+                      borderColor: count === n ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.08)",
+                      fontWeight: count === n ? 700 : 500,
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+
+              <button type="button" className="print-btn print-btn-indigo" onClick={handleGenerate} disabled={!bgLoaded}>
+                {bgLoaded ? "✨ Generate Kartu" : "⏳ Loading..."}
+              </button>
+
+              {/* Badge count real-time */}
+              {codes.length > 0 && <span className="print-count-badge">🎯 {codes.length} Kartu Aktif</span>}
+            </div>
+
+            <div className="print-controls-right">
+              {codes.length > 0 && (
+                <button
+                  type="button"
+                  className="print-btn print-btn-ghost"
+                  style={{ borderColor: "rgba(99,102,241,0.4)", color: "#A5B4FC" }}
+                  onClick={() => document.getElementById("cards-grid-section")?.scrollIntoView({ behavior: "smooth" })}
+                >
+                  ⬇ Lihat Kartu
+                </button>
+              )}
+
+              {codes.length > 0 && !isZipping && !isSaving && (
+                <>
+                  <button type="button" className="print-btn print-btn-cyan" onClick={handleSaveToStok}>
+                    💾 Simpan ke Stok
+                  </button>
+
+                  <button type="button" className="print-btn print-btn-amber" onClick={handleDownloadZip}>
+                    📦 Download ZIP
+                  </button>
+
+                  <button type="button" className="print-btn print-btn-emerald" onClick={() => window.print()}>
+                    🖨️ Print
+                  </button>
+                </>
+              )}
+
+              {(isZipping || isSaving) && (
+                <div className="print-progress-pill">
+                  <span className="print-spin" />
+                  {isSaving ? "Menyimpan ke stok..." : progress}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Save result toast */}
