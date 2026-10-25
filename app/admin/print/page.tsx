@@ -15,13 +15,14 @@ const DEFAULT_BOX_SIZE = DEFAULT_QR_SIZE + DEFAULT_QR_PAD * 2;
 const DEFAULT_BOX_X = Math.round((DEFAULT_CARD_W - DEFAULT_BOX_SIZE) / 2);
 const DEFAULT_BOX_Y = 438;
 
-export interface QRPlacementConfig {
+interface QRPlacementConfig {
   x: number;
   y: number;
   size: number;
   style: "transparent" | "white_box";
   padding: number;
   radius: number;
+  fgColor?: string;
 }
 
 const DEFAULT_PLACEMENT: QRPlacementConfig = {
@@ -31,7 +32,91 @@ const DEFAULT_PLACEMENT: QRPlacementConfig = {
   style: "white_box",
   padding: DEFAULT_QR_PAD,
   radius: 18,
+  fgColor: "#000000",
 };
+
+// ─── Smart Box Detection Algorithm ────────────────────────────────────────────
+function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: number } {
+  const cardW = img.naturalWidth || DEFAULT_CARD_W;
+  const cardH = img.naturalHeight || DEFAULT_CARD_H;
+  if (!cardW || !cardH) return { x: 100, y: 100, size: 200 };
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = cardW;
+    canvas.height = cardH;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("No 2d context");
+    ctx.drawImage(img, 0, 0, cardW, cardH);
+
+    // Ambil sampel warna di bagian tengah kartu (misal kotak kuning Purs Coffee)
+    const midX = Math.floor(cardW / 2);
+    const midY = Math.floor(cardH / 2);
+    const centerPix = ctx.getImageData(midX, midY, 1, 1).data;
+    const tr = centerPix[0];
+    const tg = centerPix[1];
+    const tb = centerPix[2];
+
+    // Cek apakah warna tengah berbeda dengan warna sudut (berarti ada kontainer di tengah)
+    const cornerPix = ctx.getImageData(Math.floor(cardW * 0.05), Math.floor(cardH * 0.05), 1, 1).data;
+    const cornerDiff = Math.abs(tr - cornerPix[0]) + Math.abs(tg - cornerPix[1]) + Math.abs(tb - cornerPix[2]);
+
+    if (cornerDiff > 35) {
+      // Ada kontainer warna berbeda di tengah! Scan batas bounding box-nya:
+      const step = Math.max(1, Math.floor(Math.min(cardW, cardH) / 400));
+      const startX = Math.floor(cardW * 0.12);
+      const endX = Math.floor(cardW * 0.88);
+      const startY = Math.floor(cardH * 0.12);
+      const endY = Math.floor(cardH * 0.88);
+
+      let minX = cardW, maxX = 0, minY = cardH, maxY = 0, matches = 0;
+      const imgData = ctx.getImageData(0, 0, cardW, cardH).data;
+
+      for (let y = startY; y < endY; y += step) {
+        for (let x = startX; x < endX; x += step) {
+          const idx = (y * cardW + x) * 4;
+          const r = imgData[idx];
+          const g = imgData[idx + 1];
+          const b = imgData[idx + 2];
+          const diff = Math.abs(r - tr) + Math.abs(g - tg) + Math.abs(b - tb);
+          if (diff < 50) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            matches++;
+          }
+        }
+      }
+
+      const boxW = maxX - minX;
+      const boxH = maxY - minY;
+      if (matches > 20 && boxW > cardW * 0.18 && boxH > cardH * 0.18) {
+        // Kotak terdeteksi! Buat QR pas di dalam kotak dengan jarak aman 6.5% dari border cokelat
+        const rawSize = Math.min(boxW, boxH);
+        const safeMargin = Math.round(rawSize * 0.065);
+        const finalSize = Math.round(rawSize - safeMargin * 2);
+        const cX = minX + boxW / 2;
+        const cY = minY + boxH / 2;
+        return {
+          x: Math.round(cX - finalSize / 2),
+          y: Math.round(cY - finalSize / 2),
+          size: finalSize,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("Auto-detect box fallback:", err);
+  }
+
+  // Fallback default: 36% tepat di tengah kartu
+  const fallbackSize = Math.round(Math.min(cardW, cardH) * 0.36);
+  return {
+    x: Math.round((cardW - fallbackSize) / 2),
+    y: Math.round((cardH - fallbackSize) / 2),
+    size: fallbackSize,
+  };
+}
 
 function generateRandomCode(length = 6): string {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -128,7 +213,15 @@ function CardItem({ code, url, bgImage, placement, onCanvasReady }: CardItemProp
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: ready ? 1 : 0.35, transition: "opacity 0.3s" }}>
       {/* Hidden QR for compositing (High resolution) */}
       <div style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", top: -9999 }}>
-        <QRCodeCanvas id={`qr-${code}`} value={url} size={Math.max(placement.size, 450)} level="H" marginSize={0} />
+        <QRCodeCanvas
+          id={`qr-${code}`}
+          value={url}
+          size={Math.max(placement.size, 450)}
+          level="H"
+          marginSize={0}
+          bgColor={placement.style === "white_box" ? "#FFFFFF" : "transparent"}
+          fgColor={placement.fgColor || "#000000"}
+        />
       </div>
 
       <div
@@ -242,6 +335,13 @@ export default function PrintQRCodes() {
     }
   }, []);
 
+  // Auto-save placement to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("custom_qr_placement", JSON.stringify({ placement }));
+    } catch {}
+  }, [placement]);
+
   // Handle Switch Mode Template
   function handleSelectMode(mode: "default" | "custom") {
     setTemplateMode(mode);
@@ -280,16 +380,14 @@ export default function PrintQRCodes() {
         const cardW = img.naturalWidth;
         const cardH = img.naturalHeight;
 
-        // Auto default placement di tengah desain klien (seperti contoh Purs Coffee)
-        const initialSize = Math.round(Math.min(cardW, cardH) * 0.42);
-        const initialX = Math.round((cardW - initialSize) / 2);
-        const initialY = Math.round((cardH - initialSize) / 2);
-
+        // Smart Box Detection (Deteksi otomatis kotak tengah di desain seperti Purs Coffee)
+        const detected = detectBoxInImage(img);
         const newPlacement: QRPlacementConfig = {
-          x: initialX,
-          y: initialY,
-          size: initialSize,
-          style: "transparent", // transparan agar menyatu dengan kotak kuning Purs Coffee
+          x: detected.x,
+          y: detected.y,
+          size: detected.size,
+          style: "transparent", // transparan agar warna kuning asli Purs Coffee tidak tertutup!
+          fgColor: "#000000",
           padding: 16,
           radius: 16,
         };
@@ -307,6 +405,19 @@ export default function PrintQRCodes() {
     reader.readAsDataURL(file);
     // Reset file input agar bisa upload file sama jika diubah
     e.target.value = "";
+  }
+
+  // Smart Snap to Detected Box
+  function handleAutoSnapBox() {
+    if (!bgImage) return;
+    const detected = detectBoxInImage(bgImage);
+    setPlacement((prev) => ({
+      ...prev,
+      x: detected.x,
+      y: detected.y,
+      size: detected.size,
+      style: "transparent",
+    }));
   }
 
   // Quick Center Helpers
@@ -463,11 +574,16 @@ export default function PrintQRCodes() {
             </div>
 
             {/* Template Status Pill */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>Dimensi Kartu:</span>
               <span style={{ fontSize: "0.74rem", fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#E2E8F0" }}>
                 {cardW} × {cardH} px
               </span>
+              {Math.abs(cardW - cardH) < 20 && (
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", color: "#FCD34D" }}>
+                  📐 1:1 Persegi (Standar Cetak 10 × 10 cm Meja Café)
+                </span>
+              )}
             </div>
           </div>
 
@@ -533,8 +649,25 @@ export default function PrintQRCodes() {
                   </div>
                 </div>
 
-                {/* Quick Auto Center Buttons */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {/* Quick Auto Center Buttons & Smart Snap */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={handleAutoSnapBox}
+                    className="print-btn print-btn-indigo"
+                    style={{
+                      padding: "6px 12px",
+                      fontSize: "0.75rem",
+                      background: "linear-gradient(135deg, #F59E0B, #D97706)",
+                      border: "none",
+                      color: "#FFF",
+                      boxShadow: "0 2px 10px rgba(245, 158, 11, 0.4)",
+                      fontWeight: 700,
+                    }}
+                    title="Deteksi kotak kuning pada kartu secara otomatis dan letakkan QR persis di dalamnya!"
+                  >
+                    ✨ 🎯 Pas-kan ke Kotak Otomatis (Smart Snap)
+                  </button>
                   <button type="button" onClick={handleCenterHorizontal} className="print-btn print-btn-ghost" style={{ padding: "5px 10px", fontSize: "0.72rem" }} title="Pusatkan posisi QR secara horizontal">
                     🎯 Auto-Center X
                   </button>
@@ -655,12 +788,50 @@ export default function PrintQRCodes() {
                       />
                     </div>
 
+                    {/* Warna QR Code */}
+                    <div className="slider-item">
+                      <div className="slider-header">
+                        <span>Warna QR Code:</span>
+                        <strong style={{ color: placement.fgColor || "#000000" }}>
+                          {placement.fgColor === "#3D2213" ? "☕ Cokelat Purs" : "⬛ Hitam Pekat"}
+                        </strong>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                        <button
+                          type="button"
+                          onClick={() => setPlacement((p) => ({ ...p, fgColor: "#000000" }))}
+                          className="print-btn"
+                          style={{
+                            flex: 1, padding: "5px 8px", fontSize: "0.72rem",
+                            background: (!placement.fgColor || placement.fgColor === "#000000") ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                            border: (!placement.fgColor || placement.fgColor === "#000000") ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
+                            color: "#FFF",
+                          }}
+                        >
+                          ⬛ Hitam
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPlacement((p) => ({ ...p, fgColor: "#3D2213" }))}
+                          className="print-btn"
+                          style={{
+                            flex: 1, padding: "5px 8px", fontSize: "0.72rem",
+                            background: placement.fgColor === "#3D2213" ? "rgba(180, 83, 9, 0.3)" : "rgba(255,255,255,0.04)",
+                            border: placement.fgColor === "#3D2213" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
+                            color: "#FCD34D",
+                          }}
+                        >
+                          ☕ Cokelat Purs
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Gaya Latar QR */}
                     <div className="slider-item">
                       <div className="slider-header">
                         <span>Gaya Latar QR:</span>
                         <strong style={{ color: placement.style === "transparent" ? "#FBBF24" : "#FFF" }}>
-                          {placement.style === "transparent" ? "Transparan (Langsung)" : "Kotak Putih Rounded"}
+                          {placement.style === "transparent" ? "Transparan (Purs)" : "Kotak Putih Rounded"}
                         </strong>
                       </div>
                       <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
@@ -808,6 +979,8 @@ export default function PrintQRCodes() {
                         size={placement.style === "white_box" ? Math.max(16, qrPrevSize - qrPrevPad * 2) : qrPrevSize}
                         level="M"
                         marginSize={0}
+                        bgColor={placement.style === "white_box" ? "#FFFFFF" : "transparent"}
+                        fgColor={placement.fgColor || "#000000"}
                         style={{ width: "100%", height: "100%", display: "block", pointerEvents: "none" }}
                       />
 
