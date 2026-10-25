@@ -1057,21 +1057,33 @@ Mohon dicek apakah posisi logo, tulisan, dan QR Code sudah sesuai sebelum kami m
                 <button
                   type="button"
                   className={`template-toggle-btn ${templateMode === "custom" ? "active" : ""}`}
-                  onClick={() => handleSelectMode("custom")}
+                  onClick={() => {
+                    if (!customImg) {
+                      fileInputRef.current?.click();
+                    } else {
+                      handleSelectMode("custom");
+                    }
+                  }}
+                  title={customImg ? "Gunakan desain custom yang sudah diupload" : "Upload gambar kartu khusus dari klien"}
                 >
-                  🎨 Desain Klien {customImageName ? `(${customImageName.slice(0, 15)}...)` : "(Custom)"}
+                  {customImg
+                    ? `🎨 ${customImageName ? customImageName.slice(0, 16) : "Desain Klien"}`
+                    : "📁 Upload Desain Klien"}
                 </button>
               </div>
 
-              {/* Upload Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="print-btn print-btn-ghost"
-                style={{ fontSize: "0.76rem", padding: "6px 12px" }}
-              >
-                📁 Upload Gambar Desain {customImg ? "Baru" : ""}
-              </button>
+              {/* Tombol Ganti File hanya tampil saat mode custom aktif dan gambar sudah ada */}
+              {templateMode === "custom" && customImg && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="print-btn print-btn-ghost"
+                  style={{ fontSize: "0.74rem", padding: "5px 10px" }}
+                  title="Ganti dengan file desain kartu lain"
+                >
+                  🔄 Ganti Gambar
+                </button>
+              )}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
