@@ -33,18 +33,8 @@ export default function AdminNav({ active }: AdminNavProps) {
     <>
       <header className="admin-nav-header">
         <div className="admin-nav-container">
-          {/* Brand & Back Button */}
+          {/* Brand Logo & Title */}
           <div className="admin-nav-brand-group">
-            {currentTab !== "dashboard" && (
-              <Link
-                href="/admin"
-                className="admin-header-back-btn"
-                title="Kembali ke Dashboard Utama"
-                aria-label="Kembali ke Dashboard"
-              >
-                ←
-              </Link>
-            )}
 
             <Link href="/admin" className="admin-nav-brand">
               <div className="brand-icon-box">⭐</div>
