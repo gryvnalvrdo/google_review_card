@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import QRCode from "qrcode";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import Link from "next/link";
 import AdminNav from "../components/AdminNav";
 
 // ─── Default Configuration for Standard Card ─────────────────────────────────
@@ -770,20 +769,6 @@ export default function PrintQRCodes() {
       {/* ── Panel Kontrol Utama ── */}
       <div className="print-panel">
         <div className="print-panel-inner">
-          {/* Subnav & Breadcrumb Bar untuk Balik ke Halaman Sebelumnya */}
-          <div className="print-subnav-bar">
-            <Link href="/admin" className="print-back-btn">
-              <span style={{ fontSize: "1rem", lineHeight: 1 }}>←</span>
-              <span>Kembali ke Dashboard</span>
-            </Link>
-
-            <div className="print-nav-crumbs">
-              <Link href="/admin" className="crumb-link">Dashboard</Link>
-              <span className="crumb-divider">/</span>
-              <span className="crumb-active">Mesin Cetak QR</span>
-            </div>
-          </div>
-
           {/* Banner Notifikasi Layar Kecil / Mobile */}
           <div className="print-mobile-notice">
             <span style={{ fontSize: "1.1rem" }}>💻</span>
