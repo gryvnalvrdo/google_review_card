@@ -402,6 +402,8 @@ export default function PrintQRCodes() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<string | null>(null);
   const [progress, setProgress] = useState("");
+  const [previewCode, setPreviewCode] = useState<string | null>(null);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const composedCanvases = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
@@ -657,6 +659,36 @@ export default function PrintQRCodes() {
       if (blob) saveAs(blob, `Kartu_${code}.png`);
     }, "image/png");
   }
+
+  function handleOpenPreview(code: string) {
+    const canvas = composedCanvases.current.get(code);
+    if (canvas) {
+      setPreviewDataUrl(canvas.toDataURL("image/png"));
+      setPreviewCode(code);
+    } else {
+      handleDownloadSingle(code);
+    }
+  }
+
+  async function handleDownloadAllPngDirect() {
+    for (const [code, canvas] of composedCanvases.current) {
+      canvas.toBlob((blob) => {
+        if (blob) saveAs(blob, `Kartu_${code}.png`);
+      }, "image/png");
+      await new Promise((r) => setTimeout(r, 220));
+    }
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && previewCode) {
+        setPreviewCode(null);
+        setPreviewDataUrl(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewCode]);
 
   function handleClearAllCards() {
     if (codes.length === 0) return;
@@ -1556,20 +1588,44 @@ export default function PrintQRCodes() {
                   <span>🎴</span> Hasil Cetak: {codes.length} Kartu Siap Pakai
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-                  Klik kartu untuk download PNG ({cardW} × {cardH} px) • Tombol ✕ untuk hapus satuan
+                  Klik kartu untuk melihat close-up detail ({cardW} × {cardH} px) • Tombol ✕ untuk hapus satuan
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="print-btn print-btn-amber"
-                  onClick={handleDownloadZip}
-                  disabled={isZipping}
-                  style={{ padding: "7px 14px", fontSize: "0.78rem" }}
-                >
-                  📦 Download ZIP ({codes.length})
-                </button>
+                {codes.length === 1 ? (
+                  <button
+                    type="button"
+                    className="print-btn print-btn-amber"
+                    onClick={() => handleDownloadSingle(codes[0])}
+                    style={{ padding: "8px 18px", fontSize: "0.82rem", fontWeight: 700 }}
+                    title="Download langsung file PNG tanpa kompresi ZIP"
+                  >
+                    ⬇ Download PNG Langsung
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="print-btn print-btn-amber"
+                      onClick={handleDownloadZip}
+                      disabled={isZipping}
+                      style={{ padding: "7px 14px", fontSize: "0.78rem" }}
+                      title="Download seluruh kartu dalam 1 file ZIP praktis"
+                    >
+                      📦 Download ZIP ({codes.length})
+                    </button>
+                    <button
+                      type="button"
+                      className="print-btn print-btn-ghost"
+                      onClick={handleDownloadAllPngDirect}
+                      style={{ padding: "7px 12px", fontSize: "0.78rem" }}
+                      title="Download semua file PNG satu per satu langsung ke folder download"
+                    >
+                      ⬇ Download Semua PNG
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
                   className="print-btn print-btn-ghost"
@@ -1592,7 +1648,12 @@ export default function PrintQRCodes() {
 
             <div className="cards-grid">
               {codes.map((code) => (
-                <div key={code} className="card-wrap" onClick={() => handleDownloadSingle(code)}>
+                <div
+                  key={code}
+                  className="card-wrap"
+                  onClick={() => handleOpenPreview(code)}
+                  title="Klik kartu untuk melihat close-up resolusi tinggi"
+                >
                   <button
                     type="button"
                     onClick={(e) => handleDeleteSingle(code, e)}
@@ -1608,10 +1669,109 @@ export default function PrintQRCodes() {
                     placement={effectivePlacement}
                     onCanvasReady={handleCanvasReady}
                   />
-                  <span className="dl-hint">⬇ download PNG</span>
+                  <div className="card-actions-row">
+                    <button
+                      type="button"
+                      className="card-quick-btn card-preview-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenPreview(code);
+                      }}
+                      title="Lihat close-up kartu resolusi penuh"
+                    >
+                      🔍 Close-Up
+                    </button>
+                    <button
+                      type="button"
+                      className="card-quick-btn card-download-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadSingle(code);
+                      }}
+                      title="Download file PNG kartu ini"
+                    >
+                      ⬇ PNG
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* ── MODAL POPUP CLOSE-UP PREVIEW RESOLUSI TINGGI ── */}
+            {previewCode && previewDataUrl && (
+              <div
+                className="card-preview-modal-overlay"
+                onClick={() => {
+                  setPreviewCode(null);
+                  setPreviewDataUrl(null);
+                }}
+              >
+                <div
+                  className="card-preview-modal-content"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="card-preview-modal-header">
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: "1.25rem" }}>🔍</span>
+                      <div>
+                        <div style={{ fontSize: "1rem", fontWeight: 700, color: "#F8FAFC" }}>
+                          Close-Up Kartu: <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{previewCode}</span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+                          Dimensi Cetak Asli: {cardW} × {cardH} px • Format PNG High-Resolution
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="card-preview-modal-close"
+                      onClick={() => {
+                        setPreviewCode(null);
+                        setPreviewDataUrl(null);
+                      }}
+                      aria-label="Tutup preview"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="card-preview-modal-body">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewDataUrl}
+                      alt={`Close-up kartu ${previewCode}`}
+                      className="card-preview-modal-img"
+                    />
+                  </div>
+
+                  <div className="card-preview-modal-footer">
+                    <div style={{ fontSize: "0.78rem", color: "#94A3B8" }}>
+                      💡 Kartu siap dicetak atau digunakan langsung ke percetakan.
+                    </div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        type="button"
+                        className="print-btn print-btn-ghost"
+                        onClick={() => {
+                          setPreviewCode(null);
+                          setPreviewDataUrl(null);
+                        }}
+                      >
+                        Tutup
+                      </button>
+                      <button
+                        type="button"
+                        className="print-btn print-btn-amber"
+                        style={{ fontWeight: 700, padding: "8px 20px", fontSize: "0.85rem" }}
+                        onClick={() => handleDownloadSingle(previewCode)}
+                      >
+                        ⬇ Download File PNG Ini
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
