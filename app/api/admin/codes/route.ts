@@ -3,6 +3,9 @@ import { isAdminLoggedIn } from "../../../../lib/auth";
 import { getCard, setCard, listCards, removeStokCode } from "../../../../lib/kv";
 import { isAllowedReviewUrl } from "../../../../lib/redirect";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const MAX_CODE_LEN = 20;
 const MAX_NAME_LEN = 100;
 const MAX_URL_LEN = 2000;
@@ -12,7 +15,16 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const cards = await listCards();
-  return NextResponse.json({ cards });
+  return NextResponse.json(
+    { cards },
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    }
+  );
 }
 
 export async function POST(req: NextRequest) {

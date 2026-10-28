@@ -1140,15 +1140,30 @@ export default function TapsPage() {
   const [mobileSubView, setMobileSubView] = useState<"feed" | "outlets">("feed");
   const lastKnownTapRef = useRef<string | null>(null);
   const datePickerRef = useRef<HTMLInputElement>(null);
+  const [justRefreshed, setJustRefreshed] = useState(false);
 
   async function fetchData(isBackground = false) {
     if (!isBackground) setLoading(true);
     else setIsUpdating(true);
 
+    const startTime = Date.now();
     try {
+      const ts = Date.now();
       const [tapRes, cardRes] = await Promise.all([
-        fetch("/api/admin/taps?limit=25000"),
-        fetch("/api/admin/codes"),
+        fetch(`/api/admin/taps?limit=25000&_t=${ts}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
+        }),
+        fetch(`/api/admin/codes?_t=${ts}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
+        }),
       ]);
       if (tapRes.ok) {
         const tapData = await tapRes.json();
@@ -1169,7 +1184,16 @@ export default function TapsPage() {
         } catch {}
       }
       if (cardRes.ok) setCards((await cardRes.json()).cards ?? []);
-      setLastRefresh(new Date());
+            setLastRefresh(new Date());
+
+      // Beri animasi feedback minimum 500ms agar di mobile terasa responsif & nyata
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 500) {
+        await new Promise((r) => setTimeout(r, 500 - elapsed));
+      }
+
+      setJustRefreshed(true);
+      setTimeout(() => setJustRefreshed(false), 2200);
     } finally {
       setLoading(false);
       setIsUpdating(false);
@@ -2514,30 +2538,84 @@ export default function TapsPage() {
                   </h1>
 
                   {/* Manual refresh / sync button - placed directly beside title on desktop & mobile */}
-                  <button
-                    type="button"
-                    onClick={() => fetchData(true)}
-                    disabled={isUpdating}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      background: isUpdating ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "#CBD5E1",
-                      cursor: isUpdating ? "not-allowed" : "pointer",
-                      fontSize: "0.95rem",
-                      transition: "all 0.15s ease",
-                      flexShrink: 0,
-                    }}
-                    title="Sinkronisasi Data Sekarang"
-                    aria-label="Sinkronisasi Data"
-                  >
-                    <span style={{ display: "inline-block", transform: isUpdating ? "rotate(180deg)" : "none", transition: "transform 0.5s ease" }}>🔄</span>
-                  </button>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    {justRefreshed && (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          color: "#34D399",
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          background: "rgba(16, 185, 129, 0.15)",
+                          border: "1px solid rgba(16, 185, 129, 0.35)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        ✓ Terkini
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => fetchData(true)}
+                      disabled={isUpdating}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        background: justRefreshed
+                          ? "rgba(16, 185, 129, 0.2)"
+                          : isUpdating
+                          ? "rgba(139, 92, 246, 0.25)"
+                          : "rgba(255, 255, 255, 0.06)",
+                        border: justRefreshed
+                          ? "1.5px solid #10B981"
+                          : isUpdating
+                          ? "1.5px solid #8B5CF6"
+                          : "1px solid rgba(255, 255, 255, 0.14)",
+                        color: justRefreshed ? "#34D399" : isUpdating ? "#C4B5FD" : "#CBD5E1",
+                        cursor: isUpdating ? "not-allowed" : "pointer",
+                        transition: "all 0.2s ease",
+                        flexShrink: 0,
+                        boxShadow: justRefreshed
+                          ? "0 0 14px rgba(16, 185, 129, 0.3)"
+                          : isUpdating
+                          ? "0 0 14px rgba(139, 92, 246, 0.35)"
+                          : "none",
+                      }}
+                      title="Sinkronisasi Data Tap Sekarang"
+                      aria-label="Sinkronisasi Data"
+                    >
+                      {justRefreshed ? (
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            animation: isUpdating ? "spin 0.75s linear infinite" : "none",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <p className="dashboard-hero-sub" style={{ marginTop: 6, marginBottom: 0 }}>
                   Pantau performa kartu pelanggan, tren kunjungan, dan leaderboard ulasan langsung.

@@ -92,7 +92,7 @@ export default function AdminDashboard() {
 
   async function loadCards() {
     try {
-      const resCodes = await fetch("/api/admin/codes");
+      const resCodes = await fetch(`/api/admin/codes?_t=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache", Pragma: "no-cache" } });
       if (resCodes.ok) {
         const data = await resCodes.json();
         setCards(data.cards ?? []);
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
     setLastVisitedAt(prevVisit);
 
     try {
-      const res = await fetch("/api/admin/taps?limit=50");
+      const res = await fetch(`/api/admin/taps?limit=50&_t=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache", Pragma: "no-cache" } });
       if (res.ok) {
         const data = await res.json();
         const all: TapLogEntry[] = data.logs ?? [];
