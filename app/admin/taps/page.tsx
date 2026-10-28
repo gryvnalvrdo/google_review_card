@@ -2712,7 +2712,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("bulanan")}
               className={`main-view-btn ${activeTab === "bulanan" ? "active" : ""}`}
             >
-              <span>🏆</span> Leaderboard Toko
+              <span>🏆</span> <span>Leaderboard<span className="desktop-only"> Toko</span></span>
             </button>
             <button
               id="tab-btn-tidur"
@@ -2720,7 +2720,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("tidur")}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
-              <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
+              <span>😴</span> <span>Belum Tap{sleepingCards.length > 0 ? ` (${sleepingCards.length})` : ""}</span>
             </button>
           </div>
 
@@ -2946,6 +2946,7 @@ export default function TapsPage() {
                           {activePeriodInfo.entries.length > 15 && (
                             <button
                               type="button"
+                              className="desktop-only"
                               onClick={() => {
                                 if (tapDisplayLimit >= activePeriodInfo.entries.length) {
                                   setTapDisplayLimit(15);
@@ -3048,10 +3049,10 @@ export default function TapsPage() {
 
                         {/* Pagination / Load More Tap Button (Zero Endless Scroll Fatigue) */}
                         {activePeriodInfo.entries.length > tapDisplayLimit ? (
-                          <div style={{ textAlign: "center", padding: "14px 16px", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                          <div className="tap-pagination-bar" style={{ textAlign: "center", padding: "14px 16px", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                             <button
                               type="button"
-                              onClick={() => setTapDisplayLimit(prev => prev + 25)}
+                              className="tap-load-more-btn" onClick={() => setTapDisplayLimit(prev => prev + 25)}
                               style={{
                                 flex: "1 1 auto",
                                 padding: "10px 16px",
@@ -3073,7 +3074,7 @@ export default function TapsPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setTapDisplayLimit(activePeriodInfo.entries.length)}
+                              className="tap-show-all-btn" onClick={() => setTapDisplayLimit(activePeriodInfo.entries.length)}
                               style={{
                                 padding: "10px 14px",
                                 borderRadius: 10,
@@ -3087,7 +3088,7 @@ export default function TapsPage() {
                               }}
                               title="Tampilkan semua riwayat tap sekaligus"
                             >
-                              Semua ({activePeriodInfo.entries.length})
+                              Tampilkan Semua ({activePeriodInfo.entries.length})
                             </button>
                           </div>
                         ) : activePeriodInfo.entries.length > 15 ? (

@@ -2307,11 +2307,20 @@ html, body {
   .main-view-btn {
     width: 100% !important;
     flex: none !important;
-    padding: 9px 8px !important;
-    font-size: 0.76rem !important;
+    padding: 8px 4px !important;
+    font-size: 0.74rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
+    gap: 3px !important;
+    min-height: 52px !important;
     white-space: normal !important;
+  }
+  .main-view-btn span:first-child {
+    font-size: 1.05rem !important;
+    line-height: 1 !important;
   }
 
   /* Redesign NO-SCROLL Period Selector Pills on Mobile */
@@ -2338,6 +2347,28 @@ html, body {
   }
   .smart-search-input-wrap {
     max-width: 100%;
+  }
+
+  /* Mobile Bottom Pagination Controls for Riwayat Tap Feed */
+  .tap-pagination-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 12px 14px !important;
+  }
+  .tap-load-more-btn,
+  .tap-show-all-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+    font-size: 0.82rem !important;
+    border-radius: 10px !important;
+  }
+  .tap-show-all-btn {
+    background: rgba(139, 92, 246, 0.16) !important;
+    border: 1px solid rgba(139, 92, 246, 0.35) !important;
+    color: #EDE9FE !important;
+    font-weight: 700 !important;
   }
 
   /* Mobile-Optimized Tap Row (Ultra-Sleek 1-Row Native Timeline - Spacious & Relaxed) */
@@ -4540,12 +4571,16 @@ html, body {
     -webkit-overflow-scrolling: touch;
   }
   .main-view-btn {
-    padding: 9px 13px !important;
-    font-size: 0.78rem !important;
+    padding: 8px 4px !important;
+    font-size: 0.73rem !important;
     border-radius: 8px !important;
-    flex: 0 0 auto !important;
-    scroll-snap-align: start;
-    min-width: fit-content !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 3px !important;
+    min-height: 52px !important;
   }
 }
 
