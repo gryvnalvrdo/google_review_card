@@ -1136,7 +1136,7 @@ export default function TapsPage() {
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showAllSidebarStores, setShowAllSidebarStores] = useState(false);
-  const [tapDisplayLimit, setTapDisplayLimit] = useState(15);
+  const [tapDisplayLimit, setTapDisplayLimit] = useState(10);
   const [mobileSubView, setMobileSubView] = useState<"feed" | "outlets">("feed");
   const lastKnownTapRef = useRef<string | null>(null);
   const datePickerRef = useRef<HTMLInputElement>(null);
@@ -2958,48 +2958,6 @@ export default function TapsPage() {
                           )}
                         </div>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                          {activePeriodInfo.entries.length > 15 && (
-                            <button
-                              type="button"
-                              className="desktop-only"
-                              onClick={() => {
-                                if (tapDisplayLimit >= activePeriodInfo.entries.length) {
-                                  setTapDisplayLimit(15);
-                                } else {
-                                  setTapDisplayLimit(activePeriodInfo.entries.length);
-                                }
-                              }}
-                              style={{
-                                padding: "5px 12px",
-                                borderRadius: 8,
-                                background: tapDisplayLimit >= activePeriodInfo.entries.length
-                                  ? "rgba(139, 92, 246, 0.22)"
-                                  : "rgba(255, 255, 255, 0.05)",
-                                border: tapDisplayLimit >= activePeriodInfo.entries.length
-                                  ? "1px solid rgba(139, 92, 246, 0.45)"
-                                  : "1px solid rgba(255, 255, 255, 0.12)",
-                                color: tapDisplayLimit >= activePeriodInfo.entries.length
-                                  ? "#EDE9FE"
-                                  : "#CBD5E1",
-                                fontSize: "0.74rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                transition: "all 0.15s ease",
-                                whiteSpace: "nowrap",
-                              }}
-                              title={
-                                tapDisplayLimit >= activePeriodInfo.entries.length
-                                  ? "Ciutkan tampilan kembali ke 15 tap"
-                                  : `Tampilkan semua ${activePeriodInfo.entries.length} tap sekaligus`
-                              }
-                            >
-                              <span>{tapDisplayLimit >= activePeriodInfo.entries.length ? "▲ Ciutkan (15)" : `Tampilkan Semua (${activePeriodInfo.entries.length})`}</span>
-                            </button>
-                          )}
-
                           <span className="tap-group-badge">
                             {activePeriodInfo.entries.length} TAP
                           </span>
@@ -3063,70 +3021,118 @@ export default function TapsPage() {
                         })}
 
                         {/* Pagination / Load More Tap Button (Zero Endless Scroll Fatigue) */}
-                        {activePeriodInfo.entries.length > tapDisplayLimit ? (
-                          <div className="tap-pagination-bar" style={{ textAlign: "center", padding: "14px 16px", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              className="tap-load-more-btn" onClick={() => setTapDisplayLimit(prev => prev + 25)}
-                              style={{
-                                flex: "1 1 auto",
-                                padding: "10px 16px",
-                                borderRadius: 10,
-                                background: "rgba(99, 102, 241, 0.12)",
-                                border: "1px dashed rgba(99, 102, 241, 0.35)",
-                                color: "#A5B4FC",
-                                fontSize: "0.82rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: 8,
-                                transition: "all 0.15s ease",
-                              }}
-                            >
-                              <span>⬇️</span> Tampilkan 25 Tap Sebelumnya ({activePeriodInfo.entries.length - tapDisplayLimit} tersisa)
-                            </button>
-                            <button
-                              type="button"
-                              className="tap-show-all-btn" onClick={() => setTapDisplayLimit(activePeriodInfo.entries.length)}
-                              style={{
-                                padding: "10px 14px",
-                                borderRadius: 10,
-                                background: "rgba(255, 255, 255, 0.04)",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
-                                color: "#CBD5E1",
-                                fontSize: "0.8rem",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                              }}
-                              title="Tampilkan semua riwayat tap sekaligus"
-                            >
-                              Tampilkan Semua ({activePeriodInfo.entries.length})
-                            </button>
-                          </div>
-                        ) : activePeriodInfo.entries.length > 15 ? (
-                          <div style={{ textAlign: "center", padding: "12px 16px", borderTop: "1px solid rgba(255, 255, 255, 0.04)", display: "flex", justifyContent: "center", alignItems: "center", gap: 10, color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                            <span>Semua {activePeriodInfo.entries.length} tap telah ditampilkan</span>
-                            <button
-                              type="button"
-                              onClick={() => setTapDisplayLimit(15)}
-                              style={{
-                                background: "rgba(255, 255, 255, 0.04)",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
-                                color: "#A5B4FC",
-                                padding: "3px 8px",
-                                borderRadius: 6,
-                                fontSize: "0.72rem",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                              }}
-                            >
-                              ▲ Ciutkan ke 15
-                            </button>
-                          </div>
-                        ) : null}
+                        {(() => {
+                          const remainingTaps = activePeriodInfo.entries.length - tapDisplayLimit;
+                          const loadStep = 10;
+
+                          if (activePeriodInfo.entries.length > tapDisplayLimit) {
+                            return (
+                              <div className="tap-pagination-bar">
+                                <button
+                                  type="button"
+                                  className="tap-load-more-btn"
+                                  onClick={() => setTapDisplayLimit(prev => prev + loadStep)}
+                                  style={{
+                                    flex: 1,
+                                    padding: "10px 18px",
+                                    borderRadius: 10,
+                                    background: "rgba(99, 102, 241, 0.12)",
+                                    border: "1px dashed rgba(99, 102, 241, 0.35)",
+                                    color: "#A5B4FC",
+                                    fontSize: "0.82rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 8,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  <span>⬇️</span>
+                                  <span>
+                                    {remainingTaps > loadStep
+                                      ? `Muat ${loadStep} Tap Berikutnya (${remainingTaps} tersisa)`
+                                      : `Tampilkan ${remainingTaps} Tap Terakhir`}
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="tap-show-all-btn"
+                                  onClick={() => setTapDisplayLimit(activePeriodInfo.entries.length)}
+                                  style={{
+                                    padding: "10px 18px",
+                                    borderRadius: 10,
+                                    background: "rgba(139, 92, 246, 0.14)",
+                                    border: "1px solid rgba(139, 92, 246, 0.35)",
+                                    color: "#EDE9FE",
+                                    fontSize: "0.82rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 6,
+                                    transition: "all 0.15s ease",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={`Tampilkan semua ${activePeriodInfo.entries.length} riwayat tap sekaligus`}
+                                >
+                                  <span>✨ Tampilkan Semua ({activePeriodInfo.entries.length})</span>
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          if (activePeriodInfo.entries.length > 10) {
+                            return (
+                              <div
+                                className="tap-all-shown-bar"
+                                style={{
+                                  textAlign: "center",
+                                  padding: "12px 18px",
+                                  borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  gap: 12,
+                                  color: "var(--text-muted)",
+                                  fontSize: "0.8rem",
+                                  background: "rgba(255, 255, 255, 0.015)",
+                                }}
+                              >
+                                <span>Semua <strong>{activePeriodInfo.entries.length}</strong> tap telah ditampilkan</span>
+                                <span style={{ opacity: 0.3 }}>•</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTapDisplayLimit(10);
+                                    if (typeof window !== "undefined") {
+                                      window.scrollTo({ top: 300, behavior: "smooth" });
+                                    }
+                                  }}
+                                  style={{
+                                    background: "rgba(99, 102, 241, 0.12)",
+                                    border: "1px solid rgba(99, 102, 241, 0.3)",
+                                    color: "#C7D2FE",
+                                    padding: "4px 12px",
+                                    borderRadius: 8,
+                                    fontSize: "0.76rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                >
+                                  ▲ Ciutkan ke 10
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        })()}
                       </div>
                     </div>
                   )}
