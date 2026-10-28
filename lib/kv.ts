@@ -143,7 +143,8 @@ export async function deleteCard(code: string): Promise<void> {
 
         await vercelKv.del(TAP_LOG_KEY);
         if (remaining.length > 0) {
-          await vercelKv.rpush(TAP_LOG_KEY, ...remaining.map((e) => JSON.stringify(e)));
+          // Gunakan lpush dengan urutan terbalik agar newest-first terjaga (sama dengan addTapLog)
+          await vercelKv.lpush(TAP_LOG_KEY, ...[...remaining].reverse().map((e) => JSON.stringify(e)));
         }
       }
     } catch (e) {
@@ -293,7 +294,8 @@ export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
         try {
           await vercelKv.del(TAP_LOG_KEY);
           if (validLogs.length > 0) {
-            await vercelKv.rpush(TAP_LOG_KEY, ...validLogs.map((e) => JSON.stringify(e)));
+            // Gunakan lpush dengan urutan terbalik agar newest-first terjaga
+            await vercelKv.lpush(TAP_LOG_KEY, ...[...validLogs].reverse().map((e) => JSON.stringify(e)));
           }
         } catch (err) {
           console.error("Gagal auto-clean orphan tap_log:", err);

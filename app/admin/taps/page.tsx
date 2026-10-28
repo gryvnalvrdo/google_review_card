@@ -932,6 +932,14 @@ export default function TapsPage() {
     fetchData(false);
   }, []);
 
+  // ── Auto-refresh setiap 60 detik (background, tidak reset tampilan) ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ── Tombol Melayang: Scroll Kembali ke Atas ─────────────────────────
   const [showScrollTop, setShowScrollTop] = useState(false);
 

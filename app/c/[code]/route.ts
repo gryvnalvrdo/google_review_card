@@ -91,9 +91,13 @@ export async function GET(
     );
   }
 
-  // Hitung tap secara async — jangan delay redirect
-  incrementTapCount(params.code);
-  addTapLog({ code: card.code, storeName: card.storeName, tappedAt: new Date().toISOString() });
+  // Catat tap dulu sebelum redirect agar tidak hilang di Vercel serverless
+  await Promise.allSettled([
+    incrementTapCount(params.code),
+    addTapLog({ code: card.code, storeName: card.storeName, tappedAt: new Date().toISOString() }),
+  ]);
 
-  return NextResponse.redirect(card.googleReviewUrl, { status: 302 });
+  // Redirect ke halaman "Terima Kasih" yang kemudian auto-forward ke Google Review
+  const thankyouUrl = new URL(`/t/${params.code}`, _req.url);
+  return NextResponse.redirect(thankyouUrl.toString(), { status: 302 });
 }
