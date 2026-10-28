@@ -32,8 +32,6 @@ interface QRPlacementConfig {
   showCtaText?: boolean;
   ctaText?: string;
   ctaColor?: string;
-  showMicroCode?: boolean;
-  microCodePosition?: "bottom-center" | "bottom-right" | "bottom-left";
 }
 
 const DEFAULT_PLACEMENT: QRPlacementConfig = {
@@ -50,8 +48,6 @@ const DEFAULT_PLACEMENT: QRPlacementConfig = {
   showCtaText: false,
   ctaText: "Tap Kartu NFC / Scan QR",
   ctaColor: "#FFFFFF",
-  showMicroCode: true,
-  microCodePosition: "bottom-center",
 };
 
 // ─── Smart Box Detection Algorithm ────────────────────────────────────────────
@@ -360,36 +356,6 @@ function compositeCard(
     ctx.shadowOffsetY = 2;
     ctx.fillStyle = placement.ctaColor || "#FFFFFF";
     ctx.fillText(placement.ctaText.trim(), ctaX, ctaY);
-    ctx.restore();
-  }
-
-  // 4. Optional Micro Serial Tag di sudut kartu untuk memudahkan sortir/packaging fisik
-  if (placement.showMicroCode !== false && code) {
-    ctx.save();
-    const fontSize = Math.max(10, Math.min(14, Math.round(cardW * 0.019)));
-    ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, "Segoe UI Mono", Menlo, Consolas, monospace`;
-    ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 1;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
-
-    const margin = Math.max(14, Math.round(cardW * 0.035));
-    const tagText = `NFC • ${code.toUpperCase()}`;
-    const pos = placement.microCodePosition || "bottom-center";
-
-    let tagX = cardW / 2;
-    let tagAlign: CanvasTextAlign = "center";
-    if (pos === "bottom-left") {
-      tagX = margin;
-      tagAlign = "left";
-    } else if (pos === "bottom-right") {
-      tagX = cardW - margin;
-      tagAlign = "right";
-    }
-
-    ctx.textAlign = tagAlign;
-    ctx.textBaseline = "bottom";
-    ctx.fillText(tagText, tagX, cardH - margin);
     ctx.restore();
   }
 
@@ -789,8 +755,6 @@ export default function PrintQRCodes() {
           showCtaText: false,
           ctaText: "Tap Kartu NFC / Scan QR",
           ctaColor: "#FFFFFF",
-          showMicroCode: true,
-          microCodePosition: "bottom-center",
         };
 
         setPlacement(newPlacement);
@@ -1403,28 +1367,6 @@ export default function PrintQRCodes() {
                       </div>
                     )}
 
-                    {/* Live Micro Serial Tag Preview */}
-                    {placement.showMicroCode !== false && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: 5,
-                          left: placement.microCodePosition === "bottom-left" ? 8 : placement.microCodePosition === "bottom-right" ? "auto" : "50%",
-                          right: placement.microCodePosition === "bottom-right" ? 8 : "auto",
-                          transform: placement.microCodePosition === "bottom-center" || !placement.microCodePosition ? "translateX(-50%)" : "none",
-                          color: "rgba(255, 255, 255, 0.65)",
-                          fontSize: "0.55rem",
-                          fontFamily: "monospace",
-                          fontWeight: 600,
-                          textShadow: "0 1px 3px rgba(0,0,0,0.85)",
-                          pointerEvents: "none",
-                          letterSpacing: "0.05em",
-                        }}
-                      >
-                        NFC • AB12CD
-                      </div>
-                    )}
-
                     {/* Drag Hint */}
                     <span className="live-drag-hint">👆 Klik atau Tarik QR di Kartu</span>
                   </div>
@@ -1550,7 +1492,7 @@ export default function PrintQRCodes() {
                       onClick={() => setInspectorTab("labels")}
                       className={`studio-tab-btn ${inspectorTab === "labels" ? "active" : ""}`}
                     >
-                      <span>🏷️</span> Teks &amp; Label Cetak
+                      <span>💬</span> Teks Ajakan (CTA)
                     </button>
                   </div>
 
@@ -1694,15 +1636,69 @@ export default function PrintQRCodes() {
                                   title={`${c.name} (${c.hex})`}
                                 />
                               ))}
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 4 }}>
+                              <div
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  padding: "4px 8px",
+                                  borderRadius: 8,
+                                  background: "rgba(255, 255, 255, 0.05)",
+                                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                                }}
+                              >
+                                <span style={{ fontSize: "0.72rem", color: "#CBD5E1", fontWeight: 600 }}>🎨 Kustom:</span>
+                                <label
+                                  style={{
+                                    position: "relative",
+                                    width: 22,
+                                    height: 22,
+                                    borderRadius: 6,
+                                    background: placement.fgColor || "#000000",
+                                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                                    cursor: "pointer",
+                                    display: "inline-block",
+                                    overflow: "hidden",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                                    flexShrink: 0,
+                                  }}
+                                  title="Klik untuk memilih warna QR bebas"
+                                >
+                                  <input
+                                    type="color"
+                                    value={placement.fgColor || "#000000"}
+                                    onChange={(e) => setPlacement((p) => ({ ...p, fgColor: e.target.value }))}
+                                    style={{
+                                      position: "absolute",
+                                      top: -6,
+                                      left: -6,
+                                      width: 36,
+                                      height: 36,
+                                      opacity: 0,
+                                      cursor: "pointer",
+                                    }}
+                                  />
+                                </label>
                                 <input
-                                  type="color"
+                                  type="text"
                                   value={placement.fgColor || "#000000"}
                                   onChange={(e) => setPlacement((p) => ({ ...p, fgColor: e.target.value }))}
-                                  style={{ width: 28, height: 28, borderRadius: 6, border: "none", cursor: "pointer", background: "transparent" }}
-                                  title="Pilih warna QR kustom"
+                                  maxLength={7}
+                                  placeholder="#000000"
+                                  style={{
+                                    width: 66,
+                                    padding: "2px 4px",
+                                    fontSize: "0.72rem",
+                                    fontFamily: "monospace",
+                                    fontWeight: 600,
+                                    background: "rgba(0,0,0,0.3)",
+                                    border: "1px solid rgba(255,255,255,0.1)",
+                                    borderRadius: 4,
+                                    color: "#93C5FD",
+                                    outline: "none",
+                                    textAlign: "center",
+                                  }}
                                 />
-                                <span style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Kustom</span>
                               </div>
                             </div>
                           </div>
@@ -1777,6 +1773,7 @@ export default function PrintQRCodes() {
                                     { name: "Putih", hex: "#FFFFFF" },
                                     { name: "Krem", hex: "#F8FAFC" },
                                     { name: "Dark Slate", hex: "#0F172A" },
+                                    { name: "Hitam", hex: "#000000" },
                                   ].map((c) => (
                                     <button
                                       key={c.hex}
@@ -1787,15 +1784,69 @@ export default function PrintQRCodes() {
                                       title={`${c.name} (${c.hex})`}
                                     />
                                   ))}
-                                  <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 4 }}>
+                                  <div
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 6,
+                                      padding: "4px 8px",
+                                      borderRadius: 8,
+                                      background: "rgba(255, 255, 255, 0.05)",
+                                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                                    }}
+                                  >
+                                    <span style={{ fontSize: "0.72rem", color: "#CBD5E1", fontWeight: 600 }}>🎨 Kustom:</span>
+                                    <label
+                                      style={{
+                                        position: "relative",
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: 6,
+                                        background: placement.boxColor || "#FFFFFF",
+                                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                                        cursor: "pointer",
+                                        display: "inline-block",
+                                        overflow: "hidden",
+                                        boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                                        flexShrink: 0,
+                                      }}
+                                      title="Pilih warna latar kotak bebas"
+                                    >
+                                      <input
+                                        type="color"
+                                        value={placement.boxColor || "#FFFFFF"}
+                                        onChange={(e) => setPlacement((p) => ({ ...p, boxColor: e.target.value }))}
+                                        style={{
+                                          position: "absolute",
+                                          top: -6,
+                                          left: -6,
+                                          width: 36,
+                                          height: 36,
+                                          opacity: 0,
+                                          cursor: "pointer",
+                                        }}
+                                      />
+                                    </label>
                                     <input
-                                      type="color"
+                                      type="text"
                                       value={placement.boxColor || "#FFFFFF"}
                                       onChange={(e) => setPlacement((p) => ({ ...p, boxColor: e.target.value }))}
-                                      style={{ width: 28, height: 28, borderRadius: 6, border: "none", cursor: "pointer", background: "transparent" }}
-                                      title="Pilih warna latar kotak kustom"
+                                      maxLength={7}
+                                      placeholder="#FFFFFF"
+                                      style={{
+                                        width: 66,
+                                        padding: "2px 4px",
+                                        fontSize: "0.72rem",
+                                        fontFamily: "monospace",
+                                        fontWeight: 600,
+                                        background: "rgba(0,0,0,0.3)",
+                                        border: "1px solid rgba(255,255,255,0.1)",
+                                        borderRadius: 4,
+                                        color: "#93C5FD",
+                                        outline: "none",
+                                        textAlign: "center",
+                                      }}
                                     />
-                                    <span style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Kustom</span>
                                   </div>
                                 </div>
                               </div>
@@ -2036,20 +2087,20 @@ export default function PrintQRCodes() {
                     </>
                   )}
 
-                  {/* ════ TAB 3: TEKS & LABEL CETAK ════ */}
+                  {/* ════ TAB 3: TEKS AJAKAN (CTA) ════ */}
                   {inspectorTab === "labels" && (
                     <>
-                      {/* Sub-Card 1: Call-to-Action (CTA) Text */}
+                      {/* Sub-Card 1: Call-to-Action (CTA) Text & Quick Presets */}
                       <div className="inspector-card">
                         <div className="inspector-card-title">
-                          <span>💬</span> Teks Ajakan Review (CTA)
+                          <span>💬</span> Kalimat &amp; Redaksi Ajakan
                         </div>
 
                         <div className="slider-group-grid">
                           <div className="studio-switch-row">
                             <div>
                               <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#E2E8F0" }}>Teks di Bawah QR Code</div>
-                              <div style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Cetak kalimat ajakan ulasan langsung pada kartu</div>
+                              <div style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Cetak kalimat ajakan ulasan presisi di bawah QR</div>
                             </div>
                             <input
                               type="checkbox"
@@ -2059,7 +2110,7 @@ export default function PrintQRCodes() {
                             />
                           </div>
 
-                          {placement.showCtaText && (
+                          {placement.showCtaText ? (
                             <>
                               <div className="slider-item">
                                 <span style={{ fontSize: "0.74rem", color: "#94A3B8", fontWeight: 600 }}>Pilih Kalimat Cepat:</span>
@@ -2077,10 +2128,11 @@ export default function PrintQRCodes() {
                                       className="nudge-btn"
                                       style={{
                                         textAlign: "left",
-                                        padding: "6px 10px",
-                                        borderColor: placement.ctaText === text ? "rgba(99,102,241,0.6)" : undefined,
-                                        background: placement.ctaText === text ? "rgba(99,102,241,0.2)" : undefined,
+                                        padding: "7px 11px",
+                                        borderColor: placement.ctaText === text ? "rgba(99,102,241,0.7)" : undefined,
+                                        background: placement.ctaText === text ? "rgba(99,102,241,0.22)" : undefined,
                                         color: placement.ctaText === text ? "#C7D2FE" : undefined,
+                                        fontWeight: placement.ctaText === text ? 700 : 500,
                                       }}
                                     >
                                       {text}
@@ -2090,27 +2142,70 @@ export default function PrintQRCodes() {
                               </div>
 
                               <div className="slider-item">
-                                <span style={{ fontSize: "0.74rem", color: "#94A3B8", fontWeight: 600 }}>Kustom Teks:</span>
+                                <span style={{ fontSize: "0.74rem", color: "#CBD5E1", fontWeight: 600 }}>Kustom Teks Ulasan:</span>
                                 <input
                                   type="text"
                                   value={placement.ctaText || ""}
                                   onChange={(e) => setPlacement((p) => ({ ...p, ctaText: e.target.value }))}
-                                  placeholder="Ketik teks ajakan..."
-                                  className="print-ctrl-input"
-                                  style={{ padding: "6px 10px", fontSize: "0.78rem" }}
+                                  placeholder="Ketik kalimat ajakan ulasan bebas..."
+                                  style={{
+                                    width: "100%",
+                                    boxSizing: "border-box",
+                                    padding: "9px 12px",
+                                    fontSize: "0.82rem",
+                                    borderRadius: 8,
+                                    background: "rgba(255, 255, 255, 0.06)",
+                                    border: "1px solid rgba(255, 255, 255, 0.16)",
+                                    color: "#FFFFFF",
+                                    outline: "none",
+                                    boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3)",
+                                  }}
                                 />
+                                <span style={{ fontSize: "0.68rem", color: "#64748B" }}>
+                                  Teks ini akan dicetak otomatis di bawah QR Code dengan bayangan tajam agar mudah dibaca.
+                                </span>
                               </div>
+                            </>
+                          ) : (
+                            <div style={{
+                              padding: "16px 14px",
+                              borderRadius: 10,
+                              background: "rgba(255, 255, 255, 0.02)",
+                              border: "1px dashed rgba(255, 255, 255, 0.08)",
+                              textAlign: "center",
+                              fontSize: "0.75rem",
+                              color: "#64748B",
+                              lineHeight: 1.5,
+                            }}>
+                              Aktifkan opsi di atas jika Anda ingin mencetak teks ajakan ulasan (CTA) langsung pada fisik kartu.
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
+                      {/* Sub-Card 2: Warna & Pratinjau Tampilan Teks */}
+                      <div className="inspector-card">
+                        <div className="inspector-card-title">
+                          <span>🎨</span> Warna &amp; Pratinjau Teks
+                        </div>
+
+                        <div className="slider-group-grid">
+                          {placement.showCtaText ? (
+                            <>
                               <div className="slider-item">
                                 <div className="slider-header">
-                                  <span>Warna Teks:</span>
-                                  <strong style={{ color: "#E2E8F0" }}>{placement.ctaColor || "#FFFFFF"}</strong>
+                                  <span>Warna Teks CTA:</span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={{ width: 12, height: 12, borderRadius: "50%", background: placement.ctaColor || "#FFFFFF", border: "1px solid rgba(255,255,255,0.3)" }} />
+                                    <strong style={{ color: "#E2E8F0" }}>{placement.ctaColor || "#FFFFFF"}</strong>
+                                  </div>
                                 </div>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                                   {[
                                     { name: "Putih", hex: "#FFFFFF" },
                                     { name: "Emas", hex: "#FBBF24" },
                                     { name: "Biru", hex: "#60A5FA" },
+                                    { name: "Hijau", hex: "#34D399" },
                                     { name: "Hitam", hex: "#000000" },
                                   ].map((c) => (
                                     <button
@@ -2118,89 +2213,127 @@ export default function PrintQRCodes() {
                                       type="button"
                                       onClick={() => setPlacement((p) => ({ ...p, ctaColor: c.hex }))}
                                       className={`color-swatch-btn ${(placement.ctaColor || "#FFFFFF") === c.hex ? "active" : ""}`}
-                                      style={{ background: c.hex }}
-                                      title={c.name}
+                                      style={{ background: c.hex, border: c.hex === "#FFFFFF" ? "1px solid rgba(255,255,255,0.3)" : undefined }}
+                                      title={`${c.name} (${c.hex})`}
                                     />
                                   ))}
-                                  <input
-                                    type="color"
-                                    value={placement.ctaColor || "#FFFFFF"}
-                                    onChange={(e) => setPlacement((p) => ({ ...p, ctaColor: e.target.value }))}
-                                    style={{ width: 28, height: 28, borderRadius: 6, border: "none", cursor: "pointer", background: "transparent" }}
-                                    title="Pilih warna teks kustom"
-                                  />
+                                  <div
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 6,
+                                      padding: "4px 8px",
+                                      borderRadius: 8,
+                                      background: "rgba(255, 255, 255, 0.05)",
+                                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                                    }}
+                                  >
+                                    <span style={{ fontSize: "0.72rem", color: "#CBD5E1", fontWeight: 600 }}>🎨 Kustom:</span>
+                                    <label
+                                      style={{
+                                        position: "relative",
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: 6,
+                                        background: placement.ctaColor || "#FFFFFF",
+                                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                                        cursor: "pointer",
+                                        display: "inline-block",
+                                        overflow: "hidden",
+                                        boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                                        flexShrink: 0,
+                                      }}
+                                      title="Pilih warna teks bebas"
+                                    >
+                                      <input
+                                        type="color"
+                                        value={placement.ctaColor || "#FFFFFF"}
+                                        onChange={(e) => setPlacement((p) => ({ ...p, ctaColor: e.target.value }))}
+                                        style={{
+                                          position: "absolute",
+                                          top: -6,
+                                          left: -6,
+                                          width: 36,
+                                          height: 36,
+                                          opacity: 0,
+                                          cursor: "pointer",
+                                        }}
+                                      />
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={placement.ctaColor || "#FFFFFF"}
+                                      onChange={(e) => setPlacement((p) => ({ ...p, ctaColor: e.target.value }))}
+                                      maxLength={7}
+                                      placeholder="#FFFFFF"
+                                      style={{
+                                        width: 66,
+                                        padding: "2px 4px",
+                                        fontSize: "0.72rem",
+                                        fontFamily: "monospace",
+                                        fontWeight: 600,
+                                        background: "rgba(0,0,0,0.3)",
+                                        border: "1px solid rgba(255,255,255,0.1)",
+                                        borderRadius: 4,
+                                        color: "#93C5FD",
+                                        outline: "none",
+                                        textAlign: "center",
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Sub-Card 2: Micro Serial Tag */}
-                      <div className="inspector-card">
-                        <div className="inspector-card-title">
-                          <span>🏷️</span> Kode Seri Mikro (Sortir Fisik)
-                        </div>
-
-                        <div className="slider-group-grid">
-                          <div className="studio-switch-row">
-                            <div>
-                              <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#E2E8F0" }}>Cetak Kode Seri Mikro di Sudut</div>
-                              <div style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Membantu admin menyortir fisik kartu tanpa merusak estetika desain</div>
-                            </div>
-                            <input
-                              type="checkbox"
-                              checked={placement.showMicroCode !== false}
-                              onChange={(e) => setPlacement((p) => ({ ...p, showMicroCode: e.target.checked }))}
-                              style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#6366F1" }}
-                            />
-                          </div>
-
-                          {placement.showMicroCode !== false && (
-                            <div className="slider-item">
-                              <span style={{ fontSize: "0.74rem", color: "#94A3B8", fontWeight: 600 }}>Posisi Kode Seri Mikro:</span>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                {[
-                                  { id: "bottom-left", label: "↙️ Kiri Bawah" },
-                                  { id: "bottom-center", label: "⬇️ Tengah Bawah" },
-                                  { id: "bottom-right", label: "↘️ Kanan Bawah" },
-                                ].map((pos) => {
-                                  const isActive = (placement.microCodePosition || "bottom-center") === pos.id;
-                                  return (
-                                    <button
-                                      key={pos.id}
-                                      type="button"
-                                      onClick={() => setPlacement((p) => ({ ...p, microCodePosition: pos.id as any }))}
-                                      className="print-btn"
-                                      style={{
-                                        flex: 1, padding: "7px 4px", fontSize: "0.7rem", justifyContent: "center",
-                                        background: isActive ? "rgba(99, 102, 241, 0.25)" : "rgba(255,255,255,0.04)",
-                                        border: isActive ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
-                                        color: isActive ? "#C7D2FE" : "#94A3B8",
-                                      }}
-                                    >
-                                      {pos.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-
+                              {/* Live Preview Box */}
                               <div style={{
-                                marginTop: 10,
-                                padding: "8px 12px",
-                                borderRadius: 8,
-                                background: "rgba(0,0,0,0.35)",
-                                border: "1px dashed rgba(255,255,255,0.12)",
-                                fontSize: "0.72rem",
-                                color: "#94A3B8",
+                                marginTop: 6,
+                                padding: "14px 16px",
+                                borderRadius: 10,
+                                background: "rgba(0, 0, 0, 0.45)",
+                                border: "1px solid rgba(255, 255, 255, 0.08)",
                                 display: "flex",
+                                flexDirection: "column",
                                 alignItems: "center",
-                                justifyContent: "space-between",
+                                justifyContent: "center",
+                                gap: 6,
                               }}>
-                                <span>Contoh Tampilan:</span>
-                                <code style={{ color: "#34D399", fontWeight: 700, letterSpacing: "0.05em" }}>
-                                  NFC • AB12CD
-                                </code>
+                                <span style={{ fontSize: "0.68rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                                  Pratinjau Teks Pada Kartu
+                                </span>
+                                <div style={{
+                                  fontSize: "0.95rem",
+                                  fontWeight: 700,
+                                  color: placement.ctaColor || "#FFFFFF",
+                                  textShadow: "0 2px 8px rgba(0,0,0,0.9)",
+                                  textAlign: "center",
+                                  wordBreak: "break-word",
+                                }}>
+                                  {placement.ctaText || "Tap Kartu NFC / Scan QR"}
+                                </div>
+                                <span style={{ fontSize: "0.66rem", color: "#94A3B8", textAlign: "center", marginTop: 2 }}>
+                                  Otomatis diselaraskan tepat di bawah posisi QR Code
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <div style={{
+                              padding: "24px 16px",
+                              borderRadius: 10,
+                              background: "rgba(0, 0, 0, 0.25)",
+                              border: "1px dashed rgba(255, 255, 255, 0.08)",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 8,
+                              textAlign: "center",
+                            }}>
+                              <span style={{ fontSize: "1.3rem" }}>✨</span>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#94A3B8" }}>
+                                Mode Bersih (Tanpa Teks Tambahan)
+                              </div>
+                              <div style={{ fontSize: "0.7rem", color: "#64748B", maxWidth: 260 }}>
+                                Kartu akan dicetak minimalis &amp; bersih hanya menampilkan QR Code dan desain latar belakang klien.
                               </div>
                             </div>
                           )}
