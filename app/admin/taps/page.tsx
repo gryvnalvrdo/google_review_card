@@ -1848,7 +1848,8 @@ export default function TapsPage() {
   }, [drilldownLogs]);
 
   // ── Tab: Kartu Tidur (Belum Pernah Tap / Belum Tap di Periode Tertentu) ──
-  const [sleepingPeriod, setSleepingPeriod] = useState<"today" | "last7" | "last30">("today");
+  // sleepingPeriod mengikuti dailyMode secara otomatis
+  const sleepingPeriod = dailyMode === "last30" ? "last30" : dailyMode === "last7" ? "last7" : "today";
 
   const tappedCodes = useMemo(() => new Set(validLogs.map(l => l.code)), [validLogs]);
 
@@ -2287,8 +2288,8 @@ export default function TapsPage() {
             <div className="hero-metrics-bar">
               <button
                 type="button"
-                className={`hero-chip ${activeTab === "harian" && dailyMode === "today" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("today"); setCustomDate(""); }}
+                className={`hero-chip ${(activeTab === "harian" || activeTab === "tidur") && dailyMode === "today" && !customDate ? "active" : ""}`}
+                onClick={() => { setDailyMode("today"); setCustomDate(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
                 title="Tampilkan total tap hari ini"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(16,185,129,0.1)", color: "#34D399", border: "1px solid rgba(16,185,129,0.25)" }}>
@@ -2302,8 +2303,8 @@ export default function TapsPage() {
 
               <button
                 type="button"
-                className={`hero-chip ${activeTab === "harian" && dailyMode === "last7" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("last7"); setCustomDate(""); }}
+                className={`hero-chip ${(activeTab === "harian" || activeTab === "tidur") && dailyMode === "last7" && !customDate ? "active" : ""}`}
+                onClick={() => { setDailyMode("last7"); setCustomDate(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
                 title="Tampilkan total tap 7 hari terakhir (mingguan)"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(99,102,241,0.1)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.25)" }}>
@@ -2317,8 +2318,8 @@ export default function TapsPage() {
 
               <button
                 type="button"
-                className={`hero-chip ${activeTab === "harian" && dailyMode === "last30" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("last30"); setCustomDate(""); }}
+                className={`hero-chip ${(activeTab === "harian" || activeTab === "tidur") && dailyMode === "last30" && !customDate ? "active" : ""}`}
+                onClick={() => { setDailyMode("last30"); setCustomDate(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
                 title="Tampilkan total tap 30 hari terakhir (bulanan)"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(245,158,11,0.1)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}>
@@ -4309,35 +4310,26 @@ export default function TapsPage() {
               </div>
             ) : (
               <div>
-                {/* ── Filter Periode ── */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "0.78rem", color: "#94A3B8", fontWeight: 600, whiteSpace: "nowrap" }}>Belum tap dalam:</span>
-                  {(["today", "last7", "last30"] as const).map((p) => {
-                    const label = p === "today" ? "Hari Ini" : p === "last7" ? "7 Hari Terakhir" : "1 Bulan Terakhir";
-                    const isActive = sleepingPeriod === p;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setSleepingPeriod(p)}
-                        style={{
-                          padding: "5px 13px",
-                          borderRadius: 999,
-                          fontSize: "0.76rem",
-                          fontWeight: isActive ? 700 : 500,
-                          border: isActive ? "1px solid rgba(239,68,68,0.55)" : "1px solid rgba(255,255,255,0.1)",
-                          background: isActive ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
-                          color: isActive ? "#FCA5A5" : "#94A3B8",
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
+                {/* ── Header periode ── */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: 600 }}>
+                      Periode:
+                    </span>
+                    <span style={{
+                      fontSize: "0.78rem", fontWeight: 700,
+                      color: sleepingPeriod === "today" ? "#34D399" : sleepingPeriod === "last7" ? "#A5B4FC" : "#FCD34D",
+                      background: sleepingPeriod === "today" ? "rgba(16,185,129,0.1)" : sleepingPeriod === "last7" ? "rgba(99,102,241,0.1)" : "rgba(245,158,11,0.1)",
+                      border: `1px solid ${sleepingPeriod === "today" ? "rgba(16,185,129,0.35)" : sleepingPeriod === "last7" ? "rgba(99,102,241,0.35)" : "rgba(245,158,11,0.35)"}`,
+                      padding: "3px 12px", borderRadius: 999,
+                    }}>
+                      {sleepingPeriod === "today" ? "☀️ Hari Ini" : sleepingPeriod === "last7" ? "📅 7 Hari Terakhir" : "🗓️ 1 Bulan Terakhir"}
+                    </span>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                      (ikuti pilihan periode di atas)
+                    </span>
+                  </div>
                   <span style={{
-                    marginLeft: "auto",
                     fontSize: "0.76rem",
                     fontWeight: 700,
                     color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399",
