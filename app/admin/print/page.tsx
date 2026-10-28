@@ -707,6 +707,7 @@ export default function PrintQRCodes() {
     } else {
       if (customImg) {
         setBgImage(customImg);
+        setShowPlacementEditor(true);
         // Pulihkan custom placement yang pernah disimpan untuk desain kustom
         try {
           const savedConfig = localStorage.getItem("custom_qr_placement");
@@ -722,6 +723,22 @@ export default function PrintQRCodes() {
         fileInputRef.current?.click();
       }
     }
+  }
+
+  // Tutup studio dan reset bersih kembali ke desain Standar Hantic
+  function handleCloseAndResetCustom() {
+    setShowPlacementEditor(false);
+    setTemplateMode("default");
+    setPlacement(DEFAULT_PLACEMENT);
+    if (defaultImg) {
+      setBgImage(defaultImg);
+    }
+    setCustomImg(null);
+    setCustomImageName("");
+    try {
+      localStorage.removeItem("custom_qr_placement");
+    } catch {}
+    composedCanvases.current.clear();
   }
 
   // Handle File Upload Desain Klien
@@ -1162,36 +1179,9 @@ export default function PrintQRCodes() {
                     : "📁 Upload Desain Klien"}
                 </button>
               </div>
-
-              {/* Tombol Ganti File hanya tampil saat mode custom aktif dan gambar sudah ada */}
-              {templateMode === "custom" && customImg && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="print-btn print-btn-ghost"
-                  style={{ fontSize: "0.74rem", padding: "5px 10px" }}
-                  title="Ganti dengan file desain kartu lain"
-                >
-                  🔄 Ganti Gambar
-                </button>
-              )}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {/* Tombol Atur Posisi QR - Hanya tampil saat editor sedang tertutup di mode custom */}
-              {templateMode === "custom" && !showPlacementEditor && (
-                <button
-                  type="button"
-                  onClick={() => setShowPlacementEditor(true)}
-                  className="print-btn print-btn-ghost"
-                  style={{
-                    fontSize: "0.76rem",
-                    padding: "6px 12px",
-                  }}
-                >
-                  ⚙️ Atur Posisi &amp; Ukuran QR
-                </button>
-              )}
               {templateMode !== "custom" && (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#94A3B8", background: "rgba(255,255,255,0.03)", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
                   <span>🔒</span> Desain Standar Hantic (Presisi Terkalibrasi)
@@ -1213,7 +1203,16 @@ export default function PrintQRCodes() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="print-btn print-btn-ghost"
+                    style={{ fontSize: "0.72rem", padding: "5px 12px" }}
+                    title="Ganti dengan file gambar kartu lain"
+                  >
+                    🔄 Ganti Gambar
+                  </button>
                   <button
                     type="button"
                     onClick={handleResetPlacement}
@@ -1225,9 +1224,10 @@ export default function PrintQRCodes() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowPlacementEditor(false)}
+                    onClick={handleCloseAndResetCustom}
                     className="print-btn print-btn-ghost"
                     style={{ fontSize: "0.72rem", padding: "5px 12px", borderColor: "rgba(255,255,255,0.15)" }}
+                    title="Tutup studio dan kembalikan ke desain standar Hantic"
                   >
                     ✕ Tutup
                   </button>
