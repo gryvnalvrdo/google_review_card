@@ -1881,6 +1881,16 @@ html, body {
 }
 
 .desktop-only {
+  display: revert;
+}
+
+div.desktop-only {
+  display: block !important;
+}
+
+button.desktop-only,
+a.desktop-only,
+span.desktop-only {
   display: inline-flex !important;
 }
 
@@ -2365,14 +2375,22 @@ html, body {
   .main-view-switcher::-webkit-scrollbar {
     display: none !important;
   }
-  .desktop-only {
+  .desktop-only,
+  .main-view-btn.desktop-only,
+  #tab-btn-tren,
+  div.desktop-only,
+  button.desktop-only,
+  span.desktop-only,
+  .peak-insight-box.desktop-only,
+  .hourly-breakdown-card,
+  .hourly-store-breakdown {
     display: none !important;
   }
   .mobile-only {
     display: inline-flex !important;
   }
 
-  .main-view-btn {
+  .main-view-btn:not(.desktop-only) {
     width: auto !important;
     flex: 0 0 auto !important;
     padding: 10px 16px !important;
@@ -2385,8 +2403,12 @@ html, body {
     justify-content: center !important;
     gap: 8px !important;
     white-space: nowrap !important;
+    word-break: keep-all !important;
     min-height: 44px !important;
     scroll-snap-align: start;
+  }
+  .main-view-btn.desktop-only {
+    display: none !important;
   }
   .main-view-btn span:first-child {
     font-size: 1.05rem !important;
@@ -2443,6 +2465,14 @@ html, body {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     line-height: 1.25 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .tap-group-title-text {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   .tap-group-subtitle {
     font-size: 0.72rem !important;
@@ -4848,18 +4878,24 @@ html, body {
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
   }
-  .main-view-btn {
+  .main-view-btn:not(.desktop-only) {
     padding: 9px 15px !important;
     font-size: 0.8rem !important;
     border-radius: 9px !important;
     flex: 0 0 auto !important;
     min-width: fit-content !important;
     white-space: nowrap !important;
+    word-break: keep-all !important;
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     gap: 7px !important;
     min-height: 42px !important;
+  }
+  .main-view-btn.desktop-only,
+  #tab-btn-tren,
+  .desktop-only {
+    display: none !important;
   }
 }
 
@@ -4958,7 +4994,7 @@ html, body {
   .btn {
     min-height: 40px;
   }
-  .main-view-btn {
+  .main-view-btn:not(.desktop-only) {
     min-height: 40px !important;
   }
   /* Prevent text size adjustment on iOS after orientation change */

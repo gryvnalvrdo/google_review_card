@@ -1108,10 +1108,26 @@ export default function TapsPage() {
   const [activeTab, setActiveTab] = useState<"tren" | "harian" | "bulanan" | "tidur">("harian");
 
   useEffect(() => {
-    // Pada desktop layar lebar (> 768px), buka tab Tren & Jam secara default
-    if (typeof window !== "undefined" && window.innerWidth > 768) {
-      setActiveTab("tren");
-    }
+    const handleViewport = () => {
+      if (typeof window !== "undefined") {
+        if (window.innerWidth <= 768) {
+          // Di mobile, tab tren & jam disembunyikan sepenuhnya
+          setActiveTab((prev) => (prev === "tren" ? "harian" : prev));
+        } else {
+          // Buka default tren di desktop hanya jika pengguna belum memilih tab lain
+          try {
+            if (!sessionStorage.getItem("user_selected_tab")) {
+              setActiveTab("tren");
+            }
+          } catch {
+            setActiveTab("tren");
+          }
+        }
+      }
+    };
+    handleViewport();
+    window.addEventListener("resize", handleViewport);
+    return () => window.removeEventListener("resize", handleViewport);
   }, []);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
@@ -2700,6 +2716,7 @@ export default function TapsPage() {
               type="button"
               onClick={(e) => {
                 setActiveTab("tren");
+                try { sessionStorage.setItem("user_selected_tab", "tren"); } catch {}
                 try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
               }}
               className={`main-view-btn desktop-only ${activeTab === "tren" ? "active" : ""}`}
@@ -2711,6 +2728,7 @@ export default function TapsPage() {
               type="button"
               onClick={(e) => {
                 setActiveTab("harian");
+                try { sessionStorage.setItem("user_selected_tab", "harian"); } catch {}
                 try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
               }}
               className={`main-view-btn ${activeTab === "harian" ? "active" : ""}`}
@@ -2722,6 +2740,7 @@ export default function TapsPage() {
               type="button"
               onClick={(e) => {
                 setActiveTab("bulanan");
+                try { sessionStorage.setItem("user_selected_tab", "bulanan"); } catch {}
                 try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
               }}
               className={`main-view-btn ${activeTab === "bulanan" ? "active" : ""}`}
@@ -2733,6 +2752,7 @@ export default function TapsPage() {
               type="button"
               onClick={(e) => {
                 setActiveTab("tidur");
+                try { sessionStorage.setItem("user_selected_tab", "tidur"); } catch {}
                 try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
               }}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
@@ -2920,7 +2940,7 @@ export default function TapsPage() {
                     onClick={() => setMobileSubView("outlets")}
                     className={`mobile-subview-btn ${mobileSubView === "outlets" ? "active" : ""}`}
                   >
-                    <span>🏪</span> Ringkasan Outlet &amp; Jam
+                    <span>🏪</span> Ringkasan Outlet
                   </button>
                 </div>
 
@@ -3145,8 +3165,8 @@ export default function TapsPage() {
 
                 {/* ── KOLOM SAMPING: SCORECARD CAFE & INSIGHT WIDGETS (Sticky di Desktop) ── */}
                 <div className="dashboard-grid-sidebar">
-                  {/* 1. Jam Kunjungan Tersibuk Widget (Foto 4 Bagian Atas) */}
-                  <div className="peak-insight-box">
+                  {/* 1. Jam Kunjungan Tersibuk Widget (Desktop Only - Disembunyikan di Mobile) */}
+                  <div className="peak-insight-box desktop-only">
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                       <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
                         <span>⏱️</span> Jam Kunjungan Tersibuk
