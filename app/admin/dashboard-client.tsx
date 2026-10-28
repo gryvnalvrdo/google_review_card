@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import AdminNav from "./components/AdminNav";
 import QRScanner from "./components/QRScanner";
+import { getPublicGoogleReviewUrl } from "../../lib/redirect";
 
 type CardRecord = {
   code: string;
@@ -64,6 +65,27 @@ export default function AdminDashboard() {
   const [lastVisitedAt, setLastVisitedAt] = useState<string | null>(null);
   const [newTapCount, setNewTapCount] = useState(0);
   const [showScanner, setShowScanner] = useState(false);
+
+  const activeCardMap = useMemo(() => new Map(cards.map(c => [c.code, c.storeName])), [cards]);
+  const activeCodesSet = useMemo(() => new Set(cards.map(c => c.code)), [cards]);
+  const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "", c.storeName)])), [cards]);
+
+  const validTapLogs = useMemo(() => {
+    if (cards.length === 0) return tapLogs;
+    return tapLogs
+      .filter(l => activeCodesSet.has(l.code))
+      .map(l => ({
+        ...l,
+        storeName: activeCardMap.get(l.code) || l.storeName,
+      }));
+  }, [tapLogs, cards, activeCodesSet, activeCardMap]);
+
+  const unseenTapCount = useMemo(() => {
+    if (!lastVisitedAt) return 0;
+    const prevDate = new Date(lastVisitedAt);
+    if (isNaN(prevDate.getTime())) return 0;
+    return validTapLogs.filter(l => new Date(l.tappedAt).getTime() > prevDate.getTime()).length;
+  }, [validTapLogs, lastVisitedAt]);
 
   const LS_KEY = "admin_dashboard_last_visited";
 
@@ -613,10 +635,10 @@ export default function AdminDashboard() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
                   <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
                     📲 Aktivitas Tap Terbaru
-                    {newTapCount > 0 ? (
+                    {unseenTapCount > 0 ? (
                       <span className="badge badge-green" style={{ fontSize: "0.65rem", display: "inline-flex", alignItems: "center", gap: 4 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }} />
-                        {newTapCount} Baru
+                        {unseenTapCount} Baru
                       </span>
                     ) : (
                       <span style={{ fontSize: "0.68rem", color: "#94A3B8", fontWeight: 500 }}>
@@ -645,7 +667,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {tapLogs.length === 0 ? (
+                {validTapLogs.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "28px 12px" }}>
                     <div style={{ fontSize: "1.8rem", marginBottom: 6, opacity: 0.4 }}>✨</div>
                     <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600 }}>
@@ -654,8 +676,13 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {tapLogs.slice(0, 6).map((log, i) => {
+                    {validTapLogs.slice(0, 6).map((log, i) => {
                       const isNew = lastVisitedAt && new Date(log.tappedAt).getTime() > new Date(lastVisitedAt).getTime();
+                      const resolvedStoreName = (log.storeName && log.storeName.trim())
+                        || activeCardMap.get(log.code)
+                        || (log.code ? `Kartu ${log.code}` : "Toko Tanpa Nama");
+                      const reviewUrl = cardUrlMap.get(log.code) || (resolvedStoreName ? getPublicGoogleReviewUrl("", resolvedStoreName) : "");
+
                       return (
                         <div
                           key={`${log.code}-${log.tappedAt}-${i}`}
@@ -672,7 +699,7 @@ export default function AdminDashboard() {
                           <div style={{ minWidth: 0, flex: "1 1 180px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontWeight: 700, color: "#F0F0FF", fontSize: "0.88rem", wordBreak: "break-word", lineHeight: 1.3 }}>
-                                {log.storeName}
+                                {resolvedStoreName}
                               </span>
                               {isNew && (
                                 <span style={{ fontSize: "0.6rem", padding: "1px 5px", background: "rgba(16,185,129,0.2)", color: "#6EE7B7", borderRadius: 4, fontWeight: 700 }}>
@@ -680,7 +707,11 @@ export default function AdminDashboard() {
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                              <span style={{ fontFamily: "monospace", color: "#818CF8", background: "rgba(99,102,241,0.1)", padding: "1px 5px", borderRadius: 4, fontSize: "0.68rem" }}>
+                                {log.code}
+                              </span>
+                              <span>·</span>
                               {(() => {
                                 const ld = new Date(log.tappedAt);
                                 const isPrev = ld.getFullYear() !== new Date().getFullYear();
@@ -699,6 +730,17 @@ export default function AdminDashboard() {
                             }}>
                               {timeAgo(log.tappedAt)}
                             </span>
+                            {reviewUrl && (
+                              <a
+                                href={reviewUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="tap-review-btn"
+                                title={`Buka menu ulasan Google publik ${resolvedStoreName}`}
+                              >
+                                <span className="tap-review-text">Ulasan ↗</span>
+                              </a>
+                            )}
                           </div>
                         </div>
                       );

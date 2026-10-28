@@ -867,7 +867,7 @@ export default function TapsPage() {
   }, []);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
-  const showReviewBtn = dailyMode === "today" && !customDate;
+  const showReviewBtn = true;
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [expandedStore, setExpandedStore] = useState<string | null>(null);
@@ -1128,7 +1128,7 @@ export default function TapsPage() {
   const thisWeekCount = useMemo(() => {
     const now = new Date();
     const cutoff7 = new Date(now);
-    cutoff7.setDate(now.getDate() - 7);
+    cutoff7.setDate(now.getDate() - 6);
     cutoff7.setHours(0, 0, 0, 0);
     return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff7).length;
   }, [storeFilteredLogs]);
@@ -1136,7 +1136,7 @@ export default function TapsPage() {
   const thisMonthCount = useMemo(() => {
     const now = new Date();
     const cutoff30 = new Date(now);
-    cutoff30.setDate(now.getDate() - 30);
+    cutoff30.setDate(now.getDate() - 29);
     cutoff30.setHours(0, 0, 0, 0);
     return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff30).length;
   }, [storeFilteredLogs]);
@@ -1159,11 +1159,11 @@ export default function TapsPage() {
     const yestYmd = toDateInputValue(yesterday);
 
     const cutoff7 = new Date(now);
-    cutoff7.setDate(now.getDate() - 7);
+    cutoff7.setDate(now.getDate() - 6);
     cutoff7.setHours(0, 0, 0, 0);
 
     const cutoff30 = new Date(now);
-    cutoff30.setDate(now.getDate() - 30);
+    cutoff30.setDate(now.getDate() - 29);
     cutoff30.setHours(0, 0, 0, 0);
 
     const today: TapLogEntry[] = [];
@@ -1293,10 +1293,10 @@ export default function TapsPage() {
   const prev7DaysCount = useMemo(() => {
     const now = new Date();
     const startPrev = new Date(now);
-    startPrev.setDate(now.getDate() - 14);
+    startPrev.setDate(now.getDate() - 13);
     startPrev.setHours(0, 0, 0, 0);
     const endPrev = new Date(now);
-    endPrev.setDate(now.getDate() - 7);
+    endPrev.setDate(now.getDate() - 6);
     endPrev.setHours(0, 0, 0, 0);
 
     return storeFilteredLogs.filter(l => {
@@ -1707,10 +1707,10 @@ export default function TapsPage() {
     const now = new Date();
     const todayYmd = toDateInputValue(now);
     const cutoff7 = new Date(now);
-    cutoff7.setDate(now.getDate() - 7);
+    cutoff7.setDate(now.getDate() - 6);
     cutoff7.setHours(0, 0, 0, 0);
     const cutoff30 = new Date(now);
-    cutoff30.setDate(now.getDate() - 30);
+    cutoff30.setDate(now.getDate() - 29);
     cutoff30.setHours(0, 0, 0, 0);
 
     const todayLogs: TapLogEntry[] = [];
@@ -1847,8 +1847,35 @@ export default function TapsPage() {
     };
   }, [drilldownLogs]);
 
-  // ── Tab: Kartu Tidur (Belum Pernah Tap) ──────────────────────────────
+  // ── Tab: Kartu Tidur (Belum Pernah Tap / Belum Tap di Periode Tertentu) ──
+  const [sleepingPeriod, setSleepingPeriod] = useState<"today" | "last7" | "last30">("today");
+
   const tappedCodes = useMemo(() => new Set(validLogs.map(l => l.code)), [validLogs]);
+
+  // Set kode kartu yang pernah di-tap dalam periode tertentu
+  const tappedCodesInPeriod = useMemo(() => {
+    const now = new Date();
+    let cutoff: Date;
+
+    if (sleepingPeriod === "today") {
+      cutoff = new Date(now);
+      cutoff.setHours(0, 0, 0, 0);
+    } else if (sleepingPeriod === "last7") {
+      cutoff = new Date(now);
+      cutoff.setDate(now.getDate() - 6);
+      cutoff.setHours(0, 0, 0, 0);
+    } else {
+      cutoff = new Date(now);
+      cutoff.setDate(now.getDate() - 29);
+      cutoff.setHours(0, 0, 0, 0);
+    }
+
+    return new Set(
+      validLogs
+        .filter(l => new Date(l.tappedAt) >= cutoff)
+        .map(l => l.code)
+    );
+  }, [validLogs, sleepingPeriod]);
 
   // ── Tanggal Awal Kartu Ditugaskan (Earliest Card Assignment Date) ──────
   // Membatasi fitur navigasi mundur ("◄ Lalu") agar tidak tembus ke tanggal sebelum kartu didaftarkan/di-assign
@@ -2186,16 +2213,22 @@ export default function TapsPage() {
     }
     const now = new Date();
     const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - trendRange);
+    cutoff.setDate(cutoff.getDate() - (trendRange === 7 ? 6 : trendRange === 30 ? 29 : trendRange));
     cutoff.setHours(0, 0, 0, 0);
     return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff);
   }, [storeFilteredLogs, trendRange, customStartDate, customEndDate]);
   const sleepingCards = useMemo(() =>
-    cards.filter(c => !tappedCodes.has(c.code) && (
+    cards.filter(c => !tappedCodesInPeriod.has(c.code) && (
       c.storeName.toLowerCase().includes(search.toLowerCase()) ||
       c.code.toLowerCase().includes(search.toLowerCase())
     )),
-    [cards, tappedCodes, search]
+    [cards, tappedCodesInPeriod, search]
+  );
+
+  // Kartu yang belum pernah tap sama sekali (all-time), untuk badge count di tombol tab
+  const neverTappedCount = useMemo(() =>
+    cards.filter(c => !tappedCodes.has(c.code)).length,
+    [cards, tappedCodes]
   );
   const activeCards = useMemo(() =>
     cards.filter(c => tappedCodes.has(c.code)),
@@ -2347,7 +2380,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("tidur")}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
-              <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
+              <span>😴</span> Belum Ada Tap {neverTappedCount > 0 && `(${neverTappedCount})`}
             </button>
           </div>
 
@@ -4276,27 +4309,85 @@ export default function TapsPage() {
               </div>
             ) : (
               <div>
+                {/* ── Filter Periode ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.78rem", color: "#94A3B8", fontWeight: 600, whiteSpace: "nowrap" }}>Belum tap dalam:</span>
+                  {(["today", "last7", "last30"] as const).map((p) => {
+                    const label = p === "today" ? "Hari Ini" : p === "last7" ? "7 Hari Terakhir" : "1 Bulan Terakhir";
+                    const isActive = sleepingPeriod === p;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setSleepingPeriod(p)}
+                        style={{
+                          padding: "5px 13px",
+                          borderRadius: 999,
+                          fontSize: "0.76rem",
+                          fontWeight: isActive ? 700 : 500,
+                          border: isActive ? "1px solid rgba(239,68,68,0.55)" : "1px solid rgba(255,255,255,0.1)",
+                          background: isActive ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
+                          color: isActive ? "#FCA5A5" : "#94A3B8",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                  <span style={{
+                    marginLeft: "auto",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                    color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399",
+                    background: sleepingCards.length > 0 ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+                    border: `1px solid ${sleepingCards.length > 0 ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`,
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    whiteSpace: "nowrap",
+                  }}>
+                    {sleepingCards.length} kartu belum tap
+                  </span>
+                </div>
+
                 <div style={{
                   padding: "14px 18px", marginBottom: 16,
                   background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)",
                   borderRadius: 12, color: "#FCD34D", fontSize: "0.82rem", lineHeight: 1.6,
                 }}>
-                  💡 <strong>Informasi Follow-Up:</strong> Daftar toko di bawah sudah membeli/menerima kartu, namun belum mencatat tap sama sekali sejak pelacakan tap aktif. Anda dapat menghubungi mereka untuk memastikan kartu sudah dipajang di kasir/meja.
+                  💡 <strong>Informasi Follow-Up:</strong>{" "}
+                  {sleepingPeriod === "today"
+                    ? "Kartu-kartu berikut belum menerima tap sama sekali hari ini. Pastikan kartu sudah dipajang di kasir/meja pelanggan."
+                    : sleepingPeriod === "last7"
+                    ? "Kartu-kartu berikut tidak menerima tap dalam 7 hari terakhir. Pertimbangkan untuk menghubungi pemilik toko."
+                    : "Kartu-kartu berikut tidak menerima tap dalam 30 hari terakhir. Toko-toko ini mungkin membutuhkan perhatian khusus."
+                  }
                 </div>
 
                 {sleepingCards.length === 0 ? (
                   <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
                     <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🎉</div>
                     <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#34D399", marginBottom: 6 }}>
-                      Luar Biasa! Semua Kartu Sudah Aktif
+                      {sleepingPeriod === "today"
+                        ? "Semua Kartu Sudah Tap Hari Ini!"
+                        : sleepingPeriod === "last7"
+                        ? "Semua Kartu Aktif dalam 7 Hari Terakhir!"
+                        : "Semua Kartu Aktif dalam 1 Bulan Terakhir!"}
                     </h3>
                     <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                      Tidak ada kartu tidur. Semua toko binaan sudah mendapatkan minimal 1 tap ulasan Google!
+                      {sleepingPeriod === "today"
+                        ? "Semua kartu sudah mendapatkan tap hari ini. Performa luar biasa! 🚀"
+                        : sleepingPeriod === "last7"
+                        ? "Semua kartu aktif dalam 7 hari terakhir. Terus pertahankan! 🔥"
+                        : "Tidak ada kartu yang diam selama sebulan penuh. Semua toko binaan aktif menggunakan kartu review!"}
                     </p>
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {sleepingCards.map((card) => {
+                      // Hitung berapa kali kartu ini pernah di-tap secara keseluruhan
+                      const totalTaps = validLogs.filter(l => l.code === card.code).length;
                       return (
                         <div
                           key={card.code}
@@ -4326,6 +4417,12 @@ export default function TapsPage() {
                                 <span>Kode: <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</strong></span>
                                 <span>·</span>
                                 <span>Dibuat: {card.createdAt ? formatDateShortIndo(card.createdAt) : "-"}</span>
+                                {totalTaps > 0 && (
+                                  <>
+                                    <span>·</span>
+                                    <span style={{ color: "#94A3B8" }}>Total all-time: <strong style={{ color: "#818CF8" }}>{totalTaps} tap</strong></span>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -4342,7 +4439,7 @@ export default function TapsPage() {
                               padding: "4px 8px", borderRadius: 999,
                               whiteSpace: "nowrap",
                             }}>
-                              Belum Ada Tap
+                              {sleepingPeriod === "today" ? "Belum Tap Hari Ini" : sleepingPeriod === "last7" ? "Diam 7 Hari" : "Diam 1 Bulan"}
                             </span>
                             <a
                               href={`/c/${card.code}`}
