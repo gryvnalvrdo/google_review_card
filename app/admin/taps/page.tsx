@@ -2529,10 +2529,21 @@ export default function TapsPage() {
     return storeFilteredLogs.filter(l => new Date(l.tappedAt) >= cutoff);
   }, [storeFilteredLogs, trendRange, customStartDate, customEndDate]);
   const sleepingCards = useMemo(() =>
-    cards.filter(c => !tappedCodesInPeriod.has(c.code) && (
-      c.storeName.toLowerCase().includes(search.toLowerCase()) ||
-      c.code.toLowerCase().includes(search.toLowerCase())
-    )),
+    cards
+      .filter(c => !tappedCodesInPeriod.has(c.code) && (
+        c.storeName.toLowerCase().includes(search.toLowerCase()) ||
+        c.code.toLowerCase().includes(search.toLowerCase())
+      ))
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const validA = isNaN(timeA) ? 0 : timeA;
+        const validB = isNaN(timeB) ? 0 : timeB;
+        if (validB !== validA) {
+          return validB - validA; // Terbaru ke terlama (descending)
+        }
+        return a.storeName.localeCompare(b.storeName);
+      }),
     [cards, tappedCodesInPeriod, search]
   );
 
@@ -4893,6 +4904,14 @@ export default function TapsPage() {
                               </div>
                               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                                 <span>Kode: <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</strong></span>
+                                {card.createdAt && (
+                                  <>
+                                    <span>·</span>
+                                    <span style={{ color: "#94A3B8" }}>
+                                      Dibuat: {timeAgo(card.createdAt)}
+                                    </span>
+                                  </>
+                                )}
                                 {lastTapEntry ? (
                                   <>
                                     <span>·</span>
