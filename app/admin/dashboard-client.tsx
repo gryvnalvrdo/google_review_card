@@ -393,9 +393,6 @@ export default function AdminDashboard() {
           step={5000}
           min={0}
         />
-        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
-          Default: Rp 50.000 (step per klik: Rp 5.000). Dihitung ke Total Pendapatan.
-        </p>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
