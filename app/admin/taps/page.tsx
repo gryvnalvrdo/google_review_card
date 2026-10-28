@@ -849,6 +849,37 @@ function getStoreInitials(name?: string): string {
 
 
 // ── Main Page ─────────────────────────────────────────────────────────
+
+// ── Tab Skeleton Loading Shimmer ──────────────────────────────────────
+function TapsTabSkeleton({ text = "Memuat data aktivitas..." }: { text?: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 2px 8px" }}>
+        <div className="spinner" style={{ width: 15, height: 15 }} />
+        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{text}</span>
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="skeleton-card"
+          style={{
+            padding: "14px 16px",
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+          }}
+        >
+          <div className="skeleton skeleton-circle" style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="skeleton skeleton-line" style={{ height: 16, width: `${Math.min(75, 45 + i * 8)}%`, marginBottom: 8 }} />
+            <div className="skeleton skeleton-line-sm" style={{ height: 10, width: "35%" }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TapsPage() {
   const [logs, setLogs] = useState<TapLogEntry[]>([]);
   const [cards, setCards] = useState<CardRecord[]>([]);
@@ -2540,10 +2571,7 @@ export default function TapsPage() {
           {/* ═════════ TAB 1: RIWAYAT TAP (CLEAN NATIVE 2-COLUMN WORKSPACE) ═════════ */}
           {activeTab === "harian" && (
             loading ? (
-              <div style={{ textAlign: "center", padding: "60px 0" }}>
-                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
-                <p style={{ color: "var(--text-muted)" }}>Memuat aktivitas riwayat tap...</p>
-              </div>
+              <TapsTabSkeleton text="Memuat aktivitas riwayat tap..." />
             ) : filtered.length === 0 ? (
               <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>📲</div>
@@ -2954,10 +2982,7 @@ export default function TapsPage() {
           {/* ═════════ TAB 2: REKAP BULANAN & PERINGKAT TOKO ═════════ */}
           {activeTab === "bulanan" && (
             loading ? (
-              <div style={{ textAlign: "center", padding: "60px 0" }}>
-                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
-                <p style={{ color: "var(--text-muted)" }}>Memuat data ranking bulanan...</p>
-              </div>
+              <TapsTabSkeleton text="Memuat data ranking bulanan..." />
             ) : filteredMonthly.length === 0 ? (
               <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>🏆</div>
@@ -3339,10 +3364,7 @@ export default function TapsPage() {
           {activeTab === "tren" && (
             <div className="desktop-only" style={{ width: "100%" }}>
               {loading ? (
-              <div style={{ textAlign: "center", padding: "60px 0" }}>
-                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
-                <p style={{ color: "var(--text-muted)" }}>Menghitung analitik tren...</p>
-              </div>
+              <TapsTabSkeleton text="Menghitung analitik tren..." />
             ) : validLogs.length === 0 ? (
               <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: 12, opacity: 0.5 }}>📈</div>
@@ -4308,10 +4330,7 @@ export default function TapsPage() {
           {/* ═════════ TAB 4: KARTU TIDUR ═════════ */}
           {activeTab === "tidur" && (
             loading ? (
-              <div style={{ textAlign: "center", padding: "60px 0" }}>
-                <div className="spinner" style={{ margin: "0 auto 12px", width: 24, height: 24 }} />
-                <p style={{ color: "var(--text-muted)" }}>Memeriksa kartu tidur...</p>
-              </div>
+              <TapsTabSkeleton text="Memeriksa kartu tidur..." />
             ) : (
               <div>
                 <div style={{
