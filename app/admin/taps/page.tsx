@@ -547,7 +547,7 @@ function CafeBreakdownCard({
             transition: "all 0.15s ease",
           }}
         >
-          <span>{showAll ? "▴ Ciutkan (Tampilkan Top 5 Saja)" : `▾ Tampilkan Semua (${countsByStore.length} Toko)`}</span>
+          <span>{showAll ? "▴ Tampilkan Lebih Sedikit" : `▾ Tampilkan Semua (${countsByStore.length} Toko)`}</span>
         </button>
       )}
     </div>
@@ -831,7 +831,7 @@ function HourlyCafeBreakdownCard({
                 width: "100%",
               }}
             >
-              <span>{showAll ? "▴ Ciutkan (Tampilkan Top 5 Saja)" : `▾ Tampilkan Semua (${countsByStore.length} Toko di Jam Ini)`}</span>
+              <span>{showAll ? "▴ Tampilkan Lebih Sedikit" : `▾ Tampilkan Semua (${countsByStore.length} Toko di Jam Ini)`}</span>
             </button>
           )}
         </div>
@@ -3136,7 +3136,7 @@ export default function TapsPage() {
                                     gap: 4,
                                   }}
                                 >
-                                  ▲ Ciutkan ke 10
+                                  ▲ Tampilkan Lebih Sedikit
                                 </button>
                               </div>
                             );
@@ -3380,7 +3380,7 @@ export default function TapsPage() {
                                   <span>{showAllSidebarStores ? "▲" : "▼"}</span>
                                   <span>
                                     {showAllSidebarStores
-                                      ? "Ciutkan (Tampilkan Top 5 Saja)"
+                                      ? "Tampilkan Lebih Sedikit"
                                       : `Tampilkan Semua (${targetList.length} Toko)`}
                                   </span>
                                 </button>
