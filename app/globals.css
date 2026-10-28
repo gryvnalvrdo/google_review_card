@@ -1383,29 +1383,15 @@ html, body {
 
 @media (min-width: 1025px) {
   .dashboard-grid-sidebar {
-    position: sticky;
-    top: 80px;
-    max-height: calc(100vh - 100px);
-    overflow-y: auto;
-    overscroll-behavior: auto; /* Alirkan scroll ke window, jangan kunci scroll halaman */
-    padding-right: 6px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-    -webkit-overflow-scrolling: touch;
+    position: static;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0;
+    width: 100%;
   }
 
   .dashboard-grid-sidebar::-webkit-scrollbar {
-    width: 6px;
-  }
-  .dashboard-grid-sidebar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .dashboard-grid-sidebar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 999px;
-  }
-  .dashboard-grid-sidebar::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.45);
+    display: none;
   }
 
   /* Kolom utama Feed Riwayat Tap: Aliran dokumen alami tanpa batasan tinggi kaku atau jebakan scroll */
