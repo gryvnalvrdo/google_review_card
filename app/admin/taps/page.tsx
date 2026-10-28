@@ -1557,12 +1557,16 @@ export default function TapsPage() {
     });
 
     activePeriodInfo.entries.forEach(l => {
-      const cur = countsMap.get(l.storeName) || { count: 0, code: l.code };
-      countsMap.set(l.storeName, { count: cur.count + 1, code: l.code || cur.code });
+      const resolvedStore = (l.storeName && l.storeName.trim())
+        || activeCardMap.get(l.code)
+        || (l.code ? `Kartu ${l.code}` : "Toko Tanpa Nama");
+      const cur = countsMap.get(resolvedStore) || { count: 0, code: l.code };
+      countsMap.set(resolvedStore, { count: cur.count + 1, code: l.code || cur.code });
     });
 
     const total = activePeriodInfo.entries.length;
     return Array.from(countsMap.entries())
+      .filter(([storeName]) => storeName && storeName.trim().length > 0)
       .map(([storeName, info]) => ({
         storeName,
         code: info.code,
@@ -1570,7 +1574,7 @@ export default function TapsPage() {
         pct: total > 0 ? Math.round((info.count / total) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count || a.storeName.localeCompare(b.storeName));
-  }, [activePeriodInfo.entries, availableStores, cards, cardUrlMap]);
+  }, [activePeriodInfo.entries, availableStores, cards, activeCardMap]);
 
   // ── KALKULASI DATA ANALYST & LAPORAN EKSEKUTIF KLIEN ───────────────────
   // 1. Pertumbuhan DoD (Hari Ini vs Kemarin)
@@ -3260,8 +3264,18 @@ export default function TapsPage() {
 
                       {(() => {
                         const storesWithTaps = cafeBreakdownList.filter(c => c.count > 0);
+                        const allRegisteredStores = cafeBreakdownList;
 
-                        if (storesWithTaps.length === 0) {
+                        // Target list: jika ada pencarian, ikuti pencarian.
+                        // Jika tanpa pencarian: utamakan toko yang bertap, dan jika kurang dari 5, lengkapi dengan toko terdaftar lainnya agar genap 5 toko.
+                        const targetList = search.trim()
+                          ? allRegisteredStores.filter(c =>
+                              c.storeName.toLowerCase().includes(search.toLowerCase()) ||
+                              c.code.toLowerCase().includes(search.toLowerCase())
+                            )
+                          : (storesWithTaps.length >= 5 ? storesWithTaps : allRegisteredStores);
+
+                        if (targetList.length === 0) {
                           return (
                             <div style={{
                               padding: "36px 16px",
@@ -3273,21 +3287,25 @@ export default function TapsPage() {
                                 Belum Ada Aktivitas Tap
                               </div>
                               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-                                Belum ada cafe yang menerima tap pelanggan {
-                                  dailyMode === "today" && !customDate ? "hari ini" :
-                                  dailyMode === "last7" && !customDate ? "dalam 7 hari terakhir" :
-                                  dailyMode === "last30" && !customDate ? "dalam 30 hari terakhir" :
-                                  customDate ? `pada ${formatDateShortIndo(customDate)}` : "pada periode ini"
-                                }.
+                                {search.trim()
+                                  ? `Tidak ditemukan toko yang cocok dengan "${search}".`
+                                  : `Belum ada cafe yang menerima tap pelanggan ${
+                                      dailyMode === "today" && !customDate ? "hari ini" :
+                                      dailyMode === "last7" && !customDate ? "dalam 7 hari terakhir" :
+                                      dailyMode === "last30" && !customDate ? "dalam 30 hari terakhir" :
+                                      customDate ? `pada ${formatDateShortIndo(customDate)}` : "pada periode ini"
+                                    }.`}
                               </div>
                             </div>
                           );
                         }
 
+                        const visibleStores = showAllSidebarStores ? targetList : targetList.slice(0, 5);
+
                         return (
                           <>
                             <div className="cafe-scorecard-grid">
-                              {(showAllSidebarStores ? storesWithTaps : storesWithTaps.slice(0, 5)).map((c, idx) => {
+                              {visibleStores.map((c, idx) => {
                                 const isSelected = search.toLowerCase() === c.storeName.toLowerCase();
                                 const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
 
@@ -3325,20 +3343,20 @@ export default function TapsPage() {
                               })}
                             </div>
 
-                            {/* Toggle Collapsible Store List (Pangkas 70% Tinggi Layar di Mobile) */}
-                            {storesWithTaps.length > 5 && (
+                            {/* Tombol Toggle: Tampilkan 5 Toko Secara Default, Sembunyikan Sisanya dengan Tombol */}
+                            {targetList.length > 5 && (
                               <div style={{ padding: "0 14px 12px" }}>
                                 <button
                                   type="button"
                                   onClick={() => setShowAllSidebarStores(prev => !prev)}
                                   style={{
                                     width: "100%",
-                                    padding: "8px 12px",
-                                    background: "rgba(255,255,255,0.03)",
-                                    border: "1px dashed rgba(255,255,255,0.12)",
+                                    padding: "9px 14px",
+                                    background: "rgba(99, 102, 241, 0.1)",
+                                    border: "1px dashed rgba(99, 102, 241, 0.35)",
                                     borderRadius: 8,
-                                    color: "#A5B4FC",
-                                    fontSize: "0.76rem",
+                                    color: "#C7D2FE",
+                                    fontSize: "0.78rem",
                                     fontWeight: 700,
                                     cursor: "pointer",
                                     display: "flex",
@@ -3348,9 +3366,12 @@ export default function TapsPage() {
                                     transition: "all 0.15s ease",
                                   }}
                                 >
-                                  {showAllSidebarStores
-                                    ? "▲ Tampilkan Lebih Sedikit (Top 5 Saja)"
-                                    : `▼ Lihat Semua ${storesWithTaps.length} Outlet (+${storesWithTaps.length - 5} lainnya)`}
+                                  <span>{showAllSidebarStores ? "▲" : "▼"}</span>
+                                  <span>
+                                    {showAllSidebarStores
+                                      ? "Ciutkan (Tampilkan Top 5 Saja)"
+                                      : `Tampilkan Semua (${targetList.length} Toko)`}
+                                  </span>
                                 </button>
                               </div>
                             )}
