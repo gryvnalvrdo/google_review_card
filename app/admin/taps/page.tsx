@@ -126,6 +126,9 @@ function BarChart({
           <filter id="barGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#10B981" floodOpacity="0.4" />
           </filter>
+          <filter id="peakGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#8B5CF6" floodOpacity="0.6" />
+          </filter>
         </defs>
 
         {/* ── Sumbu Y: Horizontal Grid Lines & Tick Labels ── */}
@@ -219,12 +222,15 @@ function BarChart({
           const barH = d.value > 0 ? Math.max((d.value / niceMax) * chartH, 4) : 2;
           const by = y0 - barH;
           const isHighlight = Boolean(d.highlight);
+          const isPeak = maxVal > 0 && d.value === maxVal && !isHighlight;
           const isSelected = selectedIndex === i;
           const isClickable = Boolean(onBarClick);
           const barFill = isSelected
             ? "#38BDF8"
             : isHighlight
             ? "#10B981"
+            : isPeak
+            ? "#8B5CF6"
             : d.value === 0
             ? "rgba(255, 255, 255, 0.04)"
             : color;
@@ -261,7 +267,7 @@ function BarChart({
                 fill={barFill}
                 stroke={isSelected ? "#FFF" : undefined}
                 strokeWidth={isSelected ? 1.5 : 0}
-                filter={isHighlight && d.value > 0 ? "url(#barGlow)" : undefined}
+                filter={isSelected ? undefined : isHighlight && d.value > 0 ? "url(#barGlow)" : isPeak && d.value > 0 ? "url(#peakGlow)" : undefined}
                 style={{ transition: "all 0.2s ease" }}
               />
 
@@ -270,13 +276,13 @@ function BarChart({
                 <text
                   x={cx}
                   y={by - 6}
-                  fill={isHighlight ? "#34D399" : "#FFFFFF"}
+                  fill={isSelected ? "#38BDF8" : isHighlight ? "#34D399" : isPeak ? "#C084FC" : "#FFFFFF"}
                   fontSize={valFontSize}
-                  fontWeight={800}
+                  fontWeight={isPeak || isHighlight ? 900 : 800}
                   textAnchor="middle"
-                  style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
+                  style={{ textShadow: isPeak ? "0 0 10px rgba(139,92,246,0.8)" : "0 1px 3px rgba(0,0,0,0.8)" }}
                 >
-                  {d.value}
+                  {isPeak && isFewBars ? `👑 ${d.value}` : d.value}
                 </text>
               )}
 
@@ -287,7 +293,7 @@ function BarChart({
                   y1={y0}
                   x2={cx}
                   y2={y0 + 4}
-                  stroke={isHighlight ? "#10B981" : "#64748B"}
+                  stroke={isHighlight ? "#10B981" : isPeak ? "#8B5CF6" : "#64748B"}
                   strokeWidth={1.5}
                 />
               )}
@@ -311,7 +317,7 @@ function BarChart({
                       y={y0 + 25}
                       fill={isHighlight ? "#6EE7B7" : "#64748B"}
                       fontSize={8}
-                      fontWeight={isHighlight ? 700 : 500}
+                      fontWeight={isHighlight || isPeak ? 700 : 500}
                       textAnchor="middle"
                     >
                       {d.mobileSubLabel || d.subLabel.split(" - ")[0] || d.subLabel}
@@ -324,9 +330,9 @@ function BarChart({
                     <text
                       x={cx}
                       y={y0 + (d.subLabel ? 14 : 17)}
-                      fill={isHighlight ? "#34D399" : "#94A3B8"}
+                      fill={isHighlight ? "#34D399" : isPeak ? "#C084FC" : "#94A3B8"}
                       fontSize={xLabelFontSize}
-                      fontWeight={isHighlight ? 700 : 600}
+                      fontWeight={isHighlight || isPeak ? 800 : 600}
                       textAnchor="middle"
                     >
                       {d.label}
@@ -336,7 +342,7 @@ function BarChart({
                     <text
                       x={cx}
                       y={y0 + 26}
-                      fill={isHighlight ? "#A7F3D0" : "#64748B"}
+                      fill={isHighlight ? "#A7F3D0" : isPeak ? "#DDD6FE" : "#64748B"}
                       fontSize={xSubLabelFontSize}
                       fontWeight={isHighlight ? 700 : 500}
                       textAnchor="middle"
