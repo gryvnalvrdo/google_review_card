@@ -1841,43 +1841,40 @@ html, body {
   letter-spacing: 0.3px;
 }
 
-/* === DESKTOP TAP FEED PAGINATION BAR (Side-by-side & Sejajar) === */
+/* === TAP FEED PAGINATION BAR (Satu Opsi Bersih & Simetris) === */
 .tap-pagination-bar {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: center;
   padding: 14px 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.015);
 }
 
-.tap-load-more-btn {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  transition: all 0.15s ease;
-}
-
 .tap-show-all-btn {
-  flex-shrink: 0;
+  width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 18px;
+  gap: 7px;
+  padding: 12px 20px;
   border-radius: 10px;
-  font-size: 0.82rem;
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #EDE9FE;
+  font-size: 0.84rem;
   font-weight: 700;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tap-show-all-btn:hover {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.55);
+  color: #FFFFFF;
+  box-shadow: 0 2px 14px rgba(139, 92, 246, 0.25);
+  transform: translateY(-1px);
 }
 
 .desktop-only {

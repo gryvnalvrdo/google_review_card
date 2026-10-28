@@ -3045,65 +3045,36 @@ export default function TapsPage() {
                           );
                         })}
 
-                        {/* Pagination / Load More Tap Button (Zero Endless Scroll Fatigue) */}
+                        {/* Tombol Tampilkan Semua Tap Sekaligus (Satu Opsi Bersih & Simetris) */}
                         {(() => {
-                          const remainingTaps = activePeriodInfo.entries.length - tapDisplayLimit;
-                          const loadStep = 10;
-
                           if (activePeriodInfo.entries.length > tapDisplayLimit) {
                             return (
                               <div className="tap-pagination-bar">
                                 <button
                                   type="button"
-                                  className="tap-load-more-btn"
-                                  onClick={() => setTapDisplayLimit(prev => prev + loadStep)}
-                                  style={{
-                                    flex: 1,
-                                    padding: "10px 18px",
-                                    borderRadius: 10,
-                                    background: "rgba(99, 102, 241, 0.12)",
-                                    border: "1px dashed rgba(99, 102, 241, 0.35)",
-                                    color: "#A5B4FC",
-                                    fontSize: "0.82rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 8,
-                                    transition: "all 0.15s ease",
-                                  }}
-                                >
-                                  <span>⬇️</span>
-                                  <span>
-                                    {remainingTaps > loadStep
-                                      ? `Muat ${loadStep} Tap Berikutnya (${remainingTaps} tersisa)`
-                                      : `Tampilkan ${remainingTaps} Tap Terakhir`}
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
                                   className="tap-show-all-btn"
                                   onClick={() => setTapDisplayLimit(activePeriodInfo.entries.length)}
                                   style={{
-                                    padding: "10px 18px",
+                                    width: "100%",
+                                    padding: "11px 20px",
                                     borderRadius: 10,
                                     background: "rgba(139, 92, 246, 0.14)",
                                     border: "1px solid rgba(139, 92, 246, 0.35)",
                                     color: "#EDE9FE",
-                                    fontSize: "0.82rem",
+                                    fontSize: "0.84rem",
                                     fontWeight: 700,
                                     cursor: "pointer",
                                     display: "inline-flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    gap: 6,
+                                    gap: 7,
                                     transition: "all 0.15s ease",
                                     whiteSpace: "nowrap",
                                   }}
                                   title={`Tampilkan semua ${activePeriodInfo.entries.length} riwayat tap sekaligus`}
                                 >
-                                  <span>✨ Tampilkan Semua ({activePeriodInfo.entries.length})</span>
+                                  <span>✨</span>
+                                  <span>Tampilkan Semua ({activePeriodInfo.entries.length} Tap)</span>
                                 </button>
                               </div>
                             );
