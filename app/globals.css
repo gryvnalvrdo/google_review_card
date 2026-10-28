@@ -1142,6 +1142,27 @@ html, body {
   color: #FCA5A5;
 }
 
+.tab-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #FECDD3;
+  margin-left: 2px;
+}
+
+.main-view-btn.danger.active .tab-pill-badge {
+  background: #EF4444;
+  color: #FFFFFF;
+  border-color: #F87171;
+}
+
 /* === UNIFIED DASHBOARD TOOLBAR (Full Width Balance) === */
 /* === UNIFIED DASHBOARD TOOLBAR (Sleek Single Row & Mobile Grid) === */
 .dashboard-unified-toolbar {
@@ -2287,15 +2308,23 @@ html, body {
     color: #94A3B8;
   }
 
-  /* Redesign NO-SCROLL Main View Switcher on Mobile (3 Clean Columns) */
+  /* Smooth Horizontal Scrollable Main View Switcher on Mobile (Lega, No Cramping) */
   .main-view-switcher {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    overflow-x: visible !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
     width: 100% !important;
-    gap: 6px !important;
-    padding: 6px !important;
+    gap: 8px !important;
+    padding: 6px 8px !important;
     margin-bottom: 14px !important;
+    border-radius: 14px !important;
+    scroll-snap-type: x proximity;
+  }
+  .main-view-switcher::-webkit-scrollbar {
+    display: none !important;
   }
   .desktop-only {
     display: none !important;
@@ -2305,18 +2334,20 @@ html, body {
   }
 
   .main-view-btn {
-    width: 100% !important;
-    flex: none !important;
-    padding: 8px 4px !important;
-    font-size: 0.74rem !important;
-    display: flex !important;
-    flex-direction: column !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    padding: 10px 16px !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
-    text-align: center !important;
-    gap: 3px !important;
-    min-height: 52px !important;
-    white-space: normal !important;
+    gap: 8px !important;
+    white-space: nowrap !important;
+    min-height: 44px !important;
+    scroll-snap-align: start;
   }
   .main-view-btn span:first-child {
     font-size: 1.05rem !important;
@@ -4562,25 +4593,25 @@ html, body {
 /* 2. Main View Switcher — Scroll horizontal yang mulus di mobile */
 @media (max-width: 640px) {
   .main-view-switcher {
-    padding: 4px !important;
-    gap: 4px !important;
+    padding: 5px !important;
+    gap: 6px !important;
     border-radius: 12px !important;
     margin-bottom: 14px !important;
-    /* Scroll snap untuk navigasi tab yang smooth */
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
   }
   .main-view-btn {
-    padding: 8px 4px !important;
-    font-size: 0.73rem !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    flex-direction: column !important;
+    padding: 9px 15px !important;
+    font-size: 0.8rem !important;
+    border-radius: 9px !important;
+    flex: 0 0 auto !important;
+    min-width: fit-content !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
     align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    gap: 3px !important;
-    min-height: 52px !important;
+    gap: 7px !important;
+    min-height: 42px !important;
   }
 }
 

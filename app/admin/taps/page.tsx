@@ -2693,34 +2693,49 @@ export default function TapsPage() {
             <button
               id="tab-btn-tren"
               type="button"
-              onClick={() => setActiveTab("tren")}
+              onClick={(e) => {
+                setActiveTab("tren");
+                try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
+              }}
               className={`main-view-btn desktop-only ${activeTab === "tren" ? "active" : ""}`}
             >
-              <span>📊</span> Tren &amp; Jam
+              <span>📊</span> <span>Tren &amp; Jam</span>
             </button>
             <button
               id="tab-btn-harian"
               type="button"
-              onClick={() => setActiveTab("harian")}
+              onClick={(e) => {
+                setActiveTab("harian");
+                try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
+              }}
               className={`main-view-btn ${activeTab === "harian" ? "active" : ""}`}
             >
-              <span>📋</span> Riwayat Tap
+              <span>📋</span> <span>Riwayat Tap</span>
             </button>
             <button
               id="tab-btn-bulanan"
               type="button"
-              onClick={() => setActiveTab("bulanan")}
+              onClick={(e) => {
+                setActiveTab("bulanan");
+                try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
+              }}
               className={`main-view-btn ${activeTab === "bulanan" ? "active" : ""}`}
             >
-              <span>🏆</span> <span>Leaderboard<span className="desktop-only"> Toko</span></span>
+              <span>🏆</span> <span>Leaderboard Toko</span>
             </button>
             <button
               id="tab-btn-tidur"
               type="button"
-              onClick={() => setActiveTab("tidur")}
+              onClick={(e) => {
+                setActiveTab("tidur");
+                try { e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch {}
+              }}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
-              <span>😴</span> <span>Belum Tap{sleepingCards.length > 0 ? ` (${sleepingCards.length})` : ""}</span>
+              <span>😴</span> <span>Belum Ada Tap</span>
+              {sleepingCards.length > 0 && (
+                <span className="tab-pill-badge">{sleepingCards.length}</span>
+              )}
             </button>
           </div>
 
