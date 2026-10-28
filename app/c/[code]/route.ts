@@ -97,7 +97,5 @@ export async function GET(
     addTapLog({ code: card.code, storeName: card.storeName, tappedAt: new Date().toISOString() }),
   ]);
 
-  // Redirect ke halaman "Terima Kasih" yang kemudian auto-forward ke Google Review
-  const thankyouUrl = new URL(`/t/${params.code}`, _req.url);
-  return NextResponse.redirect(thankyouUrl.toString(), { status: 302 });
+  return NextResponse.redirect(card.googleReviewUrl, { status: 302 });
 }

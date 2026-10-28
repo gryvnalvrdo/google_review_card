@@ -4442,22 +4442,7 @@ export default function TapsPage() {
                             </div>
                           </div>
 
-                          <div
-                            className="toko-tidur-actions"
-                            style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <a
-                              href={`/c/${card.code}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn btn-ghost"
-                              style={{ padding: "5px 9px", fontSize: "0.72rem", borderRadius: 7 }}
-                              title="Buka link kartu untuk uji coba tap"
-                            >
-                              Tes Link ↗
-                            </a>
-                          </div>
+                          
                         </div>
                       );
                     })}
