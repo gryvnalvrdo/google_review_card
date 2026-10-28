@@ -92,7 +92,8 @@ export default function AdminDashboard() {
 
   async function loadCards() {
     try {
-      const resCodes = await fetch(`/api/admin/codes?_t=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache", Pragma: "no-cache" } });
+      const rand = Math.random().toString(36).slice(2, 8);
+      const resCodes = await fetch(`/api/admin/codes?_t=${Date.now()}&_r=${rand}`, { cache: "no-store", headers: { "Cache-Control": "no-cache", Pragma: "no-cache" } });
       if (resCodes.ok) {
         const data = await resCodes.json();
         setCards(data.cards ?? []);
@@ -108,7 +109,8 @@ export default function AdminDashboard() {
     setLastVisitedAt(prevVisit);
 
     try {
-      const res = await fetch(`/api/admin/taps?limit=50&_t=${Date.now()}`, { cache: "no-store", headers: { "Cache-Control": "no-cache", Pragma: "no-cache" } });
+      const rand = Math.random().toString(36).slice(2, 8);
+      const res = await fetch(`/api/admin/taps?limit=50&_t=${Date.now()}&_r=${rand}`, { cache: "no-store", headers: { "Cache-Control": "no-cache", Pragma: "no-cache" } });
       if (res.ok) {
         const data = await res.json();
         const all: TapLogEntry[] = data.logs ?? [];
@@ -647,7 +649,14 @@ export default function AdminDashboard() {
                     )}
                   </h2>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <button onClick={loadTapLogs} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "0.72rem" }} title="Refresh log tap terbaru">
+                    <button
+                      onClick={async () => {
+                        await Promise.all([loadTapLogs(), loadCards()]);
+                      }}
+                      className="btn btn-ghost"
+                      style={{ padding: "6px 12px", fontSize: "0.75rem", minHeight: 34, touchAction: "manipulation", display: "inline-flex", alignItems: "center", gap: 4 }}
+                      title="Refresh log tap dan kartu terbaru"
+                    >
                       🔄 Refresh
                     </button>
                     <Link

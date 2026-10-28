@@ -1149,15 +1149,16 @@ export default function TapsPage() {
     const startTime = Date.now();
     try {
       const ts = Date.now();
+      const rand = Math.random().toString(36).slice(2, 8);
       const [tapRes, cardRes] = await Promise.all([
-        fetch(`/api/admin/taps?limit=25000&_t=${ts}`, {
+        fetch(`/api/admin/taps?limit=25000&_t=${ts}&_r=${rand}`, {
           cache: "no-store",
           headers: {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             Pragma: "no-cache",
           },
         }),
-        fetch(`/api/admin/codes?_t=${ts}`, {
+        fetch(`/api/admin/codes?_t=${ts}&_r=${rand}`, {
           cache: "no-store",
           headers: {
             "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -2566,9 +2567,13 @@ export default function TapsPage() {
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        width: 38,
-                        height: 38,
+                        minWidth: 42,
+                        minHeight: 42,
+                        width: 42,
+                        height: 42,
                         borderRadius: 10,
+                        touchAction: "manipulation",
+                        WebkitTapHighlightColor: "transparent",
                         background: justRefreshed
                           ? "rgba(16, 185, 129, 0.2)"
                           : isUpdating
