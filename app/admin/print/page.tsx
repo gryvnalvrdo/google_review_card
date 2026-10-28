@@ -404,6 +404,7 @@ export default function PrintQRCodes() {
   const [progress, setProgress] = useState("");
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
   const composedCanvases = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
@@ -1571,7 +1572,7 @@ export default function PrintQRCodes() {
           </div>
         ) : (
           <>
-            <div style={{
+            <div className="print-grid-action-bar" style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -1593,6 +1594,48 @@ export default function PrintQRCodes() {
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                    type="button"
+                    className="print-btn print-btn-ghost"
+                    onClick={() => {
+                      const allLinks = codes.map((c) => `${baseUrl}/c/${c}`).join("\n");
+                      navigator.clipboard.writeText(allLinks);
+                      setCopiedAll(true);
+                      setTimeout(() => setCopiedAll(false), 2000);
+                    }}
+                    style={{
+                      padding: "7px 12px",
+                      fontSize: "0.78rem",
+                      color: copiedAll ? "#34D399" : "#C7D2FE",
+                      borderColor: copiedAll ? "rgba(16, 185, 129, 0.45)" : "rgba(99, 102, 241, 0.35)",
+                      background: copiedAll ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.08)",
+                    }}
+                    title="Salin seluruh link URL NFC ke clipboard untuk dipaste ke NFC Tools"
+                  >
+                    {copiedAll ? "✓ Semua Link Disalin!" : "📋 Salin Semua Link"}
+                  </button>
+                
+                <button
+                    type="button"
+                    className="print-btn print-btn-ghost"
+                    onClick={() => {
+                      const allLinks = codes.map((c) => `${baseUrl}/c/${c}`).join("\n");
+                      navigator.clipboard.writeText(allLinks);
+                      setCopiedAll(true);
+                      setTimeout(() => setCopiedAll(false), 2000);
+                    }}
+                    style={{
+                      padding: "7px 12px",
+                      fontSize: "0.78rem",
+                      color: copiedAll ? "#34D399" : "#C7D2FE",
+                      borderColor: copiedAll ? "rgba(16, 185, 129, 0.45)" : "rgba(99, 102, 241, 0.35)",
+                      background: copiedAll ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.08)",
+                    }}
+                    title="Salin seluruh link URL NFC ke clipboard untuk dipaste ke NFC Tools"
+                  >
+                    {copiedAll ? "✓ Semua Link Disalin!" : "📋 Salin Semua Link"}
+                  </button>
+                
                 {codes.length === 1 ? (
                   <button
                     type="button"

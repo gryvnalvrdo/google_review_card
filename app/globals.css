@@ -4276,11 +4276,62 @@ html, body {
 .print-empty-sub   { font-size: 0.82rem; color: rgba(255,255,255,0.25); max-width: 340px; line-height: 1.7; }
 
 @media print {
-  .print-panel { display: none !important; }
-  .print-grid-area { padding: 5mm !important; max-width: none !important; }
-  .cards-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 5mm !important; }
-  .dl-hint { display: none !important; }
-  .card-thumb { box-shadow: none !important; }
+  /* Sembunyikan semua elemen navigasi, panel kontrol, dan tombol UI kartu */
+  .admin-nav-header,
+  .admin-mobile-dock,
+  .print-panel,
+  .print-subnav-bar,
+  .print-grid-action-bar,
+  .card-delete-btn,
+  .card-actions-row,
+  .card-preview-modal-overlay,
+  .dl-hint {
+    display: none !important;
+  }
+
+  body {
+    background: #FFF !important;
+    color: #000 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  .print-grid-area {
+    padding: 0 !important;
+    max-width: 100% !important;
+    background: transparent !important;
+  }
+
+  .cards-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8mm !important;
+    page-break-inside: auto;
+  }
+
+  .card-wrap {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 1px dashed #B0B0B0 !important; /* Panduan garis potong rapi di percetakan/stiker */
+    padding: 2mm !important;
+    border-radius: 4mm !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .card-thumb {
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .card-thumb canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
 }
 @media (max-width: 600px) {
   .print-panel { padding: 14px 14px 22px; }
