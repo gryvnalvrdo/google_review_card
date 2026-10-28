@@ -1178,23 +1178,21 @@ export default function PrintQRCodes() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {/* Toggle Editor Penyesuaian QR - HANYA TAMPIL DI MODE CUSTOM (Desain default tidak diganggu) */}
-              {templateMode === "custom" ? (
+              {/* Tombol Atur Posisi QR - Hanya tampil saat editor sedang tertutup di mode custom */}
+              {templateMode === "custom" && !showPlacementEditor && (
                 <button
                   type="button"
-                  onClick={() => setShowPlacementEditor((v) => !v)}
+                  onClick={() => setShowPlacementEditor(true)}
                   className="print-btn print-btn-ghost"
                   style={{
                     fontSize: "0.76rem",
                     padding: "6px 12px",
-                    borderColor: showPlacementEditor ? "rgba(99,102,241,0.5)" : undefined,
-                    background: showPlacementEditor ? "rgba(99,102,241,0.15)" : undefined,
-                    color: showPlacementEditor ? "#A5B4FC" : undefined,
                   }}
                 >
-                  {showPlacementEditor ? "✕ Tutup Posisi QR" : "⚙️ Atur Posisi & Ukuran QR"}
+                  ⚙️ Atur Posisi &amp; Ukuran QR
                 </button>
-              ) : (
+              )}
+              {templateMode !== "custom" && (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#94A3B8", background: "rgba(255,255,255,0.03)", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
                   <span>🔒</span> Desain Standar Hantic (Presisi Terkalibrasi)
                 </div>
@@ -1229,9 +1227,9 @@ export default function PrintQRCodes() {
                     type="button"
                     onClick={() => setShowPlacementEditor(false)}
                     className="print-btn print-btn-ghost"
-                    style={{ fontSize: "0.72rem", padding: "5px 10px" }}
+                    style={{ fontSize: "0.72rem", padding: "5px 12px", borderColor: "rgba(255,255,255,0.15)" }}
                   >
-                    ✕ Tutup Studio
+                    ✕ Tutup
                   </button>
                 </div>
               </div>
