@@ -4370,7 +4370,6 @@ export default function TapsPage() {
                     {sleepingCards.map((card) => {
                       // Cari tap terakhir kartu ini (all-time)
                       const lastTapEntry = validLogs.find(l => l.code === card.code);
-                      const totalTaps = validLogs.filter(l => l.code === card.code).length;
                       return (
                         <div
                           key={card.code}
@@ -4401,19 +4400,42 @@ export default function TapsPage() {
                                 {lastTapEntry ? (
                                   <>
                                     <span>·</span>
-                                    <span>Last tap: <strong style={{ color: "#FCD34D" }}>{timeAgo(lastTapEntry.tappedAt)}</strong></span>
-                                    <span style={{ color: "rgba(255,255,255,0.2)" }}>({formatTapDateTime(lastTapEntry.tappedAt)})</span>
+                                    <span style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 5,
+                                      background: "rgba(245, 158, 11, 0.14)",
+                                      border: "1px solid rgba(245, 158, 11, 0.35)",
+                                      color: "#FDE047",
+                                      fontWeight: 700,
+                                      fontSize: "0.76rem",
+                                      padding: "2px 8px",
+                                      borderRadius: 6,
+                                    }}>
+                                      <span>🕒</span>
+                                      <span>Last tap: {timeAgo(lastTapEntry.tappedAt)}</span>
+                                    </span>
+                                    <span style={{ color: "#CBD5E1", fontSize: "0.74rem", fontWeight: 500 }}>
+                                      ({formatTapDateTime(lastTapEntry.tappedAt)})
+                                    </span>
                                   </>
                                 ) : (
                                   <>
                                     <span>·</span>
-                                    <span style={{ color: "#F87171" }}>Belum pernah di-tap</span>
-                                  </>
-                                )}
-                                {totalTaps > 0 && (
-                                  <>
-                                    <span>·</span>
-                                    <span>Total: <strong style={{ color: "#818CF8" }}>{totalTaps}×</strong></span>
+                                    <span style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 4,
+                                      background: "rgba(239, 68, 68, 0.12)",
+                                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                                      color: "#FCA5A5",
+                                      fontWeight: 700,
+                                      fontSize: "0.75rem",
+                                      padding: "2px 8px",
+                                      borderRadius: 6,
+                                    }}>
+                                      <span>⚠️</span> Belum pernah di-tap
+                                    </span>
                                   </>
                                 )}
                               </div>
