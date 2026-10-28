@@ -2942,9 +2942,52 @@ export default function TapsPage() {
                             <div className="tap-group-subtitle">{activePeriodInfo.subtitle}</div>
                           )}
                         </div>
-                        <span className="tap-group-badge">
-                          {activePeriodInfo.entries.length} TAP
-                        </span>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          {activePeriodInfo.entries.length > 15 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (tapDisplayLimit >= activePeriodInfo.entries.length) {
+                                  setTapDisplayLimit(15);
+                                } else {
+                                  setTapDisplayLimit(activePeriodInfo.entries.length);
+                                }
+                              }}
+                              style={{
+                                padding: "5px 12px",
+                                borderRadius: 8,
+                                background: tapDisplayLimit >= activePeriodInfo.entries.length
+                                  ? "rgba(139, 92, 246, 0.22)"
+                                  : "rgba(255, 255, 255, 0.05)",
+                                border: tapDisplayLimit >= activePeriodInfo.entries.length
+                                  ? "1px solid rgba(139, 92, 246, 0.45)"
+                                  : "1px solid rgba(255, 255, 255, 0.12)",
+                                color: tapDisplayLimit >= activePeriodInfo.entries.length
+                                  ? "#EDE9FE"
+                                  : "#CBD5E1",
+                                fontSize: "0.74rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                transition: "all 0.15s ease",
+                                whiteSpace: "nowrap",
+                              }}
+                              title={
+                                tapDisplayLimit >= activePeriodInfo.entries.length
+                                  ? "Ciutkan tampilan kembali ke 15 tap"
+                                  : `Tampilkan semua ${activePeriodInfo.entries.length} tap sekaligus`
+                              }
+                            >
+                              <span>{tapDisplayLimit >= activePeriodInfo.entries.length ? "▲ Ciutkan (15)" : `Tampilkan Semua (${activePeriodInfo.entries.length})`}</span>
+                            </button>
+                          )}
+
+                          <span className="tap-group-badge">
+                            {activePeriodInfo.entries.length} TAP
+                          </span>
+                        </div>
                       </div>
 
                       <div className="tap-group-scroll-area">
@@ -3004,7 +3047,7 @@ export default function TapsPage() {
                         })}
 
                         {/* Pagination / Load More Tap Button (Zero Endless Scroll Fatigue) */}
-                        {activePeriodInfo.entries.length > tapDisplayLimit && (
+                        {activePeriodInfo.entries.length > tapDisplayLimit ? (
                           <div style={{ textAlign: "center", padding: "14px 16px", display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                             <button
                               type="button"
@@ -3047,7 +3090,27 @@ export default function TapsPage() {
                               Semua ({activePeriodInfo.entries.length})
                             </button>
                           </div>
-                        )}
+                        ) : activePeriodInfo.entries.length > 15 ? (
+                          <div style={{ textAlign: "center", padding: "12px 16px", borderTop: "1px solid rgba(255, 255, 255, 0.04)", display: "flex", justifyContent: "center", alignItems: "center", gap: 10, color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                            <span>Semua {activePeriodInfo.entries.length} tap telah ditampilkan</span>
+                            <button
+                              type="button"
+                              onClick={() => setTapDisplayLimit(15)}
+                              style={{
+                                background: "rgba(255, 255, 255, 0.04)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                                color: "#A5B4FC",
+                                padding: "3px 8px",
+                                borderRadius: 6,
+                                fontSize: "0.72rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
+                            >
+                              ▲ Ciutkan ke 15
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}
