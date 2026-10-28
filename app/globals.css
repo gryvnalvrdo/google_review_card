@@ -2380,6 +2380,46 @@ html, body {
     max-width: 100%;
   }
 
+  /* Mobile Symmetrical Header for Riwayat Tap Group Box (No Squishing) */
+  .tap-group-header {
+    padding: 12px 14px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+  .tap-group-title-wrap {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+  .tap-group-title-main {
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+    color: #F8FAFC !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.25 !important;
+  }
+  .tap-group-subtitle {
+    font-size: 0.72rem !important;
+    color: #94A3B8 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+  }
+  .tap-group-badge {
+    flex-shrink: 0 !important;
+    font-size: 0.72rem !important;
+    padding: 4px 10px !important;
+    white-space: nowrap !important;
+  }
+
   /* Mobile Bottom Pagination Controls for Riwayat Tap Feed */
   .tap-pagination-bar {
     display: flex !important;
