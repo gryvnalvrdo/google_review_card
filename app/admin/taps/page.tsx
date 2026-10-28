@@ -3149,9 +3149,90 @@ export default function TapsPage() {
                   )}
                 </div>
 
-                {/* ── KOLOM SAMPING: SCORECARD CAFE & INSIGHT WIDGETS (Aliran Alami & Prioritas Scorecard) ── */}
+                {/* ── KOLOM SAMPING: SCORECARD CAFE & INSIGHT WIDGETS ── */}
                 <div className="dashboard-grid-sidebar">
-                  {/* 1. Scorecard Total Tap per Cafe (Paling Utama / Top 5 & Tampilkan Semua) */}
+                  {/* 1. Jam Kunjungan Tersibuk Widget (Desktop Only - Disembunyikan di Mobile) */}
+                  <div className="peak-insight-box desktop-only">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>⏱️</span> Jam Kunjungan Tersibuk
+                      </span>
+                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
+                        {dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari" : dailyMode === "last30" ? "30 Hari" : "Periode Aktif"}
+                      </span>
+                    </div>
+
+                    {(() => {
+                      const counts = Array(24).fill(0);
+                      activePeriodInfo.entries.forEach(l => {
+                        const h = new Date(l.tappedAt).getHours();
+                        if (h >= 0 && h < 24) counts[h]++;
+                      });
+                      const max = Math.max(...counts);
+                      if (max === 0) {
+                        return (
+                          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
+                            Belum ada riwayat tap yang tercatat pada rentang waktu ini.
+                          </p>
+                        );
+                      }
+                      const h = counts.indexOf(max);
+                      const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
+
+                      return (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10 }}>
+                          <div style={{ fontSize: "1.3rem" }}>🔥</div>
+                          <div>
+                            <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 2. Ringkasan Status Outlet & Kartu */}
+                  <div className="peak-insight-box">
+                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>📊</span> Status Operasional Kartu
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Toko Aktif</div>
+                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", marginTop: 2 }}>{availableStores.length}</div>
+                      </div>
+                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Kartu Aktif</div>
+                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34D399", marginTop: 2 }}>{cards.length - sleepingCards.length}</div>
+                      </div>
+                    </div>
+                    {sleepingCards.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("tidur")}
+                        style={{
+                          width: "100%",
+                          marginTop: 10,
+                          padding: "7px 10px",
+                          background: "rgba(239, 68, 68, 0.1)",
+                          border: "1px solid rgba(239, 68, 68, 0.25)",
+                          borderRadius: 8,
+                          color: "#FCA5A5",
+                          fontSize: "0.74rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span>😴</span> {sleepingCards.length} Kartu Belum Ada Tap ↗
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 3. Scorecard Total Tap per Cafe (Top 5 & Tampilkan Semua) */}
                   {cafeBreakdownList.length > 0 && (
                     <div className="cafe-scorecard-box">
                       <div className="cafe-scorecard-header">
@@ -3310,87 +3391,6 @@ export default function TapsPage() {
                       })()}
                     </div>
                   )}
-
-                  {/* 2. Jam Kunjungan Tersibuk Widget (Desktop Only - Disembunyikan di Mobile) */}
-                  <div className="peak-insight-box desktop-only">
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
-                        <span>⏱️</span> Jam Kunjungan Tersibuk
-                      </span>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
-                        {dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari" : dailyMode === "last30" ? "30 Hari" : "Periode Aktif"}
-                      </span>
-                    </div>
-
-                    {(() => {
-                      const counts = Array(24).fill(0);
-                      activePeriodInfo.entries.forEach(l => {
-                        const h = new Date(l.tappedAt).getHours();
-                        if (h >= 0 && h < 24) counts[h]++;
-                      });
-                      const max = Math.max(...counts);
-                      if (max === 0) {
-                        return (
-                          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
-                            Belum ada riwayat tap yang tercatat pada rentang waktu ini.
-                          </p>
-                        );
-                      }
-                      const h = counts.indexOf(max);
-                      const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
-
-                      return (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10 }}>
-                          <div style={{ fontSize: "1.3rem" }}>🔥</div>
-                          <div>
-                            <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
-                            <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* 3. Ringkasan Status Outlet & Kartu */}
-                  <div className="peak-insight-box">
-                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>📊</span> Status Operasional Kartu
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Toko Aktif</div>
-                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", marginTop: 2 }}>{availableStores.length}</div>
-                      </div>
-                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Kartu Aktif</div>
-                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34D399", marginTop: 2 }}>{cards.length - sleepingCards.length}</div>
-                      </div>
-                    </div>
-                    {sleepingCards.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("tidur")}
-                        style={{
-                          width: "100%",
-                          marginTop: 10,
-                          padding: "7px 10px",
-                          background: "rgba(239, 68, 68, 0.1)",
-                          border: "1px solid rgba(239, 68, 68, 0.25)",
-                          borderRadius: 8,
-                          color: "#FCA5A5",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span>😴</span> {sleepingCards.length} Kartu Belum Ada Tap ↗
-                      </button>
-                    )}
-                  </div>
                 </div>
               </div>
             )
