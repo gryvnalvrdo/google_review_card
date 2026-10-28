@@ -3502,7 +3502,7 @@ export default function TapsPage() {
                                     <span>📋 Riwayat {storeTaps.length} Tap — {s.storeName} ({selectedMonthKey === "all" ? "Sepanjang Masa" : mg.label})</span>
                                   </div>
 
-                                  <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 240, overflowY: "auto" }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 260, overflowY: "auto", overscrollBehavior: "auto", WebkitOverflowScrolling: "touch" }}>
                                     {storeTaps.map((t, ti) => (
                                       <div
                                         key={`${t.tappedAt}-${ti}`}
