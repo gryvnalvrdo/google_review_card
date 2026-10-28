@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import AdminNav from "./components/AdminNav";
 import QRScanner from "./components/QRScanner";
+import { PriceStepperInput } from "./components/PriceStepperInput";
 import { getPublicGoogleReviewUrl } from "../../lib/redirect";
 
 type CardRecord = {
@@ -382,17 +383,16 @@ export default function AdminDashboard() {
 
       <div className="form-group">
         <label className="label" htmlFor="price">Harga Jual (Rp)</label>
-        <input
+        <PriceStepperInput
           id="price"
-          type="number"
-          className="input"
           value={price}
-          onChange={(e) => setPrice(Number(e.target.value))}
+          onChange={setPrice}
           placeholder="50000"
-          required
+          step={5000}
+          min={0}
         />
-        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
-          Default: Rp 50.000. Dihitung ke Total Pendapatan.
+        <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
+          Default: Rp 50.000 (step per klik: Rp 5.000). Dihitung ke Total Pendapatan.
         </p>
       </div>
 

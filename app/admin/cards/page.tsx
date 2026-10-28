@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import AdminNav from "../components/AdminNav";
 import QRScanner from "../components/QRScanner";
+import { PriceStepperInput } from "../components/PriceStepperInput";
 import { getPublicGoogleReviewUrl } from "../../../lib/redirect";
 
 const QR_EXPORT_SIZE = 1000; // ukuran QR PNG yang di-download (px)
@@ -602,12 +603,12 @@ export default function CardsPage() {
 
               <div className="form-group">
                 <label className="label">Harga Jual (Rp)</label>
-                <input
-                  className="input"
-                  type="number"
+                <PriceStepperInput
                   value={editingCard.price ?? 50000}
-                  onChange={e => setEditingCard({ ...editingCard, price: Number(e.target.value) })}
-                  required
+                  onChange={p => setEditingCard({ ...editingCard, price: p })}
+                  placeholder="50000"
+                  step={5000}
+                  min={0}
                 />
               </div>
 
