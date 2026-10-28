@@ -4843,20 +4843,6 @@ export default function TapsPage() {
               <TapsTabSkeleton text="Memeriksa kartu tidur..." />
             ) : (
               <div>
-                <div style={{
-                  padding: "14px 18px", marginBottom: 16,
-                  background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)",
-                  borderRadius: 12, color: "#FCD34D", fontSize: "0.82rem", lineHeight: 1.6,
-                }}>
-                  💡 <strong>Informasi Follow-Up:</strong>{" "}
-                  {sleepingPeriod === "today"
-                    ? "Kartu-kartu berikut belum menerima tap sama sekali hari ini. Pastikan kartu sudah dipajang di kasir/meja pelanggan."
-                    : sleepingPeriod === "last7"
-                    ? "Kartu-kartu berikut tidak menerima tap dalam 7 hari terakhir. Pertimbangkan untuk menghubungi pemilik toko."
-                    : "Kartu-kartu berikut tidak menerima tap dalam 30 hari terakhir. Toko-toko ini mungkin membutuhkan perhatian khusus."
-                  }
-                </div>
-
                 {sleepingCards.length === 0 ? (
                   <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
                     <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🎉</div>
