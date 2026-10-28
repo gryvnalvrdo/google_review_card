@@ -854,7 +854,223 @@ function getStoreInitials(name?: string): string {
 
 
 
-// ── Main Page ─────────────────────────────────────────────────────────
+
+// ── Premium Custom Month Dropdown ─────────────────────────────────────
+function CustomMonthDropdown({
+  value,
+  onChange,
+  options,
+  placeholder = "Pilih Bulan...",
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { key: string; label: string; isCurrent: boolean; total?: number }[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.key === value);
+
+  return (
+    <div ref={ref} style={{ position: "relative", flex: 1, minWidth: 140 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        style={{
+          width: "100%",
+          background: open
+            ? "rgba(139, 92, 246, 0.22)"
+            : selected
+            ? "rgba(139, 92, 246, 0.14)"
+            : "#161622",
+          border: open
+            ? "1.5px solid #A78BFA"
+            : selected
+            ? "1.5px solid rgba(139, 92, 246, 0.55)"
+            : "1px solid rgba(139, 92, 246, 0.35)",
+          color: selected ? "#EDE9FE" : "#94A3B8",
+          padding: "6px 10px",
+          borderRadius: 8,
+          fontSize: "0.74rem",
+          fontWeight: 600,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 6,
+          outline: "none",
+          transition: "all 0.18s ease",
+          boxShadow: open
+            ? "0 0 16px rgba(139, 92, 246, 0.35)"
+            : selected
+            ? "0 0 10px rgba(139, 92, 246, 0.18)"
+            : "none",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {selected ? (
+            <>
+              <span style={{ fontSize: "0.82rem", flexShrink: 0 }}>{selected.isCurrent ? "🌟" : "📅"}</span>
+              <span style={{ fontWeight: 700, color: selected.isCurrent ? "#FDE047" : "#F8FAFC" }}>
+                {selected.label}
+              </span>
+              {selected.isCurrent && (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    padding: "1px 5px",
+                    borderRadius: 4,
+                    background: "rgba(245, 158, 11, 0.25)",
+                    color: "#FDE047",
+                    border: "1px solid rgba(245, 158, 11, 0.45)",
+                    flexShrink: 0,
+                  }}
+                >
+                  Bulan Ini
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: "0.82rem", opacity: 0.7 }}>📅</span>
+              <span style={{ color: "#94A3B8" }}>{placeholder}</span>
+            </>
+          )}
+        </span>
+        <span
+          style={{
+            fontSize: "0.58rem",
+            color: "#C4B5FD",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s ease",
+            flexShrink: 0,
+            marginLeft: 4,
+          }}
+        >
+          ▼
+        </span>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            zIndex: 1000,
+            minWidth: "100%",
+            width: "max-content",
+            maxWidth: "min(320px, 92vw)",
+            background: "linear-gradient(180deg, #181826 0%, #12121C 100%)",
+            border: "1.5px solid rgba(139, 92, 246, 0.45)",
+            borderRadius: 10,
+            padding: "6px",
+            boxShadow: "0 16px 40px rgba(0, 0, 0, 0.8), 0 0 16px rgba(139, 92, 246, 0.25)",
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <div style={{ maxHeight: "220px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
+            {options.map((opt) => {
+              const isSelected = opt.key === value;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.key);
+                    setOpen(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: 7,
+                    fontSize: "0.75rem",
+                    fontWeight: isSelected ? 700 : 500,
+                    color: isSelected ? "#FFFFFF" : "#CBD5E1",
+                    background: isSelected ? "rgba(139, 92, 246, 0.28)" : "transparent",
+                    border: isSelected ? "1px solid rgba(139, 92, 246, 0.5)" : "1px solid transparent",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all 0.12s ease",
+                    gap: 8,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)";
+                      e.currentTarget.style.color = "#F8FAFC";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "#CBD5E1";
+                    }
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 7, overflow: "hidden" }}>
+                    <span style={{ fontSize: "0.82rem", flexShrink: 0 }}>{opt.isCurrent ? "🌟" : "📅"}</span>
+                    <span style={{ fontWeight: opt.isCurrent || isSelected ? 700 : 500, color: opt.isCurrent ? "#FDE047" : isSelected ? "#FFFFFF" : "#E2E8F0" }}>
+                      {opt.label}
+                    </span>
+                    {opt.isCurrent && (
+                      <span
+                        style={{
+                          fontSize: "0.62rem",
+                          fontWeight: 700,
+                          padding: "1px 6px",
+                          borderRadius: 4,
+                          background: "rgba(245, 158, 11, 0.22)",
+                          color: "#FDE047",
+                          border: "1px solid rgba(245, 158, 11, 0.45)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        Bulan Ini
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    {opt.total !== undefined && opt.total > 0 && (
+                      <span style={{ fontSize: "0.65rem", color: "#94A3B8", fontWeight: 600 }}>
+                        {opt.total} tap
+                      </span>
+                    )}
+                    {isSelected && (
+                      <span style={{ color: "#C084FC", fontSize: "0.8rem", fontWeight: 900 }}>✓</span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Tab Skeleton Loading Shimmer ──────────────────────────────────────
 function TapsTabSkeleton({ text = "Memuat data aktivitas..." }: { text?: string }) {
@@ -867,25 +1083,20 @@ function TapsTabSkeleton({ text = "Memuat data aktivitas..." }: { text?: string 
       {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
-          className="skeleton-card"
           style={{
-            padding: "14px 16px",
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
+            height: 60,
+            borderRadius: 10,
+            background: "rgba(255, 255, 255, 0.03)",
+            border: "1px solid rgba(255, 255, 255, 0.06)",
+            animation: "pulse 1.8s infinite ease-in-out",
           }}
-        >
-          <div className="skeleton skeleton-circle" style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="skeleton skeleton-line" style={{ height: 16, width: `${Math.min(75, 45 + i * 8)}%`, marginBottom: 8 }} />
-            <div className="skeleton skeleton-line-sm" style={{ height: 10, width: "35%" }} />
-          </div>
-        </div>
+        />
       ))}
     </div>
   );
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────
 export default function TapsPage() {
   const [logs, setLogs] = useState<TapLogEntry[]>([]);
   const [cards, setCards] = useState<CardRecord[]>([]);
@@ -1986,6 +2197,15 @@ export default function TapsPage() {
   }, [earliestWeekRange, canGoPreviousWeeks, weekPageOffset, weeklyPeriodType]);
 
   // ── Tren Mingguan (8 Minggu Terakhir) & Drilldown ─────────────────────
+    // ── Navigasi Flat Bulan untuk Card 4 Arsip & Geser ─────────────────
+  const allFlatMonths = useMemo(() => monthsByYear.flatMap(y => y.months), [monthsByYear]);
+  const isWeeklyMonthMode = weeklyPeriodType === "month";
+  const activeWeeklyMonthKey = isWeeklyMonthMode ? (selectedWeeklyMonth || thisMonthKey) : null;
+  const currentWeeklyMonthIdx = isWeeklyMonthMode ? allFlatMonths.findIndex(m => m.monthKey === activeWeeklyMonthKey) : -1;
+  const canGoPrevMonth = isWeeklyMonthMode && currentWeeklyMonthIdx !== -1 && currentWeeklyMonthIdx < allFlatMonths.length - 1;
+  const canGoNextMonth = isWeeklyMonthMode && currentWeeklyMonthIdx > 0;
+  const isViewingPastWeeklyMonth = isWeeklyMonthMode && activeWeeklyMonthKey !== thisMonthKey;
+
   // ── Tren Mingguan (Paginasi Fleksibel, Arsip Bulanan & Sepanjang Tahun) ─
   const weeklyTrendData = useMemo(() => {
     const weeks: {
@@ -4167,133 +4387,237 @@ export default function TapsPage() {
                                   justifyContent: "space-between",
                                   padding: "10px 14px",
                                   borderRadius: 10,
-                                  background: weeklyPeriodType === "month" || weekPageOffset > 0 ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                  border: weeklyPeriodType === "month" || weekPageOffset > 0 ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  background: isWeeklyMonthMode || weekPageOffset > 0 ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                                  border: isWeeklyMonthMode || weekPageOffset > 0 ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
                                   gap: 8,
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#C4B5FD" }}>
-                                    🗂️ Arsip Bulan &amp; Geser
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#C4B5FD", display: "flex", alignItems: "center", gap: 5 }}>
+                                    <span>🗂️</span>
+                                    <span>Arsip Bulan &amp; Geser</span>
                                   </span>
-                                  {weekPageOffset > 0 && (
-                                    <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "#F59E0B", color: "#000" }}>
+                                  {isWeeklyMonthMode ? (
+                                    currentWeeklyMonthIdx === 0 ? (
+                                      <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "rgba(245, 158, 11, 0.2)", color: "#FDE047", border: "1px solid rgba(245, 158, 11, 0.4)" }}>
+                                        Bulan Berjalan
+                                      </span>
+                                    ) : (
+                                      <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "rgba(139, 92, 246, 0.3)", color: "#EDE9FE", border: "1px solid rgba(139, 92, 246, 0.5)" }}>
+                                        Arsip Historis
+                                      </span>
+                                    )
+                                  ) : weekPageOffset > 0 ? (
+                                    <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "#F59E0B", color: "#000" }}>
                                       Halaman -{weekPageOffset}
                                     </span>
-                                  )}
+                                  ) : null}
                                 </div>
 
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", flexWrap: "wrap" }}>
-                                  <div style={{ position: "relative", flex: 1, minWidth: 110 }}>
-                                    <select
-                                      value={weeklyPeriodType === "month" ? `month:${selectedWeeklyMonth || thisMonthKey}` : ""}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (!val) return;
-                                        setSelectedWeekKey(null);
-                                        setWeekPageOffset(0);
-                                        setWeeklyPeriodType("month");
-                                        setSelectedWeeklyMonth(val.replace("month:", ""));
-                                      }}
-                                      style={{
-                                        width: "100%",
-                                        background: "#181824",
-                                        border: "1px solid rgba(139, 92, 246, 0.35)",
-                                        color: "#EDE9FE",
-                                        padding: "4px 20px 4px 6px",
-                                        borderRadius: 6,
-                                        fontSize: "0.72rem",
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                        appearance: "none",
-                                        WebkitAppearance: "none",
-                                        outline: "none",
-                                      }}
-                                    >
-                                      <option value="">Pilih Bulan...</option>
-                                      {monthsByYear.flatMap(y => y.months).map(m => (
-                                        <option key={m.monthKey} value={`month:${m.monthKey}`}>
-                                          {m.monthKey === thisMonthKey ? `🌟 ${m.label} (Bulan Ini)` : m.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", fontSize: "0.5rem", color: "#C4B5FD", pointerEvents: "none" }}>
-                                      ▼
-                                    </span>
-                                  </div>
+                                  <CustomMonthDropdown
+                                    value={isWeeklyMonthMode ? (selectedWeeklyMonth || thisMonthKey) : ""}
+                                    onChange={(val) => {
+                                      setSelectedWeekKey(null);
+                                      setWeekPageOffset(0);
+                                      setWeeklyPeriodType("month");
+                                      setSelectedWeeklyMonth(val);
+                                    }}
+                                    options={allFlatMonths.map((m) => ({
+                                      key: m.monthKey,
+                                      label: m.label,
+                                      isCurrent: m.monthKey === thisMonthKey,
+                                      total: m.total,
+                                    }))}
+                                    placeholder="Pilih Bulan..."
+                                  />
 
-                                  <div style={{ display: "inline-flex", gap: 3, alignItems: "center", flexShrink: 0 }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (canGoPreviousWeeks) {
-                                          setWeekPageOffset(o => o + 1);
-                                        }
-                                      }}
-                                      disabled={!canGoPreviousWeeks}
-                                      style={{
-                                        background: !canGoPreviousWeeks ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.15)",
-                                        border: !canGoPreviousWeeks ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.35)",
-                                        color: !canGoPreviousWeeks ? "var(--text-muted)" : "#C4B5FD",
-                                        padding: "4px 7px",
-                                        borderRadius: 6,
-                                        fontSize: "0.7rem",
-                                        fontWeight: 700,
-                                        cursor: !canGoPreviousWeeks ? "not-allowed" : "pointer",
-                                        opacity: !canGoPreviousWeeks ? 0.35 : 1,
-                                        whiteSpace: "nowrap",
-                                        transition: "all 0.15s ease",
-                                      }}
-                                      title={
-                                        !canGoPreviousWeeks
-                                          ? earliestAssignedDate
-                                            ? `Batas awal penugasan kartu tercapai (${formatDateShortIndo(earliestAssignedDate)})`
-                                            : "Tidak ada riwayat sebelum ini"
-                                          : "Lihat minggu-minggu sebelumnya di masa lalu"
-                                      }
-                                    >
-                                      ◄ Lalu
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setWeekPageOffset(o => Math.max(0, o - 1))}
-                                      disabled={weekPageOffset === 0}
-                                      style={{
-                                        background: weekPageOffset === 0 ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.15)",
-                                        border: weekPageOffset === 0 ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.35)",
-                                        color: weekPageOffset === 0 ? "var(--text-muted)" : "#C4B5FD",
-                                        padding: "4px 7px",
-                                        borderRadius: 6,
-                                        fontSize: "0.7rem",
-                                        fontWeight: 700,
-                                        cursor: weekPageOffset === 0 ? "not-allowed" : "pointer",
-                                        opacity: weekPageOffset === 0 ? 0.35 : 1,
-                                        whiteSpace: "nowrap",
-                                        transition: "all 0.15s ease",
-                                      }}
-                                      title={weekPageOffset === 0 ? "Sudah berada di minggu terbaru" : "Lihat minggu-minggu berikutnya"}
-                                    >
-                                      Maju ►
-                                    </button>
-                                    {weekPageOffset > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setWeekPageOffset(0)}
-                                        style={{
-                                          background: "rgba(245,158,11,0.15)",
-                                          border: "1px solid rgba(245,158,11,0.35)",
-                                          color: "#FCD34D",
-                                          padding: "4px 6px",
-                                          borderRadius: 6,
-                                          fontSize: "0.68rem",
-                                          fontWeight: 700,
-                                          cursor: "pointer",
-                                          whiteSpace: "nowrap",
-                                        }}
-                                        title="Kembali ke minggu berjalan"
-                                      >
-                                        🌟 Terkini
-                                      </button>
+                                  <div style={{ display: "inline-flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+                                    {isWeeklyMonthMode ? (
+                                      <>
+                                        {/* Tombol Geser Bulan Sebelumnya (Ke Masa Lalu) */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (canGoPrevMonth) {
+                                              const prevM = allFlatMonths[currentWeeklyMonthIdx + 1];
+                                              if (prevM) {
+                                                setSelectedWeeklyMonth(prevM.monthKey);
+                                                setSelectedWeekKey(null);
+                                              }
+                                            }
+                                          }}
+                                          disabled={!canGoPrevMonth}
+                                          style={{
+                                            background: !canGoPrevMonth ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.18)",
+                                            border: !canGoPrevMonth ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.45)",
+                                            color: !canGoPrevMonth ? "var(--text-muted)" : "#EDE9FE",
+                                            padding: "5px 8px",
+                                            borderRadius: 7,
+                                            fontSize: "0.72rem",
+                                            fontWeight: 700,
+                                            cursor: !canGoPrevMonth ? "not-allowed" : "pointer",
+                                            opacity: !canGoPrevMonth ? 0.35 : 1,
+                                            whiteSpace: "nowrap",
+                                            transition: "all 0.15s ease",
+                                          }}
+                                          title={
+                                            canGoPrevMonth
+                                              ? `Geser ke bulan sebelumnya (${allFlatMonths[currentWeeklyMonthIdx + 1]?.label})`
+                                              : "Sudah di arsip bulan paling awal"
+                                          }
+                                        >
+                                          ◄ Lalu
+                                        </button>
+
+                                        {/* Tombol Geser Bulan Berikutnya (Ke Masa Depan) */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (canGoNextMonth) {
+                                              const nextM = allFlatMonths[currentWeeklyMonthIdx - 1];
+                                              if (nextM) {
+                                                setSelectedWeeklyMonth(nextM.monthKey);
+                                                setSelectedWeekKey(null);
+                                              }
+                                            }
+                                          }}
+                                          disabled={!canGoNextMonth}
+                                          style={{
+                                            background: !canGoNextMonth ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.18)",
+                                            border: !canGoNextMonth ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.45)",
+                                            color: !canGoNextMonth ? "var(--text-muted)" : "#EDE9FE",
+                                            padding: "5px 8px",
+                                            borderRadius: 7,
+                                            fontSize: "0.72rem",
+                                            fontWeight: 700,
+                                            cursor: !canGoNextMonth ? "not-allowed" : "pointer",
+                                            opacity: !canGoNextMonth ? 0.35 : 1,
+                                            whiteSpace: "nowrap",
+                                            transition: "all 0.15s ease",
+                                          }}
+                                          title={
+                                            canGoNextMonth
+                                              ? `Geser ke bulan berikutnya (${allFlatMonths[currentWeeklyMonthIdx - 1]?.label})`
+                                              : `Sudah di bulan terbaru (${allFlatMonths[0]?.label})`
+                                          }
+                                        >
+                                          Maju ►
+                                        </button>
+
+                                        {/* Tombol Cepat Kembali ke Bulan Ini (jika sedang melihat bulan arsip masa lalu) */}
+                                        {isViewingPastWeeklyMonth && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setSelectedWeeklyMonth(thisMonthKey);
+                                              setSelectedWeekKey(null);
+                                            }}
+                                            style={{
+                                              background: "rgba(245, 158, 11, 0.18)",
+                                              border: "1px solid rgba(245, 158, 11, 0.45)",
+                                              color: "#FDE047",
+                                              padding: "5px 8px",
+                                              borderRadius: 7,
+                                              fontSize: "0.7rem",
+                                              fontWeight: 700,
+                                              cursor: "pointer",
+                                              whiteSpace: "nowrap",
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: 4,
+                                              boxShadow: "0 0 10px rgba(245, 158, 11, 0.25)",
+                                              transition: "all 0.15s ease",
+                                            }}
+                                            title={`Kembali langsung ke bulan berjalan (${formatMonthLabel(thisMonthKey)})`}
+                                          >
+                                            <span>🌟</span>
+                                            <span>Bulan Ini</span>
+                                          </button>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        {/* Mode Preset Mingguan: Paginasi Offset Minggu */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (canGoPreviousWeeks) {
+                                              setWeekPageOffset(o => o + 1);
+                                            }
+                                          }}
+                                          disabled={!canGoPreviousWeeks}
+                                          style={{
+                                            background: !canGoPreviousWeeks ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.18)",
+                                            border: !canGoPreviousWeeks ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.45)",
+                                            color: !canGoPreviousWeeks ? "var(--text-muted)" : "#EDE9FE",
+                                            padding: "5px 8px",
+                                            borderRadius: 7,
+                                            fontSize: "0.72rem",
+                                            fontWeight: 700,
+                                            cursor: !canGoPreviousWeeks ? "not-allowed" : "pointer",
+                                            opacity: !canGoPreviousWeeks ? 0.35 : 1,
+                                            whiteSpace: "nowrap",
+                                            transition: "all 0.15s ease",
+                                          }}
+                                          title={
+                                            !canGoPreviousWeeks
+                                              ? earliestAssignedDate
+                                                ? `Batas awal penugasan kartu tercapai (${formatDateShortIndo(earliestAssignedDate)})`
+                                                : "Tidak ada riwayat sebelum ini"
+                                              : "Lihat minggu-minggu sebelumnya di masa lalu"
+                                          }
+                                        >
+                                          ◄ Lalu
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setWeekPageOffset(o => Math.max(0, o - 1))}
+                                          disabled={weekPageOffset === 0}
+                                          style={{
+                                            background: weekPageOffset === 0 ? "rgba(255,255,255,0.03)" : "rgba(139,92,246,0.18)",
+                                            border: weekPageOffset === 0 ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(139,92,246,0.45)",
+                                            color: weekPageOffset === 0 ? "var(--text-muted)" : "#EDE9FE",
+                                            padding: "5px 8px",
+                                            borderRadius: 7,
+                                            fontSize: "0.72rem",
+                                            fontWeight: 700,
+                                            cursor: weekPageOffset === 0 ? "not-allowed" : "pointer",
+                                            opacity: weekPageOffset === 0 ? 0.35 : 1,
+                                            whiteSpace: "nowrap",
+                                            transition: "all 0.15s ease",
+                                          }}
+                                          title={weekPageOffset === 0 ? "Sudah berada di minggu terbaru" : "Lihat minggu-minggu berikutnya"}
+                                        >
+                                          Maju ►
+                                        </button>
+
+                                        {weekPageOffset > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setWeekPageOffset(0)}
+                                            style={{
+                                              background: "rgba(245, 158, 11, 0.18)",
+                                              border: "1px solid rgba(245, 158, 11, 0.45)",
+                                              color: "#FDE047",
+                                              padding: "5px 8px",
+                                              borderRadius: 7,
+                                              fontSize: "0.7rem",
+                                              fontWeight: 700,
+                                              cursor: "pointer",
+                                              whiteSpace: "nowrap",
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: 4,
+                                            }}
+                                            title="Kembali ke minggu berjalan"
+                                          >
+                                            <span>🌟</span>
+                                            <span>Terkini</span>
+                                          </button>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                 </div>
