@@ -2760,7 +2760,7 @@ export default function TapsPage() {
               }}
               className={`main-view-btn ${activeTab === "bulanan" ? "active" : ""}`}
             >
-              <span>🏆</span> <span>Leaderboard Toko</span>
+              <span>🏆</span> <span>Leaderboard<span className="desktop-inline"> Toko</span></span>
             </button>
             <button
               id="tab-btn-tidur"
@@ -2772,7 +2772,7 @@ export default function TapsPage() {
               }}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
-              <span>😴</span> <span>Belum Ada Tap</span>
+              <span>😴</span> <span>Belum <span className="desktop-inline">Ada </span>Tap</span>
               {sleepingCards.length > 0 && (
                 <span className="tab-pill-badge">{sleepingCards.length}</span>
               )}
