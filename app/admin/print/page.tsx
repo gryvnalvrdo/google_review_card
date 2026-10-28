@@ -124,6 +124,67 @@ function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: 
   };
 }
 
+// ─── Deteksi QR Code Bawaan Desain Klien (ZXing QR Scanner & Fallback Box) ───
+async function detectClientQRCode(img: HTMLImageElement): Promise<{
+  x: number;
+  y: number;
+  size: number;
+  detected: boolean;
+  qrFound: boolean;
+  text?: string;
+}> {
+  const cardW = img.naturalWidth || DEFAULT_CARD_W;
+  const cardH = img.naturalHeight || DEFAULT_CARD_H;
+  if (!cardW || !cardH) return { x: 100, y: 100, size: 200, detected: false, qrFound: false };
+
+  // 1. Coba deteksi QR code nyata bawaan klien menggunakan ZXing BrowserQRCodeReader
+  try {
+    const { BrowserQRCodeReader } = await import("@zxing/library");
+    const reader = new BrowserQRCodeReader();
+    const result = await reader.decodeFromImageElement(img);
+
+    if (result) {
+      const points = result.getResultPoints();
+      if (points && points.length >= 2) {
+        const xs = points.map((p) => p.getX());
+        const ys = points.map((p) => p.getY());
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        const distFinder = Math.max(maxX - minX, maxY - minY);
+        // Finder pattern berjarak ~75-80% dari lebar total QR code
+        const rawSize = Math.max(distFinder * 1.34, 70);
+        const cX = (minX + maxX) / 2;
+        const cY = (minY + maxY) / 2;
+
+        const size = Math.round(Math.min(rawSize, Math.min(cardW, cardH) * 0.95));
+        const x = Math.max(0, Math.round(cX - size / 2));
+        const y = Math.max(0, Math.round(cY - size / 2));
+
+        return {
+          x,
+          y,
+          size,
+          detected: true,
+          qrFound: true,
+          text: result.getText(),
+        };
+      }
+    }
+  } catch (err) {
+    console.log("ZXing auto QR detect pass:", err);
+  }
+
+  // 2. Fallback: Deteksi kotak warna di tengah kartu
+  const boxResult = detectBoxInImage(img);
+  return {
+    ...boxResult,
+    qrFound: false,
+  };
+}
+
 function generateRandomCode(length = 6): string {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
   let out = "";
@@ -511,22 +572,22 @@ export default function PrintQRCodes() {
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         setCustomImg(img);
         setBgImage(img);
         setTemplateMode("custom");
         setShowPlacementEditor(true);
 
-        const result = detectBoxInImage(img);
+        const result = await detectClientQRCode(img);
         const newPlacement: QRPlacementConfig = {
           x: result.x,
           y: result.y,
           size: result.size,
-          style: "white_box", // Default aman & kontras tinggi untuk semua desain
+          style: "white_box", // Kotak putih solid agar QR dummy bawaan klien 100% tertutup dan terhapus
           fgColor: "#000000",
           dotStyle: "dots",
           padding: 18,
-          radius: 16,
+          radius: 14,
         };
 
         setPlacement(newPlacement);
@@ -536,10 +597,14 @@ export default function PrintQRCodes() {
           localStorage.setItem("custom_qr_placement", JSON.stringify({ placement: newPlacement }));
         } catch {}
 
-        if (result.detected) {
+        if (result.qrFound) {
+          setSnapFeedback("🎯 Berhasil mendeteksi QR Code bawaan klien! Area QR lama otomatis ditimpa & diganti dengan QR unik baru.");
+        } else if (result.detected) {
           setSnapFeedback("✅ Area kotak desain kartu terdeteksi! Ukuran & posisi QR disesuaikan.");
-          setTimeout(() => setSnapFeedback(null), 3500);
+        } else {
+          setSnapFeedback("ℹ️ Tidak ditemukan QR otomatis, posisi QR disesuaikan di tengah kartu. Silakan sesuaikan.");
         }
+        setTimeout(() => setSnapFeedback(null), 4500);
       };
       img.src = dataUrl;
     };
@@ -653,13 +718,7 @@ export default function PrintQRCodes() {
     composedCanvases.current.set(code, canvas);
   }, []);
 
-  function handleDownloadSingle(code: string) {
-    const canvas = composedCanvases.current.get(code);
-    if (!canvas) return;
-    canvas.toBlob((blob) => {
-      if (blob) saveAs(blob, `Kartu_${code}.png`);
-    }, "image/png");
-  }
+
 
   function handleOpenPreview(code: string) {
     const canvas = composedCanvases.current.get(code);
@@ -671,13 +730,86 @@ export default function PrintQRCodes() {
     }
   }
 
+  // ── Auto Save to Stock Helper ─────────────────────────────────────────────
+  const autoSaveToStock = useCallback(async (codesToSave: string[]) => {
+    if (!codesToSave || codesToSave.length === 0) return;
+    try {
+      const res = await fetch("/api/admin/stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codes: codesToSave }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setSaveResult(`✅ ${data.saved ?? codesToSave.length} kartu otomatis disimpan ke stok!`);
+        setTimeout(() => setSaveResult(null), 4000);
+      }
+    } catch {
+      // Background auto-save without disruption
+    }
+  }, []);
+
+  function handleDownloadSingle(code: string) {
+    const canvas = composedCanvases.current.get(code);
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (blob) {
+        saveAs(blob, `Kartu_${code}.png`);
+        autoSaveToStock([code]);
+      }
+    }, "image/png");
+  }
+
   async function handleDownloadAllPngDirect() {
+    setIsSaving(true);
+    setProgress("Mendownload file PNG...");
     for (const [code, canvas] of composedCanvases.current) {
       canvas.toBlob((blob) => {
         if (blob) saveAs(blob, `Kartu_${code}.png`);
       }, "image/png");
       await new Promise((r) => setTimeout(r, 220));
     }
+    await autoSaveToStock(codes);
+    setIsSaving(false);
+    setProgress("");
+  }
+
+  async function handleSmartDownload() {
+    if (codes.length === 0) return;
+    if (codes.length >= 10) {
+      await handleDownloadZip();
+    } else if (codes.length === 1) {
+      handleDownloadSingle(codes[0]);
+    } else {
+      await handleDownloadAllPngDirect();
+    }
+  }
+
+  async function handleDetectAndReplaceQR() {
+    if (!bgImage) return;
+    setSnapFeedback("🔍 Sedang memindai QR code pada desain kartu...");
+    const result = await detectClientQRCode(bgImage);
+
+    setPlacement((prev) => ({
+      ...prev,
+      x: result.x,
+      y: result.y,
+      size: result.size,
+      style: "white_box", // Wajib kotak putih solid agar QR lama 100% terhapus dan bersih
+      padding: Math.max(16, prev.padding || 18),
+      radius: Math.max(12, prev.radius || 14),
+    }));
+
+    if (result.qrFound) {
+      setSnapFeedback(
+        `🎯 QR Code bawaan klien terdeteksi! Area QR lama otomatis dihapus & ditimpa QR unik baru.`
+      );
+    } else if (result.detected) {
+      setSnapFeedback("✅ Area kotak desain kartu terdeteksi! Posisi QR disesuaikan.");
+    } else {
+      setSnapFeedback("ℹ️ QR bawaan tidak terdeteksi otomatis, posisi QR diratakan di tengah kartu. Anda dapat menggeser/mengatur ukurannya.");
+    }
+    setTimeout(() => setSnapFeedback(null), 4500);
   }
 
   useEffect(() => {
@@ -724,6 +856,7 @@ export default function PrintQRCodes() {
     setProgress("Membuat ZIP...");
     const content = await zip.generateAsync({ type: "blob" });
     saveAs(content, "NFC_Review_Cards.zip");
+    await autoSaveToStock(codes);
     setIsZipping(false);
     setProgress("");
   }
@@ -1068,12 +1201,12 @@ export default function PrintQRCodes() {
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
                     <button
                       type="button"
-                      onClick={handleAutoSnapBox}
+                      onClick={handleDetectAndReplaceQR}
                       className="print-btn"
                       style={{
                         width: "100%",
-                        padding: "8px 12px",
-                        fontSize: "0.76rem",
+                        padding: "9px 14px",
+                        fontSize: "0.78rem",
                         background: "linear-gradient(135deg, #4F46E5, #6366F1)",
                         border: "1px solid rgba(99,102,241,0.4)",
                         color: "#FFF",
@@ -1082,9 +1215,9 @@ export default function PrintQRCodes() {
                         justifyContent: "center",
                         gap: 6,
                       }}
-                      title="Deteksi area kotak pada kartu secara otomatis dan letakkan QR di dalamnya tanpa mengubah gaya latar"
+                      title="Deteksi QR Code bawaan pada desain kartu klien, lalu hapus/timpa bersih dengan QR code dinamis unik baru"
                     >
-                      <span>🎯 Paskan ke Kotak Desain (Auto-Detect)</span>
+                      <span>🎯 Deteksi &amp; Timpa QR Desain Klien</span>
                     </button>
 
                     {snapFeedback && (
@@ -1516,16 +1649,25 @@ export default function PrintQRCodes() {
 
               {codes.length > 0 && !isZipping && !isSaving && (
                 <>
-                  <button type="button" className="print-btn print-btn-cyan" onClick={handleSaveToStok}>
-                    💾 Simpan ke Stok
-                  </button>
-
-                  <button type="button" className="print-btn print-btn-amber" onClick={handleDownloadZip}>
-                    📦 Download ZIP
-                  </button>
-
-                  <button type="button" className="print-btn print-btn-emerald" onClick={() => window.print()}>
-                    🖨️ Print
+                  <button
+                    type="button"
+                    className="print-btn print-btn-amber"
+                    onClick={handleSmartDownload}
+                    title={
+                      codes.length >= 10
+                        ? `Download ${codes.length} kartu dalam 1 file ZIP (Otomatis simpan ke stok)`
+                        : codes.length === 1
+                        ? "Download 1 file PNG langsung (Otomatis simpan ke stok)"
+                        : `Download ${codes.length} file PNG langsung satu per satu (Otomatis simpan ke stok)`
+                    }
+                  >
+                    {codes.length >= 10 ? (
+                      <>📦 Download ZIP ({codes.length})</>
+                    ) : codes.length === 1 ? (
+                      <>💾 Download PNG Kartu</>
+                    ) : (
+                      <>💾 Download {codes.length} PNG Langsung</>
+                    )}
                   </button>
 
                   <button
@@ -1636,17 +1778,7 @@ export default function PrintQRCodes() {
                     {copiedAll ? "✓ Semua Link Disalin!" : "📋 Salin Semua Link"}
                   </button>
                 
-                {codes.length === 1 ? (
-                  <button
-                    type="button"
-                    className="print-btn print-btn-amber"
-                    onClick={() => handleDownloadSingle(codes[0])}
-                    style={{ padding: "8px 18px", fontSize: "0.82rem", fontWeight: 700 }}
-                    title="Download langsung file PNG tanpa kompresi ZIP"
-                  >
-                    ⬇ Download PNG Langsung
-                  </button>
-                ) : (
+                {codes.length >= 10 ? (
                   <>
                     <button
                       type="button"
@@ -1654,7 +1786,7 @@ export default function PrintQRCodes() {
                       onClick={handleDownloadZip}
                       disabled={isZipping}
                       style={{ padding: "7px 14px", fontSize: "0.78rem" }}
-                      title="Download seluruh kartu dalam 1 file ZIP praktis"
+                      title="Download seluruh kartu dalam 1 file ZIP praktis (Otomatis simpan ke stok)"
                     >
                       📦 Download ZIP ({codes.length})
                     </button>
@@ -1663,9 +1795,41 @@ export default function PrintQRCodes() {
                       className="print-btn print-btn-ghost"
                       onClick={handleDownloadAllPngDirect}
                       style={{ padding: "7px 12px", fontSize: "0.78rem" }}
-                      title="Download semua file PNG satu per satu langsung ke folder download"
+                      title="Download semua file PNG satu per satu tanpa kompresi ZIP"
                     >
-                      ⬇ Download Semua PNG
+                      ⬇ PNG Langsung
+                    </button>
+                  </>
+                ) : codes.length === 1 ? (
+                  <button
+                    type="button"
+                    className="print-btn print-btn-amber"
+                    onClick={() => handleDownloadSingle(codes[0])}
+                    style={{ padding: "8px 18px", fontSize: "0.82rem", fontWeight: 700 }}
+                    title="Download langsung file PNG (Otomatis simpan ke stok)"
+                  >
+                    ⬇ Download PNG Langsung
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="print-btn print-btn-amber"
+                      onClick={handleDownloadAllPngDirect}
+                      style={{ padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700 }}
+                      title="Download langsung seluruh file PNG satu per satu (Otomatis simpan ke stok)"
+                    >
+                      ⬇ Download {codes.length} PNG Langsung
+                    </button>
+                    <button
+                      type="button"
+                      className="print-btn print-btn-ghost"
+                      onClick={handleDownloadZip}
+                      disabled={isZipping}
+                      style={{ padding: "7px 12px", fontSize: "0.76rem" }}
+                      title="Download sebagai file ZIP jika diinginkan"
+                    >
+                      📦 Jadikan ZIP
                     </button>
                   </>
                 )}
