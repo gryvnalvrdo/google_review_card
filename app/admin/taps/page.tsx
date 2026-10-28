@@ -2226,11 +2226,7 @@ export default function TapsPage() {
     [cards, tappedCodesInPeriod, search]
   );
 
-  // Kartu yang belum pernah tap sama sekali (all-time), untuk badge count di tombol tab
-  const neverTappedCount = useMemo(() =>
-    cards.filter(c => !tappedCodes.has(c.code)).length,
-    [cards, tappedCodes]
-  );
+
   const activeCards = useMemo(() =>
     cards.filter(c => tappedCodes.has(c.code)),
     [cards, tappedCodes]
@@ -2381,7 +2377,7 @@ export default function TapsPage() {
               onClick={() => setActiveTab("tidur")}
               className={`main-view-btn ${activeTab === "tidur" ? "danger active" : ""}`}
             >
-              <span>😴</span> Belum Ada Tap {neverTappedCount > 0 && `(${neverTappedCount})`}
+              <span>😴</span> Belum Ada Tap {sleepingCards.length > 0 && `(${sleepingCards.length})`}
             </button>
           </div>
 
@@ -4310,39 +4306,6 @@ export default function TapsPage() {
               </div>
             ) : (
               <div>
-                {/* ── Header periode ── */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: 600 }}>
-                      Periode:
-                    </span>
-                    <span style={{
-                      fontSize: "0.78rem", fontWeight: 700,
-                      color: sleepingPeriod === "today" ? "#34D399" : sleepingPeriod === "last7" ? "#A5B4FC" : "#FCD34D",
-                      background: sleepingPeriod === "today" ? "rgba(16,185,129,0.1)" : sleepingPeriod === "last7" ? "rgba(99,102,241,0.1)" : "rgba(245,158,11,0.1)",
-                      border: `1px solid ${sleepingPeriod === "today" ? "rgba(16,185,129,0.35)" : sleepingPeriod === "last7" ? "rgba(99,102,241,0.35)" : "rgba(245,158,11,0.35)"}`,
-                      padding: "3px 12px", borderRadius: 999,
-                    }}>
-                      {sleepingPeriod === "today" ? "☀️ Hari Ini" : sleepingPeriod === "last7" ? "📅 7 Hari Terakhir" : "🗓️ 1 Bulan Terakhir"}
-                    </span>
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                      (ikuti pilihan periode di atas)
-                    </span>
-                  </div>
-                  <span style={{
-                    fontSize: "0.76rem",
-                    fontWeight: 700,
-                    color: sleepingCards.length > 0 ? "#FCA5A5" : "#34D399",
-                    background: sleepingCards.length > 0 ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                    border: `1px solid ${sleepingCards.length > 0 ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`,
-                    padding: "3px 10px",
-                    borderRadius: 999,
-                    whiteSpace: "nowrap",
-                  }}>
-                    {sleepingCards.length} kartu belum tap
-                  </span>
-                </div>
-
                 <div style={{
                   padding: "14px 18px", marginBottom: 16,
                   background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)",
@@ -4378,7 +4341,8 @@ export default function TapsPage() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {sleepingCards.map((card) => {
-                      // Hitung berapa kali kartu ini pernah di-tap secara keseluruhan
+                      // Cari tap terakhir kartu ini (all-time)
+                      const lastTapEntry = validLogs.find(l => l.code === card.code);
                       const totalTaps = validLogs.filter(l => l.code === card.code).length;
                       return (
                         <div
@@ -4407,12 +4371,22 @@ export default function TapsPage() {
                               </div>
                               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                                 <span>Kode: <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{card.code}</strong></span>
-                                <span>·</span>
-                                <span>Dibuat: {card.createdAt ? formatDateShortIndo(card.createdAt) : "-"}</span>
+                                {lastTapEntry ? (
+                                  <>
+                                    <span>·</span>
+                                    <span>Last tap: <strong style={{ color: "#FCD34D" }}>{timeAgo(lastTapEntry.tappedAt)}</strong></span>
+                                    <span style={{ color: "rgba(255,255,255,0.2)" }}>({formatTapDateTime(lastTapEntry.tappedAt)})</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>·</span>
+                                    <span style={{ color: "#F87171" }}>Belum pernah di-tap</span>
+                                  </>
+                                )}
                                 {totalTaps > 0 && (
                                   <>
                                     <span>·</span>
-                                    <span style={{ color: "#94A3B8" }}>Total all-time: <strong style={{ color: "#818CF8" }}>{totalTaps} tap</strong></span>
+                                    <span>Total: <strong style={{ color: "#818CF8" }}>{totalTaps}×</strong></span>
                                   </>
                                 )}
                               </div>
@@ -4424,15 +4398,6 @@ export default function TapsPage() {
                             style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <span style={{
-                              fontSize: "0.7rem", fontWeight: 700,
-                              color: "#FCA5A5", background: "rgba(239,68,68,0.12)",
-                              border: "1px solid rgba(239,68,68,0.25)",
-                              padding: "4px 8px", borderRadius: 999,
-                              whiteSpace: "nowrap",
-                            }}>
-                              {sleepingPeriod === "today" ? "Belum Tap Hari Ini" : sleepingPeriod === "last7" ? "Diam 7 Hari" : "Diam 1 Bulan"}
-                            </span>
                             <a
                               href={`/c/${card.code}`}
                               target="_blank"
