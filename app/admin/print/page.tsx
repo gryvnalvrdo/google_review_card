@@ -615,10 +615,38 @@ export default function PrintQRCodes() {
   const [customImg, setCustomImg] = useState<HTMLImageElement | null>(null);
   const [bgLoaded, setBgLoaded] = useState(false);
 
-  // QR Placement State
-  const [placement, setPlacement] = useState<QRPlacementConfig>(DEFAULT_PLACEMENT);
+  // QR Placement State (Terpisah antara Template Standar dan Desain Klien)
+  const [defaultPlacement, setDefaultPlacement] = useState<QRPlacementConfig>(DEFAULT_PLACEMENT);
+  const [customPlacement, setCustomPlacement] = useState<QRPlacementConfig>(DEFAULT_PLACEMENT);
   const [showPlacementEditor, setShowPlacementEditor] = useState(false);
   const [snapFeedback, setSnapFeedback] = useState<string | null>(null);
+
+  // Placement aktif sesuai mode yang sedang dipilih
+  const placement = templateMode === "default" ? defaultPlacement : customPlacement;
+
+  const setPlacement = useCallback(
+    (updater: React.SetStateAction<QRPlacementConfig>) => {
+      composedCanvases.current.clear();
+      if (templateMode === "default") {
+        setDefaultPlacement((prev) => {
+          const next = typeof updater === "function" ? updater(prev) : updater;
+          try {
+            localStorage.setItem("default_qr_placement", JSON.stringify({ placement: next }));
+          } catch {}
+          return next;
+        });
+      } else {
+        setCustomPlacement((prev) => {
+          const next = typeof updater === "function" ? updater(prev) : updater;
+          try {
+            localStorage.setItem("custom_qr_placement", JSON.stringify({ placement: next }));
+          } catch {}
+          return next;
+        });
+      }
+    },
+    [templateMode]
+  );
 
   const [isZipping, setIsZipping] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -656,7 +684,7 @@ export default function PrintQRCodes() {
 
       setPlacement((prev) => ({ ...prev, x: nextX, y: nextY }));
     },
-    [bgImage, placement.size]
+    [bgImage, placement.size, setPlacement]
   );
 
   function handleNudge(dx: number, dy: number) {
@@ -671,7 +699,7 @@ export default function PrintQRCodes() {
     }));
   }
 
-  // Load default template on mount
+  // Load default template on mount + pulihkan konfigurasi tersimpan
   useEffect(() => {
     setBaseUrl(window.location.origin);
     const img = new Image();
@@ -683,41 +711,40 @@ export default function PrintQRCodes() {
     img.onerror = () => console.error("Gagal load /card-design.png");
     img.crossOrigin = "anonymous";
     img.src = "/card-design.png";
-  }, []);
 
-  // Auto-save placement to localStorage HANYA saat di mode custom
-  useEffect(() => {
-    if (templateMode === "custom") {
-      try {
-        localStorage.setItem("custom_qr_placement", JSON.stringify({ placement }));
-      } catch {}
-    }
-  }, [placement, templateMode]);
+    try {
+      const savedDefault = localStorage.getItem("default_qr_placement");
+      if (savedDefault) {
+        const parsed = JSON.parse(savedDefault);
+        if (parsed.placement) {
+          setDefaultPlacement({ ...DEFAULT_PLACEMENT, ...parsed.placement });
+        }
+      }
+    } catch {}
+
+    try {
+      const savedCustom = localStorage.getItem("custom_qr_placement");
+      if (savedCustom) {
+        const parsed = JSON.parse(savedCustom);
+        if (parsed.placement) {
+          setCustomPlacement({ ...DEFAULT_PLACEMENT, ...parsed.placement });
+        }
+      }
+    } catch {}
+  }, []);
 
   // Handle Switch Mode Template
   function handleSelectMode(mode: "default" | "custom") {
     setTemplateMode(mode);
     composedCanvases.current.clear();
     if (mode === "default") {
-      setShowPlacementEditor(false); // Tutup editor agar desain default standar tidak terganggu
       if (defaultImg) {
         setBgImage(defaultImg);
       }
-      setPlacement(DEFAULT_PLACEMENT); // Selalu kunci ke setelan standar Hantic asli
     } else {
       if (customImg) {
         setBgImage(customImg);
         setShowPlacementEditor(true);
-        // Pulihkan custom placement yang pernah disimpan untuk desain kustom
-        try {
-          const savedConfig = localStorage.getItem("custom_qr_placement");
-          if (savedConfig) {
-            const parsed = JSON.parse(savedConfig);
-            if (parsed.placement) {
-              setPlacement({ ...DEFAULT_PLACEMENT, ...parsed.placement });
-            }
-          }
-        } catch {}
       } else {
         // Trigger upload jika belum ada custom template
         fileInputRef.current?.click();
@@ -729,7 +756,6 @@ export default function PrintQRCodes() {
   function handleCloseAndResetCustom() {
     setShowPlacementEditor(false);
     setTemplateMode("default");
-    setPlacement(DEFAULT_PLACEMENT);
     if (defaultImg) {
       setBgImage(defaultImg);
     }
@@ -849,20 +875,28 @@ export default function PrintQRCodes() {
   }
 
   function handleResetPlacement() {
-    if (!bgImage) return;
-    const cardW = bgImage.naturalWidth || DEFAULT_CARD_W;
-    const cardH = bgImage.naturalHeight || DEFAULT_CARD_H;
-    const defaultSz = Math.round(Math.min(cardW, cardH) * 0.42);
-    setPlacement((prev) => ({
-      ...prev,
-      x: Math.round((cardW - defaultSz) / 2),
-      y: Math.round((cardH - defaultSz) / 2),
-      size: defaultSz,
-      style: "white_box",
-      padding: 18,
-      radius: 16,
-    }));
-    setSnapFeedback("↺ Ukuran dan posisi QR dikembalikan ke standar awal.");
+    if (templateMode === "default") {
+      setPlacement(DEFAULT_PLACEMENT);
+      try {
+        localStorage.removeItem("default_qr_placement");
+      } catch {}
+      setSnapFeedback("↺ Desain & posisi QR dikembalikan ke standar kalibrasi Hantic.");
+    } else {
+      if (!bgImage) return;
+      const cardW = bgImage.naturalWidth || DEFAULT_CARD_W;
+      const cardH = bgImage.naturalHeight || DEFAULT_CARD_H;
+      const defaultSz = Math.round(Math.min(cardW, cardH) * 0.42);
+      setPlacement((prev) => ({
+        ...prev,
+        x: Math.round((cardW - defaultSz) / 2),
+        y: Math.round((cardH - defaultSz) / 2),
+        size: defaultSz,
+        style: "white_box",
+        padding: 18,
+        radius: 16,
+      }));
+      setSnapFeedback("↺ Ukuran dan posisi QR dikembalikan ke standar awal.");
+    }
     setTimeout(() => setSnapFeedback(null), 3000);
   }
 
@@ -1068,7 +1102,7 @@ export default function PrintQRCodes() {
     }
   }
 
-  const effectivePlacement = templateMode === "default" ? DEFAULT_PLACEMENT : placement;
+  const effectivePlacement = placement;
 
   const cardW = bgImage?.naturalWidth || DEFAULT_CARD_W;
   const cardH = bgImage?.naturalHeight || DEFAULT_CARD_H;
@@ -1182,54 +1216,76 @@ export default function PrintQRCodes() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {templateMode !== "custom" && (
+              <button
+                type="button"
+                className={`print-btn ${showPlacementEditor ? "print-btn-indigo" : "print-btn-ghost"}`}
+                onClick={() => setShowPlacementEditor((prev) => !prev)}
+                style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
+                title="Buka Studio Desain untuk mengatur logo tengah (Google/Bintang/NFC/Polos), gaya titik, warna, dan posisi QR"
+              >
+                <span>🎨</span>
+                <span>{showPlacementEditor ? "Tutup Studio Desain" : "Kustomisasi Desain QR"}</span>
+              </button>
+
+              {templateMode === "default" ? (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#94A3B8", background: "rgba(255,255,255,0.03)", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <span>🔒</span> Desain Standar Hantic (Presisi Terkalibrasi)
+                  <span>💳</span> Template Standar Hantic
+                </div>
+              ) : (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#FCD34D", background: "rgba(245,158,11,0.1)", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(245,158,11,0.25)" }}>
+                  <span>🎨</span> Desain Kustom Klien
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── QR Placement & Position Adjuster Panel (HANYA AKTIF DI MODE CUSTOM) ── */}
-          {templateMode === "custom" && showPlacementEditor && (
+          {/* ── QR Placement & Position Adjuster Panel (BISA DIAKSES BAIK STANDAR MAUPUN CUSTOM) ── */}
+          {showPlacementEditor && (
             <div className="placement-editor">
               <div className="placement-editor-header">
                 <div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 7 }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                     <span>🎯</span> Studio Desain &amp; Posisi QR Code
+                    <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: 6, background: templateMode === "default" ? "rgba(99,102,241,0.2)" : "rgba(245,158,11,0.2)", color: templateMode === "default" ? "#A5B4FC" : "#FCD34D", border: `1px solid ${templateMode === "default" ? "rgba(99,102,241,0.4)" : "rgba(245,158,11,0.4)"}` }}>
+                      {templateMode === "default" ? "Template Standar Hantic" : `Desain Klien (${customImageName || "Kustom"})`}
+                    </span>
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: 2 }}>
-                    Tarik kotak QR pada kartu atau klik langsung ke posisi baru. Atur gaya titik, warna, dan ukuran secara instan.
+                    {templateMode === "default"
+                      ? "Pilih logo tengah (Google, Bintang 5, NFC, atau Polos tanpa logo), gaya titik, warna, dan ukuran QR untuk template standar."
+                      : "Tarik kotak QR pada kartu atau klik langsung ke posisi baru. Atur gaya titik, warna, dan ukuran secara instan."}
                   </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="print-btn print-btn-ghost"
-                    style={{ fontSize: "0.72rem", padding: "5px 12px" }}
-                    title="Ganti dengan file gambar kartu lain"
-                  >
-                    🔄 Ganti Gambar
-                  </button>
+                  {templateMode === "custom" && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="print-btn print-btn-ghost"
+                      style={{ fontSize: "0.72rem", padding: "5px 12px" }}
+                      title="Ganti dengan file gambar kartu lain"
+                    >
+                      🔄 Ganti Gambar
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleResetPlacement}
                     className="print-btn print-btn-ghost"
                     style={{ fontSize: "0.72rem", padding: "5px 12px" }}
-                    title="Kembalikan posisi & ukuran ke setelan bawaan"
+                    title={templateMode === "default" ? "Kembalikan ke setelan standar Hantic asli" : "Kembalikan posisi & ukuran ke setelan bawaan"}
                   >
-                    ↺ Reset Posisi
+                    ↺ Reset ke Standar
                   </button>
                   <button
                     type="button"
-                    onClick={handleCloseAndResetCustom}
+                    onClick={() => setShowPlacementEditor(false)}
                     className="print-btn print-btn-ghost"
                     style={{ fontSize: "0.72rem", padding: "5px 12px", borderColor: "rgba(255,255,255,0.15)" }}
-                    title="Tutup studio dan kembalikan ke desain standar Hantic"
+                    title="Tutup studio desain"
                   >
-                    ✕ Tutup
+                    ✕ Tutup Studio
                   </button>
                 </div>
               </div>
@@ -1389,26 +1445,48 @@ export default function PrintQRCodes() {
 
                   {/* Quick Action Buttons Directly Under Card */}
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                    <button
-                      type="button"
-                      onClick={handleDetectAndReplaceQR}
-                      className="print-btn"
-                      style={{
-                        width: "100%",
-                        padding: "9px 14px",
-                        fontSize: "0.78rem",
-                        background: "linear-gradient(135deg, #4F46E5, #6366F1)",
-                        border: "1px solid rgba(99,102,241,0.4)",
-                        color: "#FFF",
-                        boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
-                        fontWeight: 700,
-                        justifyContent: "center",
-                        gap: 6,
-                      }}
-                      title="Deteksi QR Code bawaan pada desain kartu klien, lalu hapus/timpa bersih dengan QR code dinamis unik baru"
-                    >
-                      <span>🎯 Deteksi &amp; Timpa QR Desain Klien</span>
-                    </button>
+                    {templateMode === "custom" ? (
+                      <button
+                        type="button"
+                        onClick={handleDetectAndReplaceQR}
+                        className="print-btn"
+                        style={{
+                          width: "100%",
+                          padding: "9px 14px",
+                          fontSize: "0.78rem",
+                          background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                          border: "1px solid rgba(99,102,241,0.4)",
+                          color: "#FFF",
+                          boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
+                          fontWeight: 700,
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                        title="Deteksi QR Code bawaan pada desain kartu klien, lalu hapus/timpa bersih dengan QR code dinamis unik baru"
+                      >
+                        <span>🎯 Deteksi &amp; Timpa QR Desain Klien</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResetPlacement}
+                        className="print-btn"
+                        style={{
+                          width: "100%",
+                          padding: "9px 14px",
+                          fontSize: "0.78rem",
+                          background: "rgba(99, 102, 241, 0.15)",
+                          border: "1px solid rgba(99, 102, 241, 0.35)",
+                          color: "#C7D2FE",
+                          fontWeight: 700,
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                        title="Kembalikan posisi dan ukuran QR code tepat di tengah kotak putih kartu Standar Hantic"
+                      >
+                        <span>🎯 Paskan ke Kotak Standar Hantic ({DEFAULT_BOX_SIZE}×{DEFAULT_BOX_SIZE} px)</span>
+                      </button>
+                    )}
 
                     {snapFeedback && (
                       <div style={{
@@ -1896,26 +1974,43 @@ export default function PrintQRCodes() {
                         </div>
 
                         <div className="slider-group-grid">
-                          <button
-                            type="button"
-                            onClick={handleDetectAndReplaceQR}
-                            className="print-btn"
-                            style={{
-                              width: "100%",
-                              padding: "9px 14px",
-                              fontSize: "0.78rem",
-                              background: "linear-gradient(135deg, #4F46E5, #6366F1)",
-                              border: "1px solid rgba(99,102,241,0.4)",
-                              color: "#FFF",
-                              boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
-                              fontWeight: 700,
-                              justifyContent: "center",
-                              gap: 6,
-                            }}
-                            title="Deteksi QR Code dummy klien dan sesuaikan posisi & ukuran secara instan"
-                          >
-                            <span>🎯 Deteksi &amp; Timpa QR Desain Klien</span>
-                          </button>
+                          {templateMode === "custom" ? (
+                            <button
+                              type="button"
+                              onClick={handleDetectAndReplaceQR}
+                              className="print-btn"
+                              style={{
+                                width: "100%",
+                                padding: "9px 14px",
+                                fontSize: "0.78rem",
+                                background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                                border: "1px solid rgba(99,102,241,0.4)",
+                                color: "#FFF",
+                                boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
+                                fontWeight: 700,
+                                justifyContent: "center",
+                                gap: 6,
+                              }}
+                              title="Deteksi QR Code dummy klien dan sesuaikan posisi & ukuran secara instan"
+                            >
+                              <span>🎯 Deteksi &amp; Timpa QR Desain Klien</span>
+                            </button>
+                          ) : (
+                            <div style={{
+                              padding: "10px 14px",
+                              borderRadius: 8,
+                              background: "rgba(99, 102, 241, 0.1)",
+                              border: "1px solid rgba(99, 102, 241, 0.25)",
+                              fontSize: "0.73rem",
+                              color: "#C7D2FE",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}>
+                              <span>📐</span>
+                              <span>Posisi awal telah terkalibrasi presisi di kotak kartu Standar Hantic ({DEFAULT_BOX_SIZE}×{DEFAULT_BOX_SIZE} px). Anda bebas mengatur ulang ukuran atau posisi jika diinginkan.</span>
+                            </div>
+                          )}
 
                           {/* Ukuran QR */}
                           <div className="slider-item">
@@ -2492,46 +2587,25 @@ export default function PrintQRCodes() {
 
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <button
-                    type="button"
-                    className="print-btn print-btn-ghost"
-                    onClick={() => {
-                      const allLinks = codes.map((c) => `${baseUrl}/c/${c}`).join("\n");
-                      navigator.clipboard.writeText(allLinks);
-                      setCopiedAll(true);
-                      setTimeout(() => setCopiedAll(false), 2000);
-                    }}
-                    style={{
-                      padding: "7px 12px",
-                      fontSize: "0.78rem",
-                      color: copiedAll ? "#34D399" : "#C7D2FE",
-                      borderColor: copiedAll ? "rgba(16, 185, 129, 0.45)" : "rgba(99, 102, 241, 0.35)",
-                      background: copiedAll ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.08)",
-                    }}
-                    title="Salin seluruh link URL NFC ke clipboard untuk dipaste ke NFC Tools"
-                  >
-                    {copiedAll ? "✓ Semua Link Disalin!" : "📋 Salin Semua Link"}
-                  </button>
-                
-                <button
-                    type="button"
-                    className="print-btn print-btn-ghost"
-                    onClick={() => {
-                      const allLinks = codes.map((c) => `${baseUrl}/c/${c}`).join("\n");
-                      navigator.clipboard.writeText(allLinks);
-                      setCopiedAll(true);
-                      setTimeout(() => setCopiedAll(false), 2000);
-                    }}
-                    style={{
-                      padding: "7px 12px",
-                      fontSize: "0.78rem",
-                      color: copiedAll ? "#34D399" : "#C7D2FE",
-                      borderColor: copiedAll ? "rgba(16, 185, 129, 0.45)" : "rgba(99, 102, 241, 0.35)",
-                      background: copiedAll ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.08)",
-                    }}
-                    title="Salin seluruh link URL NFC ke clipboard untuk dipaste ke NFC Tools"
-                  >
-                    {copiedAll ? "✓ Semua Link Disalin!" : "📋 Salin Semua Link"}
-                  </button>
+                  type="button"
+                  className="print-btn print-btn-ghost"
+                  onClick={() => {
+                    const allLinks = codes.map((c) => `${baseUrl}/c/${c}`).join("\n");
+                    navigator.clipboard.writeText(allLinks);
+                    setCopiedAll(true);
+                    setTimeout(() => setCopiedAll(false), 2000);
+                  }}
+                  style={{
+                    padding: "7px 12px",
+                    fontSize: "0.78rem",
+                    color: copiedAll ? "#34D399" : "#C7D2FE",
+                    borderColor: copiedAll ? "rgba(16, 185, 129, 0.45)" : "rgba(99, 102, 241, 0.35)",
+                    background: copiedAll ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.08)",
+                  }}
+                  title="Salin seluruh link URL NFC ke clipboard untuk dipaste ke NFC Tools"
+                >
+                  {copiedAll ? "✓ Semua Link Disalin!" : "📋 Salin Semua Link"}
+                </button>
                 
                 {codes.length >= 10 ? (
                   <>
