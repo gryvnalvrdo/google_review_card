@@ -129,6 +129,16 @@ function BarChart({
           <filter id="peakGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#8B5CF6" floodOpacity="0.6" />
           </filter>
+          {/* Gradient Vertikal Ungu Puncak -> Hijau Hari/Minggu Ini (Saat Hari/Minggu Ini Sekaligus Tertinggi) */}
+          <linearGradient id="currentPeakGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#A855F7" />
+            <stop offset="45%" stopColor="#8B5CF6" />
+            <stop offset="100%" stopColor="#10B981" />
+          </linearGradient>
+          <filter id="currentPeakGlow" x="-25%" y="-25%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#A855F7" floodOpacity="0.6" />
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#10B981" floodOpacity="0.45" />
+          </filter>
         </defs>
 
         {/* ── Sumbu Y: Horizontal Grid Lines & Tick Labels ── */}
@@ -222,18 +232,35 @@ function BarChart({
           const barH = d.value > 0 ? Math.max((d.value / niceMax) * chartH, 4) : 2;
           const by = y0 - barH;
           const isHighlight = Boolean(d.highlight);
-          const isPeak = maxVal > 0 && d.value === maxVal && !isHighlight;
+          const isMaxVal = maxVal > 0 && d.value === maxVal;
+          const isCurrentAndPeak = isHighlight && isMaxVal;
+          const isPeakOnly = isMaxVal && !isHighlight;
+          const isHighlightOnly = isHighlight && !isMaxVal;
+          const isCrown = isMaxVal;
           const isSelected = selectedIndex === i;
           const isClickable = Boolean(onBarClick);
+
           const barFill = isSelected
             ? "#38BDF8"
-            : isHighlight
+            : isCurrentAndPeak
+            ? "url(#currentPeakGrad)"
+            : isHighlightOnly
             ? "#10B981"
-            : isPeak
+            : isPeakOnly
             ? "#8B5CF6"
             : d.value === 0
             ? "rgba(255, 255, 255, 0.04)"
             : color;
+
+          const barFilter = isSelected
+            ? undefined
+            : isCurrentAndPeak && d.value > 0
+            ? "url(#currentPeakGlow)"
+            : isHighlightOnly && d.value > 0
+            ? "url(#barGlow)"
+            : isPeakOnly && d.value > 0
+            ? "url(#peakGlow)"
+            : undefined;
 
           return (
             <g
@@ -267,7 +294,7 @@ function BarChart({
                 fill={barFill}
                 stroke={isSelected ? "#FFF" : undefined}
                 strokeWidth={isSelected ? 1.5 : 0}
-                filter={isSelected ? undefined : isHighlight && d.value > 0 ? "url(#barGlow)" : isPeak && d.value > 0 ? "url(#peakGlow)" : undefined}
+                filter={barFilter}
                 style={{ transition: "all 0.2s ease" }}
               />
 
@@ -276,13 +303,29 @@ function BarChart({
                 <text
                   x={cx}
                   y={by - 6}
-                  fill={isSelected ? "#38BDF8" : isHighlight ? "#34D399" : isPeak ? "#C084FC" : "#FFFFFF"}
+                  fill={
+                    isSelected
+                      ? "#38BDF8"
+                      : isCurrentAndPeak
+                      ? "#DDD6FE"
+                      : isHighlightOnly
+                      ? "#34D399"
+                      : isPeakOnly
+                      ? "#C084FC"
+                      : "#FFFFFF"
+                  }
                   fontSize={valFontSize}
-                  fontWeight={isPeak || isHighlight ? 900 : 800}
+                  fontWeight={isMaxVal || isHighlight ? 900 : 800}
                   textAnchor="middle"
-                  style={{ textShadow: isPeak ? "0 0 10px rgba(139,92,246,0.8)" : "0 1px 3px rgba(0,0,0,0.8)" }}
+                  style={{
+                    textShadow: isCurrentAndPeak
+                      ? "0 0 12px rgba(168,85,247,0.95), 0 0 6px rgba(16,185,129,0.7)"
+                      : isPeakOnly
+                      ? "0 0 10px rgba(139,92,246,0.8)"
+                      : "0 1px 3px rgba(0,0,0,0.8)",
+                  }}
                 >
-                  {isPeak && isFewBars ? `👑 ${d.value}` : d.value}
+                  {isCrown && isFewBars ? `👑 ${d.value}` : d.value}
                 </text>
               )}
 
@@ -293,7 +336,15 @@ function BarChart({
                   y1={y0}
                   x2={cx}
                   y2={y0 + 4}
-                  stroke={isHighlight ? "#10B981" : isPeak ? "#8B5CF6" : "#64748B"}
+                  stroke={
+                    isCurrentAndPeak
+                      ? "#34D399"
+                      : isHighlightOnly
+                      ? "#10B981"
+                      : isPeakOnly
+                      ? "#8B5CF6"
+                      : "#64748B"
+                  }
                   strokeWidth={1.5}
                 />
               )}
@@ -304,7 +355,7 @@ function BarChart({
                   <text
                     x={cx}
                     y={y0 + 13}
-                    fill={isHighlight ? "#34D399" : "#E2E8F0"}
+                    fill={isCurrentAndPeak ? "#34D399" : isHighlightOnly ? "#34D399" : isPeakOnly ? "#C084FC" : "#E2E8F0"}
                     fontSize={10.5}
                     fontWeight={800}
                     textAnchor="middle"
@@ -315,9 +366,9 @@ function BarChart({
                     <text
                       x={cx}
                       y={y0 + 25}
-                      fill={isHighlight ? "#6EE7B7" : "#64748B"}
+                      fill={isCurrentAndPeak ? "#6EE7B7" : isHighlightOnly ? "#6EE7B7" : isPeakOnly ? "#DDD6FE" : "#64748B"}
                       fontSize={8}
-                      fontWeight={isHighlight || isPeak ? 700 : 500}
+                      fontWeight={isHighlight || isMaxVal ? 700 : 500}
                       textAnchor="middle"
                     >
                       {d.mobileSubLabel || d.subLabel.split(" - ")[0] || d.subLabel}
@@ -330,9 +381,9 @@ function BarChart({
                     <text
                       x={cx}
                       y={y0 + (d.subLabel ? 14 : 17)}
-                      fill={isHighlight ? "#34D399" : isPeak ? "#C084FC" : "#94A3B8"}
+                      fill={isCurrentAndPeak ? "#34D399" : isHighlightOnly ? "#34D399" : isPeakOnly ? "#C084FC" : "#94A3B8"}
                       fontSize={xLabelFontSize}
-                      fontWeight={isHighlight || isPeak ? 800 : 600}
+                      fontWeight={isHighlight || isMaxVal ? 800 : 600}
                       textAnchor="middle"
                     >
                       {d.label}
@@ -342,9 +393,9 @@ function BarChart({
                     <text
                       x={cx}
                       y={y0 + 26}
-                      fill={isHighlight ? "#A7F3D0" : isPeak ? "#DDD6FE" : "#64748B"}
+                      fill={isCurrentAndPeak ? "#A7F3D0" : isHighlightOnly ? "#A7F3D0" : isPeakOnly ? "#DDD6FE" : "#64748B"}
                       fontSize={xSubLabelFontSize}
-                      fontWeight={isHighlight ? 700 : 500}
+                      fontWeight={isHighlight || isMaxVal ? 700 : 500}
                       textAnchor="middle"
                     >
                       {d.subLabel}
@@ -2128,7 +2179,6 @@ export default function TapsPage() {
   }, [hourFilteredLogs, activeHour]);
 
   const hourData = useMemo(() => {
-    const maxH = Math.max(...allHourCounts);
     return allHourCounts.map((v, i) => {
       const isLabeled = i % 4 === 0 || i === 23;
       const hourStr = String(i).padStart(2, "0");
@@ -2136,7 +2186,7 @@ export default function TapsPage() {
       return {
         label: isLabeled ? `${hourStr}.00` : "",
         value: v,
-        highlight: i === activeHour || (v === maxH && maxH > 0),
+        highlight: i === activeHour,
         tooltip: `Pukul ${hourStr}.00 - ${nextHourStr}.00: ${v} tap (Klik untuk rincian cafe)`,
       };
     });
@@ -2156,7 +2206,6 @@ export default function TapsPage() {
       const h = new Date(l.tappedAt).getHours();
       if (h >= 0 && h < 24) counts[h]++;
     });
-    const maxH = Math.max(...counts);
     return counts.map((v, i) => {
       const isLabeled = i % 4 === 0 || i === 23;
       const hourStr = String(i).padStart(2, "0");
@@ -2164,7 +2213,7 @@ export default function TapsPage() {
       return {
         label: isLabeled ? `${hourStr}.00` : "",
         value: v,
-        highlight: v === maxH && maxH > 0,
+        highlight: false,
         tooltip: `Pukul ${hourStr}.00 - ${nextHourStr}.00: ${v} tap`,
       };
     });
@@ -2498,7 +2547,7 @@ export default function TapsPage() {
         date: d,
         value: dLogs.length,
         logs: dLogs,
-        highlight: dLogs.length === maxVal && maxVal > 0,
+        highlight: dateKey === toDateInputValue(new Date()),
         tooltip: `${dayNames[i]}, ${d.getDate()}/${d.getMonth() + 1}: ${dLogs.length} tap`,
       });
     }
@@ -2507,20 +2556,20 @@ export default function TapsPage() {
   }, [selectedWeekObj]);
 
   const weeklyChartData = useMemo(() => {
-    const maxV = Math.max(...weeklyTrendData.map(w => w.count), 0);
+    const currentWeekInfo = getWeekRange(new Date());
     return weeklyTrendData.map(w => {
-      const isSelected = selectedWeekKey === w.weekKey;
+      const isCurrentWeek = w.weekKey === currentWeekInfo.weekKey;
       return {
         label: w.subLabel,
         subLabel: w.label,
         mobileSubLabel: w.mobileSubLabel,
         value: w.count,
         weekKey: w.weekKey,
-        highlight: isSelected || (w.count === maxV && maxV > 0),
-        tooltip: `${w.subLabel} (${w.label}): ${w.count} tap`,
+        highlight: isCurrentWeek,
+        tooltip: `${w.subLabel} (${w.label}): ${w.count} tap${isCurrentWeek ? " (Minggu Berjalan)" : ""}`,
       };
     });
-  }, [weeklyTrendData, selectedWeekKey]);
+  }, [weeklyTrendData]);
 
   const eightWeeksLogs = useMemo(() => {
     if (weeklyTrendData.length === 0) return [];
@@ -4436,6 +4485,22 @@ export default function TapsPage() {
                             }}
                           />
 
+                          {/* Legend Keterangan Warna Grafik */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 12, marginBottom: 8, fontSize: "0.74rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ width: 10, height: 10, borderRadius: 2, background: "#8B5CF6", display: "inline-block" }} />
+                              <span>Tertinggi / Puncak (👑)</span>
+                            </span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981", display: "inline-block" }} />
+                              <span>Hari Ini</span>
+                            </span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ width: 10, height: 10, borderRadius: 2, background: "linear-gradient(180deg, #8B5CF6 0%, #10B981 100%)", display: "inline-block" }} />
+                              <span>Hari Ini Sekaligus Tertinggi (👑 Rekor)</span>
+                            </span>
+                          </div>
+
                           {activeDailyData.length === 0 && (
                             <div style={{
                               textAlign: "center",
@@ -4901,7 +4966,7 @@ export default function TapsPage() {
 
                             <BarChart
                               data={weeklyChartData}
-                              color="#8B5CF6"
+                              color="#F59E0B"
                               yAxisUnit="Tap"
                               xAxisTitle="Minggu"
                               showValue={true}
@@ -4911,6 +4976,22 @@ export default function TapsPage() {
                                 }
                               }}
                             />
+
+                            {/* Legend Keterangan Warna Grafik */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 12, marginBottom: 8, fontSize: "0.74rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#8B5CF6", display: "inline-block" }} />
+                                <span>Tertinggi / Puncak (👑)</span>
+                              </span>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#10B981", display: "inline-block" }} />
+                                <span>Minggu Ini</span>
+                              </span>
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: "linear-gradient(180deg, #8B5CF6 0%, #10B981 100%)", display: "inline-block" }} />
+                                <span>Minggu Ini Sekaligus Tertinggi (👑 Rekor)</span>
+                              </span>
+                            </div>
 
                             {/* Breakdown Cafe Periode Mingguan — sembunyikan jika hanya 1 outlet difilter */}
                             {!isSingleOutletFilter && (
