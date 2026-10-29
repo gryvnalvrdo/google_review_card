@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminLoggedIn } from "../../../../lib/auth";
-import { getCard, setCard, listCards, removeStokCode } from "../../../../lib/kv";
+import { getCard, setCard, listCards, removeStokCode, resetCardTaps } from "../../../../lib/kv";
 import { isAllowedReviewUrl } from "../../../../lib/redirect";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   const storeName = body?.storeName?.trim();
   const googleReviewUrl = body?.googleReviewUrl?.trim();
   const price = typeof body?.price === "number" ? body.price : 50000;
+  const explicitResetTap = Boolean(body?.resetTaps || body?.resetTap);
 
   if (!code || !storeName || !googleReviewUrl) {
     return NextResponse.json(
@@ -66,6 +67,20 @@ export async function POST(req: NextRequest) {
   const existing = await getCard(code);
   const now = new Date().toISOString();
 
+  // Deteksi jika toko atau lokasi review diganti:
+  // Jika nama toko atau Google Review URL berubah, riwayat tap toko lama wajib di-reset
+  // agar tidak tercampur dan tidak memunculkan tap lama pada toko baru.
+  const isStoreOrLocationChanged = Boolean(
+    existing && (
+      existing.storeName.trim().toLowerCase() !== storeName.toLowerCase() ||
+      existing.googleReviewUrl.trim() !== googleReviewUrl
+    )
+  );
+
+  if (isStoreOrLocationChanged || explicitResetTap) {
+    await resetCardTaps(code);
+  }
+
   await setCard({
     code,
     storeName,
@@ -78,5 +93,8 @@ export async function POST(req: NextRequest) {
   // Hapus dari stok jika ada (kartu sudah di-assign ke toko)
   await removeStokCode(code);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    tapsReset: Boolean(isStoreOrLocationChanged || explicitResetTap),
+  });
 }

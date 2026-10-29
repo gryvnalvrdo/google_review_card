@@ -66,12 +66,17 @@ export default function CardsPage() {
   const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price">("date");
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
+  const [originalCard, setOriginalCard] = useState<CardData | null>(null);
+  const [resetTapsCheckbox, setResetTapsCheckbox] = useState(false);
+  const [resettingCode, setResettingCode] = useState<string | null>(null);
   const [editPlaceId, setEditPlaceId] = useState("");
 
   function startEdit(card: CardData) {
-    setEditingCard(card);
+    setEditingCard({ ...card });
+    setOriginalCard(card);
     const match = card.googleReviewUrl?.match(/placeid=([a-zA-Z0-9_\-]+)/i);
     setEditPlaceId(match ? match[1] : "");
+    setResetTapsCheckbox(false);
   }
 
   function handlePlaceIdChange(rawVal: string) {
@@ -123,9 +128,38 @@ export default function CardsPage() {
     setDeleteConfirmCode(null);
   }
 
+  async function handleResetTaps(card: CardData) {
+    const confirmed = window.confirm(
+      `Reset riwayat tap untuk "${card.storeName}" (${card.code})?\n\nHitungan ${card.tapCount ?? 0} tap dan seluruh entri log kartu ini akan dihapus dan kembali ke 0.`
+    );
+    if (!confirmed) return;
+    setResettingCode(card.code);
+    try {
+      const res = await fetch(`/api/admin/codes/${card.code}`, { method: "POST" });
+      if (res.ok) {
+        await fetchCards();
+      } else {
+        alert("Gagal mereset tap kartu.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Terjadi kesalahan saat mereset tap.");
+    } finally {
+      setResettingCode(null);
+    }
+  }
+
   async function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!editingCard) return;
+
+    const isLocationOrStoreChanged = Boolean(
+      originalCard && (
+        originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase() ||
+        originalCard.googleReviewUrl.trim() !== editingCard.googleReviewUrl.trim()
+      )
+    );
+
     const res = await fetch("/api/admin/codes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -134,10 +168,12 @@ export default function CardsPage() {
         storeName: editingCard.storeName,
         googleReviewUrl: editingCard.googleReviewUrl,
         price: editingCard.price ?? 50000,
+        resetTaps: isLocationOrStoreChanged || resetTapsCheckbox,
       }),
     });
     if (res.ok) {
       setEditingCard(null);
+      setOriginalCard(null);
       fetchCards();
     } else {
       alert("Gagal menyimpan perubahan.");
@@ -421,6 +457,30 @@ export default function CardsPage() {
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                               <span className="badge badge-green">● Aktif</span>
                               <span className="badge badge-orange">👆 {card.tapCount ?? 0} Tap</span>
+                              {(card.tapCount ?? 0) > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResetTaps(card)}
+                                  disabled={resettingCode === card.code}
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    color: "#FCA5A5",
+                                    background: "rgba(239, 68, 68, 0.12)",
+                                    border: "1px solid rgba(239, 68, 68, 0.25)",
+                                    borderRadius: 6,
+                                    padding: "2px 7px",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title={`Reset ${card.tapCount} tap kartu ini kembali ke 0`}
+                                >
+                                  {resettingCode === card.code ? "⏳ Mereset..." : "🔄 Reset Tap ke 0"}
+                                </button>
+                              )}
                               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                                 Ditambahkan: {formatDate(card.createdAt)}
                               </span>
@@ -611,6 +671,66 @@ export default function CardsPage() {
                   min={0}
                 />
               </div>
+
+              {/* Deteksi jika nama toko atau URL Google Review berubah */}
+              {(() => {
+                const isLocationOrStoreChanged = Boolean(
+                  originalCard && (
+                    originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase() ||
+                    originalCard.googleReviewUrl.trim() !== editingCard.googleReviewUrl.trim()
+                  )
+                );
+                const currentTaps = originalCard?.tapCount ?? 0;
+
+                return (
+                  <>
+                    {isLocationOrStoreChanged && (
+                      <div style={{
+                        padding: "10px 12px",
+                        background: "rgba(245, 158, 11, 0.12)",
+                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                        borderRadius: 8,
+                        color: "#FDE68A",
+                        fontSize: "0.76rem",
+                        lineHeight: 1.5,
+                        marginBottom: 12,
+                      }}>
+                        <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                          <span>⚡</span> Toko atau Lokasi Diganti
+                        </div>
+                        Nama toko atau Google Review telah diganti. Riwayat tap sebelumnya ({currentTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
+                      </div>
+                    )}
+
+                    {currentTaps > 0 && (
+                      <label style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: "0.78rem",
+                        color: isLocationOrStoreChanged ? "#FCD34D" : "#CBD5E1",
+                        cursor: isLocationOrStoreChanged ? "default" : "pointer",
+                        marginBottom: 14,
+                        padding: "8px 10px",
+                        background: "rgba(255, 255, 255, 0.03)",
+                        borderRadius: 8,
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={isLocationOrStoreChanged || resetTapsCheckbox}
+                          onChange={e => setResetTapsCheckbox(e.target.checked)}
+                          disabled={isLocationOrStoreChanged}
+                        />
+                        <span>
+                          Reset hitungan tap ke 0 ({currentTaps} tap saat ini)
+                          {isLocationOrStoreChanged ? " (Otomatis aktif)" : ""}
+                        </span>
+                      </label>
+                    )}
+                  </>
+                );
+              })()}
 
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button type="button" className="btn btn-ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => setEditingCard(null)}>

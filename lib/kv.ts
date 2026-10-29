@@ -127,7 +127,8 @@ export async function setCard(record: CardRecord): Promise<void> {
   memoryStore.set(record.code, record);
 }
 
-export async function deleteCard(code: string): Promise<void> {
+/** Reset hitungan tap dan bersihkan entri log tap untuk satu kartu tertentu (misal toko/lokasi berganti). */
+export async function resetCardTaps(code: string): Promise<void> {
   if (hasKv && vercelKv) {
     try {
       const rawLogs = await vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1);
@@ -151,20 +152,28 @@ export async function deleteCard(code: string): Promise<void> {
       console.error("Gagal membersihkan tap_log untuk kode", code, e);
     }
 
-    await Promise.all([
-      vercelKv.del(KEY_PREFIX + code),
-      vercelKv.del(TAP_PREFIX + code),
-      vercelKv.srem(INDEX_KEY, code),
-    ]);
+    await vercelKv.del(TAP_PREFIX + code);
     return;
   }
-  memoryStore.delete(code);
+
   tapStore.delete(code);
   for (let i = tapLogStore.length - 1; i >= 0; i--) {
     if (tapLogStore[i].code === code) {
       tapLogStore.splice(i, 1);
     }
   }
+}
+
+export async function deleteCard(code: string): Promise<void> {
+  await resetCardTaps(code);
+  if (hasKv && vercelKv) {
+    await Promise.all([
+      vercelKv.del(KEY_PREFIX + code),
+      vercelKv.srem(INDEX_KEY, code),
+    ]);
+    return;
+  }
+  memoryStore.delete(code);
 }
 
 export async function incrementTapCount(code: string): Promise<void> {
