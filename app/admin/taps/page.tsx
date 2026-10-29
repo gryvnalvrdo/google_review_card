@@ -1349,22 +1349,39 @@ export default function TapsPage() {
     });
   }
   function timeAgo(iso: string) {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
+    const target = new Date(iso);
+    if (isNaN(target.getTime())) return "";
+
+    const now = new Date();
+    const diffMs = now.getTime() - target.getTime();
+    const mins = Math.floor(diffMs / 60000);
+
+    // Untuk tap yang baru saja terjadi dalam 1 jam terakhir
     if (mins < 1) return "Baru saja";
     if (mins < 60) return `${mins}m lalu`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}j lalu`;
-    const days = Math.floor(hrs / 24);
-    const d = new Date(iso);
-    const isPrevYear = d.getFullYear() !== new Date().getFullYear();
-    return days < 7
-      ? `${days} hari lalu`
-      : d.toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-          ...(isPrevYear ? { year: "numeric" } : {}),
-        });
+
+    // Hitung selisih berdasarkan hari kalender (midnight 00:00:00) agar semua tap pada hari yang sama konsisten
+    const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetDateOnly = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+    const diffDays = Math.round((nowDateOnly.getTime() - targetDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      const hrs = Math.floor(mins / 60);
+      return `${hrs}j lalu`;
+    }
+    if (diffDays === 1) {
+      return "Kemarin";
+    }
+    if (diffDays > 1 && diffDays < 7) {
+      return `${diffDays} hari lalu`;
+    }
+
+    const isPrevYear = target.getFullYear() !== now.getFullYear();
+    return target.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      ...(isPrevYear ? { year: "numeric" } : {}),
+    });
   }
   function formatFull(iso: string) {
     return new Date(iso).toLocaleString("id-ID", {
