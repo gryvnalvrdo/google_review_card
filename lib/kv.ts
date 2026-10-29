@@ -188,19 +188,59 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
   if (hasKv && vercelKv) {
     const codes = await vercelKv.smembers<string[]>(INDEX_KEY);
     if (!codes || codes.length === 0) return [];
-    const [records, taps] = await Promise.all([
+    const [records, taps, rawLogs] = await Promise.all([
       Promise.all(codes.map((c) => getCard(c))),
       Promise.all(codes.map((c) =>
         vercelKv.get<number>(TAP_PREFIX + c).then((v) => v ?? 0)
       )),
+      vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1).catch(() => []),
     ]);
+
+    // Hitung riwayat log per kode kartu agar angka di Daftar Kartu selalu 100% konsisten
+    // dengan halaman Riwayat Tap (menghindari selisih akibat log masa lalu ter-trim atau async delay)
+    const logCounts = new Map<string, number>();
+    if (rawLogs && rawLogs.length > 0) {
+      for (const item of rawLogs) {
+        let entry: TapLogEntry | null = null;
+        if (typeof item === "string") {
+          try { entry = JSON.parse(item); } catch {}
+        } else {
+          entry = item as unknown as TapLogEntry;
+        }
+        if (entry && entry.code) {
+          logCounts.set(entry.code, (logCounts.get(entry.code) ?? 0) + 1);
+        }
+      }
+    }
+
     return records
-      .map((r, i) => (r ? { ...r, tapCount: taps[i] } : null))
+      .map((r, i) => {
+        if (!r) return null;
+        const code = r.code;
+        const countFromLogs = logCounts.get(code) ?? 0;
+        // Jika ada tap_log tersimpan di sistem, jumlah log riil adalah acuan mutlak (single source of truth)
+        const hasLogsInSystem = rawLogs && rawLogs.length > 0;
+        const tapCount = hasLogsInSystem ? countFromLogs : (taps[i] ?? 0);
+
+        // Self-healing: jika counter numerik tap:code berbeda dengan jumlah log riil,
+        // sinkronkan counter ke Redis secara otomatis agar konsisten di semua tempat
+        if (hasLogsInSystem && taps[i] !== countFromLogs) {
+          vercelKv.set(TAP_PREFIX + code, countFromLogs).catch(() => {});
+        }
+
+        return { ...r, tapCount };
+      })
       .filter((r): r is CardRecord & { tapCount: number } => r !== null);
   }
+
+  const activeCodes = new Set(memoryStore.keys());
+  const valid = tapLogStore.filter((e) => activeCodes.has(e.code));
+  const logCounts = new Map<string, number>();
+  valid.forEach(l => logCounts.set(l.code, (logCounts.get(l.code) ?? 0) + 1));
+
   return Array.from(memoryStore.values()).map((r) => ({
     ...r,
-    tapCount: tapStore.get(r.code) ?? 0,
+    tapCount: logCounts.get(r.code) ?? (tapStore.get(r.code) ?? 0),
   }));
 }
 
