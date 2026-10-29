@@ -2380,10 +2380,11 @@ export default function TapsPage() {
         const eMo = wInfo.end.getMonth() + 1;
         const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
 
+        const isCurrentWeek = wInfo.weekKey === currentWeekInfo.weekKey;
         weeks.push({
           weekKey: wInfo.weekKey,
           label: wInfo.label,
-          subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
+          subLabel: isCurrentWeek ? "Minggu ini" : `Minggu ${getWeekNumber(wInfo.start)}`,
           mobileSubLabel: mobileRange,
           start: wInfo.start,
           end: wInfo.end,
@@ -2417,10 +2418,11 @@ export default function TapsPage() {
         const eMo = wInfo.end.getMonth() + 1;
         const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
 
+        const isCurrentWeek = wInfo.weekKey === currentWeekInfo.weekKey;
         weeks.push({
           weekKey: wInfo.weekKey,
           label: wInfo.label,
-          subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
+          subLabel: isCurrentWeek ? "Minggu ini" : `Minggu ${getWeekNumber(wInfo.start)}`,
           mobileSubLabel: mobileRange,
           start: wInfo.start,
           end: wInfo.end,
@@ -2461,10 +2463,11 @@ export default function TapsPage() {
         const eMo = wInfo.end.getMonth() + 1;
         const mobileRange = `${sDay}/${sMo}-${eDay}/${eMo}`;
 
+        const isCurrentWeek = wInfo.weekKey === currentWeekInfo.weekKey;
         weeks.push({
           weekKey: wInfo.weekKey,
           label: wInfo.label,
-          subLabel: `Minggu ${getWeekNumber(wInfo.start)}`,
+          subLabel: isCurrentWeek ? "Minggu ini" : `Minggu ${getWeekNumber(wInfo.start)}`,
           mobileSubLabel: mobileRange,
           start: wInfo.start,
           end: wInfo.end,
@@ -2597,6 +2600,84 @@ export default function TapsPage() {
     const y = selectedWeeklyYear || new Date().getFullYear();
     return storeFilteredLogs.filter(l => new Date(l.tappedAt).getFullYear() === y).length;
   }, [storeFilteredLogs, selectedWeeklyYear]);
+
+  const eightWeeksPeak = useMemo(() => {
+    const now = new Date();
+    const currentWeekInfo = getWeekRange(now);
+    let peakLabel = "";
+    let peakCount = 0;
+    for (let i = 7; i >= 0; i--) {
+      const refDate = new Date(currentWeekInfo.start);
+      refDate.setDate(refDate.getDate() - (i * 7));
+      const wInfo = getWeekRange(refDate);
+      if (earliestWeekRange && wInfo.end.getTime() < earliestWeekRange.start.getTime()) continue;
+      const count = storeFilteredLogs.filter(l => {
+        const t = new Date(l.tappedAt).getTime();
+        return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
+      }).length;
+      if (count > peakCount) {
+        peakCount = count;
+        peakLabel = wInfo.weekKey === currentWeekInfo.weekKey ? "Minggu ini" : `Minggu ${getWeekNumber(wInfo.start)}`;
+      }
+    }
+    return peakCount > 0 ? `${peakLabel} (${peakCount} tap)` : "Belum ada";
+  }, [storeFilteredLogs, earliestWeekRange]);
+
+  const twelveWeeksPeak = useMemo(() => {
+    const now = new Date();
+    const currentWeekInfo = getWeekRange(now);
+    let peakLabel = "";
+    let peakCount = 0;
+    for (let i = 11; i >= 0; i--) {
+      const refDate = new Date(currentWeekInfo.start);
+      refDate.setDate(refDate.getDate() - (i * 7));
+      const wInfo = getWeekRange(refDate);
+      if (earliestWeekRange && wInfo.end.getTime() < earliestWeekRange.start.getTime()) continue;
+      const count = storeFilteredLogs.filter(l => {
+        const t = new Date(l.tappedAt).getTime();
+        return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
+      }).length;
+      if (count > peakCount) {
+        peakCount = count;
+        peakLabel = wInfo.weekKey === currentWeekInfo.weekKey ? "Minggu ini" : `Minggu ${getWeekNumber(wInfo.start)}`;
+      }
+    }
+    return peakCount > 0 ? `${peakLabel} (${peakCount} tap)` : "Belum ada";
+  }, [storeFilteredLogs, earliestWeekRange]);
+
+  const yearWeeksPeak = useMemo(() => {
+    const now = new Date();
+    const targetYear = selectedWeeklyYear || now.getFullYear();
+    const isThisYear = targetYear === now.getFullYear();
+    const firstDay = new Date(targetYear, 0, 1);
+    const startWeek = getWeekRange(firstDay);
+    const currentWeekInfo = getWeekRange(now);
+    const endLimit = isThisYear ? currentWeekInfo.start : getWeekRange(new Date(targetYear, 11, 31)).start;
+
+    let effectiveStart = startWeek.start;
+    if (earliestWeekRange && earliestWeekRange.start.getFullYear() === targetYear) {
+      if (earliestWeekRange.start.getTime() > effectiveStart.getTime()) {
+        effectiveStart = earliestWeekRange.start;
+      }
+    }
+
+    let peakLabel = "";
+    let peakCount = 0;
+    const cur = new Date(effectiveStart);
+    while (cur.getTime() <= endLimit.getTime()) {
+      const wInfo = getWeekRange(cur);
+      const count = storeFilteredLogs.filter(l => {
+        const t = new Date(l.tappedAt).getTime();
+        return t >= wInfo.start.getTime() && t <= wInfo.end.getTime();
+      }).length;
+      if (count > peakCount) {
+        peakCount = count;
+        peakLabel = wInfo.weekKey === currentWeekInfo.weekKey ? "Minggu ini" : `Minggu ${getWeekNumber(wInfo.start)}`;
+      }
+      cur.setDate(cur.getDate() + 7);
+    }
+    return peakCount > 0 ? `${peakLabel} (${peakCount} tap)` : "Belum ada";
+  }, [storeFilteredLogs, selectedWeeklyYear, earliestWeekRange]);
 
   const trendRangeLogs = useMemo(() => {
     if (trendRange === "custom") {
@@ -4090,15 +4171,15 @@ export default function TapsPage() {
                             fontSize: "0.76rem",
                             fontWeight: 700,
                             borderRadius: 8,
-                            background: trenView === "mingguan" ? "#8B5CF6" : "transparent",
-                            color: trenView === "mingguan" ? "#FFF" : "var(--text-muted)",
+                            background: trenView === "mingguan" ? "#F59E0B" : "transparent",
+                            color: trenView === "mingguan" ? "#000" : "var(--text-muted)",
                             border: "none",
                             cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
                             gap: 5,
                             transition: "all 0.15s ease",
-                            boxShadow: trenView === "mingguan" ? "0 2px 8px rgba(139,92,246,0.35)" : "none",
+                            boxShadow: trenView === "mingguan" ? "0 2px 8px rgba(245,158,11,0.35)" : "none",
                           }}
                         >
                           <span>📊</span>
@@ -4547,7 +4628,7 @@ export default function TapsPage() {
 
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
+                                <span className="badge badge-orange" style={{ background: "rgba(245,158,11,0.15)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.3)" }}>
                                   Total Minggu Ini: {selectedWeekObj.count} tap
                                 </span>
                               </div>
@@ -4557,11 +4638,11 @@ export default function TapsPage() {
                                 alignItems: "center",
                                 gap: 6,
                                 padding: "4px 10px",
-                                background: "rgba(56, 189, 248, 0.08)",
-                                border: "1px dashed rgba(56, 189, 248, 0.3)",
+                                background: "rgba(245, 158, 11, 0.08)",
+                                border: "1px dashed rgba(245, 158, 11, 0.3)",
                                 borderRadius: 8,
                                 fontSize: "0.72rem",
-                                color: "#7DD3FC",
+                                color: "#FCD34D",
                               }}>
                                 <span>👆</span>
                                 <span><strong>Klik salah satu hari</strong> untuk membedah jam 24-jam</span>
@@ -4570,7 +4651,7 @@ export default function TapsPage() {
 
                             <BarChart
                               data={weekDailyData}
-                              color="#38BDF8"
+                              color="#F59E0B"
                               yAxisUnit="Tap"
                               xAxisTitle="Hari"
                               showValue={true}
@@ -4594,10 +4675,10 @@ export default function TapsPage() {
                         ) : (
                           /* Level 1: Grafik Batang Mingguan dengan Navigasi Periode & Arsip */
                           <div>
-                            {/* Badges Info (Sesuai Foto 1) */}
+                            {/* Badges Info (Identik dengan Harian) */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                <span className="badge badge-purple" style={{ background: "rgba(139,92,246,0.15)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.3)" }}>
+                                <span className="badge badge-orange" style={{ background: "rgba(245,158,11,0.15)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.3)" }}>
                                   Total: {weeklyTrendData.reduce((s, w) => s + w.count, 0)} tap
                                 </span>
                                 {(() => {
@@ -4613,13 +4694,13 @@ export default function TapsPage() {
                                 })()}
                               </div>
 
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#C4B5FD" }}>
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#7DD3FC" }}>
                                 <span>👆</span>
                                 <span>Klik batang minggu untuk bedah 7 hari &amp; cafe</span>
                               </div>
                             </div>
 
-                            {/* Filter Periode & Ringkasan Minggu Puncak per Periode (Sesuai Foto 1) */}
+                            {/* Filter Periode & Ringkasan Minggu Puncak per Periode (Identik dengan Harian) */}
                             <div className="hour-period-grid">
                               {/* Card 1: 8 Minggu Terakhir */}
                               <button
@@ -4631,25 +4712,27 @@ export default function TapsPage() {
                                   alignItems: "flex-start",
                                   padding: "10px 14px",
                                   borderRadius: 10,
-                                  background: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                  border: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  background: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "rgba(245, 158, 11, 0.14)" : "rgba(255, 255, 255, 0.03)",
+                                  border: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
                                   cursor: "pointer",
                                   textAlign: "left",
                                   transition: "all 0.15s ease",
-                                  boxShadow: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "0 0 14px rgba(139,92,246,0.25)" : "none",
+                                  boxShadow: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "0 0 14px rgba(245,158,11,0.2)" : "none",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#C4B5FD" : "#E2E8F0" }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#FCD34D" : "#E2E8F0" }}>
                                     🌟 8 Minggu Terakhir
                                   </span>
-                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#8B5CF6" : "rgba(255,255,255,0.08)", color: "#FFF" }}>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#F59E0B" : "rgba(255,255,255,0.08)", color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#000" : "#FFF" }}>
                                     {eightWeeksCount} tap
                                   </span>
                                 </div>
                                 <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, lineHeight: 1.3 }}>
-                                  <span style={{ color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>Rentang:</span>
-                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>8 pekan berjalan</strong>
+                                  <span style={{ color: (weeklyPeriodType === "8w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>🏆 Puncak:</span>
+                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>
+                                    {eightWeeksPeak}
+                                  </strong>
                                 </div>
                               </button>
 
@@ -4663,25 +4746,27 @@ export default function TapsPage() {
                                   alignItems: "flex-start",
                                   padding: "10px 14px",
                                   borderRadius: 10,
-                                  background: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                  border: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  background: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "rgba(245, 158, 11, 0.14)" : "rgba(255, 255, 255, 0.03)",
+                                  border: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
                                   cursor: "pointer",
                                   textAlign: "left",
                                   transition: "all 0.15s ease",
-                                  boxShadow: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "0 0 14px rgba(139,92,246,0.25)" : "none",
+                                  boxShadow: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "0 0 14px rgba(245,158,11,0.2)" : "none",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#C4B5FD" : "#E2E8F0" }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#FCD34D" : "#E2E8F0" }}>
                                     📊 12 Minggu (3 Bulan)
                                   </span>
-                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#8B5CF6" : "rgba(255,255,255,0.08)", color: "#FFF" }}>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#F59E0B" : "rgba(255,255,255,0.08)", color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#000" : "#FFF" }}>
                                     {twelveWeeksCount} tap
                                   </span>
                                 </div>
                                 <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, lineHeight: 1.3 }}>
-                                  <span style={{ color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>Rentang:</span>
-                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>Kuartal 3 bulan terakhir</strong>
+                                  <span style={{ color: (weeklyPeriodType === "12w" && weekPageOffset === 0) ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>🏆 Puncak:</span>
+                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>
+                                    {twelveWeeksPeak}
+                                  </strong>
                                 </div>
                               </button>
 
@@ -4695,25 +4780,27 @@ export default function TapsPage() {
                                   alignItems: "flex-start",
                                   padding: "10px 14px",
                                   borderRadius: 10,
-                                  background: weeklyPeriodType === "year" ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                  border: weeklyPeriodType === "year" ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  background: weeklyPeriodType === "year" ? "rgba(245, 158, 11, 0.14)" : "rgba(255, 255, 255, 0.03)",
+                                  border: weeklyPeriodType === "year" ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
                                   cursor: "pointer",
                                   textAlign: "left",
                                   transition: "all 0.15s ease",
-                                  boxShadow: weeklyPeriodType === "year" ? "0 0 14px rgba(139,92,246,0.25)" : "none",
+                                  boxShadow: weeklyPeriodType === "year" ? "0 0 14px rgba(245,158,11,0.2)" : "none",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: weeklyPeriodType === "year" ? "#C4B5FD" : "#E2E8F0" }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: weeklyPeriodType === "year" ? "#FCD34D" : "#E2E8F0" }}>
                                     🗓️ Tahun {selectedWeeklyYear}
                                   </span>
-                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: weeklyPeriodType === "year" ? "#8B5CF6" : "rgba(255,255,255,0.08)", color: "#FFF" }}>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: weeklyPeriodType === "year" ? "#F59E0B" : "rgba(255,255,255,0.08)", color: weeklyPeriodType === "year" ? "#000" : "#FFF" }}>
                                     {yearWeeksCount} tap
                                   </span>
                                 </div>
                                 <div style={{ fontSize: "0.72rem", marginTop: 5, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                                  <span style={{ color: weeklyPeriodType === "year" ? "#CBD5E1" : "var(--text-muted)" }}>Arsip:</span>
-                                  <strong style={{ color: "#34D399" }}>Semua minggu {selectedWeeklyYear}</strong>
+                                  <span style={{ color: weeklyPeriodType === "year" ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.68rem" }}>🏆 Puncak:</span>
+                                  <strong style={{ color: "#34D399", fontSize: "0.72rem" }}>
+                                    {yearWeeksPeak}
+                                  </strong>
                                 </div>
                               </button>
 
@@ -4727,13 +4814,13 @@ export default function TapsPage() {
                                   justifyContent: "space-between",
                                   padding: "10px 14px",
                                   borderRadius: 10,
-                                  background: isWeeklyMonthMode || weekPageOffset > 0 ? "rgba(139, 92, 246, 0.2)" : "rgba(255, 255, 255, 0.03)",
-                                  border: isWeeklyMonthMode || weekPageOffset > 0 ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.08)",
+                                  background: isWeeklyMonthMode || weekPageOffset > 0 ? "rgba(245, 158, 11, 0.14)" : "rgba(255, 255, 255, 0.03)",
+                                  border: isWeeklyMonthMode || weekPageOffset > 0 ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
                                   gap: 8,
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#C4B5FD", display: "flex", alignItems: "center", gap: 5 }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (isWeeklyMonthMode || weekPageOffset > 0) ? "#FCD34D" : "#E2E8F0", display: "flex", alignItems: "center", gap: 5 }}>
                                     <span>🗂️</span>
                                     <span>Arsip Bulan &amp; Geser</span>
                                   </span>
@@ -4743,7 +4830,7 @@ export default function TapsPage() {
                                         Bulan Berjalan
                                       </span>
                                     ) : (
-                                      <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "rgba(139, 92, 246, 0.3)", color: "#EDE9FE", border: "1px solid rgba(139, 92, 246, 0.5)" }}>
+                                      <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: "rgba(245, 158, 11, 0.25)", color: "#FDE047", border: "1px solid rgba(245, 158, 11, 0.45)" }}>
                                         Arsip Historis
                                       </span>
                                     )
