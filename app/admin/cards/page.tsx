@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 import AdminNav from "../components/AdminNav";
 import QRScanner from "../components/QRScanner";
@@ -456,7 +457,20 @@ export default function CardsPage() {
 
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                               <span className="badge badge-green">● Aktif</span>
-                              <span className="badge badge-orange">👆 {card.tapCount ?? 0} Tap</span>
+                              <Link
+                                href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
+                                className="badge badge-orange"
+                                style={{
+                                  textDecoration: "none",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                                title={`Klik untuk buka seluruh riwayat tap ${card.storeName}`}
+                              >
+                                👆 {card.tapCount ?? 0} Tap ↗
+                              </Link>
                               {(card.tapCount ?? 0) > 0 && (
                                 <button
                                   type="button"
@@ -543,18 +557,47 @@ export default function CardsPage() {
                           </div>
                         </div>
 
-                        {/* Row 3: Action Buttons (High-Res QR Download) */}
-                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        {/* Row 3: Action Buttons (Riwayat Tap & High-Res QR Download) */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10, alignItems: "stretch" }}>
+                          <Link
+                            href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
+                            className="btn btn-ghost"
+                            style={{
+                              justifyContent: "center",
+                              padding: "9px 14px",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              color: "#C7D2FE",
+                              borderColor: "rgba(99,102,241,0.35)",
+                              background: "rgba(99,102,241,0.08)",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              textDecoration: "none",
+                              transition: "all 0.15s ease",
+                            }}
+                            title={`Lihat seluruh riwayat aktivitas tap pelanggan untuk ${card.storeName}`}
+                          >
+                            <span>📊</span>
+                            <span>Lihat Riwayat Tap ({card.tapCount ?? 0}) ↗</span>
+                          </Link>
+
                           <button
                             type="button"
                             onClick={() => downloadQrOnly(card)}
                             disabled={downloadingQrCode === card.code || !baseUrl}
                             className="btn btn-ghost"
                             style={{
-                              width: "100%", justifyContent: "center",
-                              padding: "9px 14px", fontSize: "0.82rem", fontWeight: 700,
-                              color: "#34D399", borderColor: "rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.06)",
-                              display: "inline-flex", alignItems: "center", gap: 6,
+                              justifyContent: "center",
+                              padding: "9px 14px",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              color: "#34D399",
+                              borderColor: "rgba(16,185,129,0.3)",
+                              background: "rgba(16,185,129,0.06)",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
                             }}
                             title="Download QR Code resolusi tinggi (1000px PNG) untuk cetak fisik"
                           >

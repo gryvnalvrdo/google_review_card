@@ -1129,6 +1129,27 @@ export default function TapsPage() {
     window.addEventListener("resize", handleViewport);
     return () => window.removeEventListener("resize", handleViewport);
   }, []);
+
+  // Baca parameter query URL (?search=...&period=all) saat dibuka dari tautan kartu
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlSearch = params.get("search") || params.get("store") || params.get("q");
+      const urlPeriod = params.get("period");
+
+      if (urlSearch) {
+        setSearch(urlSearch);
+        setActiveTab("harian");
+        setDailyMode("all");
+        try {
+          sessionStorage.setItem("user_selected_tab", "harian");
+        } catch {}
+      } else if (urlPeriod === "all" || urlPeriod === "today" || urlPeriod === "last7" || urlPeriod === "last30") {
+        setDailyMode(urlPeriod as any);
+        setCustomDate("");
+      }
+    }
+  }, []);
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">("today");
   const [customDate, setCustomDate] = useState<string>("");
   const showReviewBtn = true;
