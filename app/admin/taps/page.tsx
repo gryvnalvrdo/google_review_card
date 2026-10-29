@@ -3280,13 +3280,15 @@ export default function TapsPage() {
                         const allRegisteredStores = cafeBreakdownList;
 
                         // Target list: jika ada pencarian, ikuti pencarian.
-                        // Jika tanpa pencarian: utamakan toko yang bertap, dan jika kurang dari 5, lengkapi dengan toko terdaftar lainnya agar genap 5 toko.
+                        // Jika tanpa pencarian: tampilkan hanya toko yang punya tap di periode ini.
+                        // Kalau kurang dari 5, tampilkan semuanya yang ada tap saja (jangan isi dengan toko tanpa tap).
+                        // Kalau lebih dari 5, tampilkan Top 5 dulu + tombol Tampilkan Semua.
                         const targetList = search.trim()
                           ? allRegisteredStores.filter(c =>
                               c.storeName.toLowerCase().includes(search.toLowerCase()) ||
                               c.code.toLowerCase().includes(search.toLowerCase())
                             )
-                          : (storesWithTaps.length >= 5 ? storesWithTaps : allRegisteredStores);
+                          : storesWithTaps;
 
                         if (targetList.length === 0) {
                           return (
