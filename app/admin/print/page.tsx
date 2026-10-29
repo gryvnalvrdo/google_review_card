@@ -735,8 +735,13 @@ export default function PrintQRCodes() {
 
   // Handle Switch Mode Template
   function handleSelectMode(mode: "default" | "custom") {
+    if (mode === templateMode && ((mode === "default" && bgImage === defaultImg) || (mode === "custom" && bgImage === customImg))) {
+      return;
+    }
     setTemplateMode(mode);
     composedCanvases.current.clear();
+    setCodes([]); // Kosongkan daftar kartu lama agar tertutup saat ganti desain
+    setSaveResult(null);
     if (mode === "default") {
       if (defaultImg) {
         setBgImage(defaultImg);
@@ -765,6 +770,8 @@ export default function PrintQRCodes() {
       localStorage.removeItem("custom_qr_placement");
     } catch {}
     composedCanvases.current.clear();
+    setCodes([]); // Kosongkan daftar kartu lama
+    setSaveResult(null);
   }
 
   // Handle File Upload Desain Klien
@@ -782,6 +789,9 @@ export default function PrintQRCodes() {
         setBgImage(img);
         setTemplateMode("custom");
         setShowPlacementEditor(true);
+        composedCanvases.current.clear();
+        setCodes([]); // Reset kartu yang di-generate agar user menekan Generate Kartu ulang untuk desain baru
+        setSaveResult(null);
 
         const result = await detectClientQRCode(img);
         const newPlacement: QRPlacementConfig = {
