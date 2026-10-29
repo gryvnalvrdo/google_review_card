@@ -2980,24 +2980,26 @@ export default function TapsPage() {
                 </p>
               </div>
             ) : (
-              <div className={`dashboard-grid-2col show-mobile-${mobileSubView}`}>
-                {/* ── MOBILE SUBVIEW TOGGLE (Zero Endless Scroll Fatigue) ── */}
-                <div className="mobile-harian-subview-toggle mobile-only">
-                  <button
-                    type="button"
-                    onClick={() => setMobileSubView("feed")}
-                    className={`mobile-subview-btn ${mobileSubView === "feed" ? "active" : ""}`}
-                  >
-                    <span>📋</span> Aliran Tap ({activePeriodInfo.entries.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileSubView("outlets")}
-                    className={`mobile-subview-btn ${mobileSubView === "outlets" ? "active" : ""}`}
-                  >
-                    <span>🏪</span> Ringkasan Outlet
-                  </button>
-                </div>
+              <div className={`dashboard-grid-2col show-mobile-${mobileSubView} ${search.trim() ? "single-store-view" : ""}`}>
+                {/* ── MOBILE SUBVIEW TOGGLE (Hanya Tampil Saat Mode Semua Toko / Bukan Single Cafe) ── */}
+                {!search.trim() && (
+                  <div className="mobile-harian-subview-toggle mobile-only">
+                    <button
+                      type="button"
+                      onClick={() => setMobileSubView("feed")}
+                      className={`mobile-subview-btn ${mobileSubView === "feed" ? "active" : ""}`}
+                    >
+                      <span>📋</span> Aliran Tap ({activePeriodInfo.entries.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileSubView("outlets")}
+                      className={`mobile-subview-btn ${mobileSubView === "outlets" ? "active" : ""}`}
+                    >
+                      <span>🏪</span> Ringkasan Outlet
+                    </button>
+                  </div>
+                )}
 
                 {/* ── KOLOM UTAMA: FEED RIWAYAT TAP ── */}
                 <div className="dashboard-grid-main">
@@ -3010,12 +3012,14 @@ export default function TapsPage() {
                         Tidak Ada Data Tap
                       </h3>
                       <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: 440, margin: "0 auto 18px", lineHeight: 1.5 }}>
-                        {activePeriodInfo.emptyMsg}
+                        {search.trim()
+                          ? `Toko "${search.trim()}" belum memiliki aktivitas tap pada periode ini.`
+                          : activePeriodInfo.emptyMsg}
                       </p>
                       {dailyMode !== "all" && filtered.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => { setDailyMode("all"); setCustomDate(""); setSearch(""); setTapDisplayLimit(10); }}
+                          onClick={() => { setDailyMode("all"); setCustomDate(""); setTapDisplayLimit(10); }}
                           className="btn btn-ghost"
                           style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
                         >
@@ -3029,15 +3033,51 @@ export default function TapsPage() {
                         <div className="tap-group-title-wrap">
                           <div className="tap-group-title-main">
                             <span className="tap-group-title-icon" style={{ fontSize: "1.1rem" }}>
-                              {dailyMode === "today" ? "☀️" : dailyMode === "last7" ? "📅" : dailyMode === "last30" ? "🗓️" : customDate ? "🗓️" : "📑"}
+                              {search.trim() ? "🏪" : dailyMode === "today" ? "☀️" : dailyMode === "last7" ? "📅" : dailyMode === "last30" ? "🗓️" : customDate ? "🗓️" : "📑"}
                             </span>
-                            <span className="tap-group-title-text">{activePeriodInfo.title}</span>
+                            <span className="tap-group-title-text">
+                              {search.trim() ? `Riwayat Tap — ${search.trim()}` : activePeriodInfo.title}
+                            </span>
                           </div>
-                          {activePeriodInfo.subtitle && (
-                            <div className="tap-group-subtitle">{activePeriodInfo.subtitle}</div>
-                          )}
+                          <div className="tap-group-subtitle">
+                            {search.trim()
+                              ? `Menampilkan seluruh aktivitas tap khusus toko "${search.trim()}" (${
+                                  dailyMode === "today" && !customDate ? "Hari Ini" :
+                                  dailyMode === "last7" && !customDate ? "7 Hari Terakhir" :
+                                  dailyMode === "last30" && !customDate ? "30 Hari Terakhir" :
+                                  customDate ? formatDateIndo(customDate) : "Sepanjang Masa"
+                                })`
+                              : activePeriodInfo.subtitle}
+                          </div>
                         </div>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          {search.trim() && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSearch("");
+                                setTapDisplayLimit(10);
+                              }}
+                              className="btn btn-ghost"
+                              style={{
+                                padding: "5px 12px",
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                                color: "#A5B4FC",
+                                borderColor: "rgba(99,102,241,0.35)",
+                                background: "rgba(99,102,241,0.1)",
+                                borderRadius: 8,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 5,
+                                cursor: "pointer",
+                              }}
+                              title="Kembali ke semua riwayat toko"
+                            >
+                              <span>✕</span>
+                              <span>Semua Toko</span>
+                            </button>
+                          )}
                           <span className="tap-group-badge">
                             {activePeriodInfo.entries.length} TAP
                           </span>
@@ -3189,251 +3229,253 @@ export default function TapsPage() {
                   )}
                 </div>
 
-                {/* ── KOLOM SAMPING: SCORECARD CAFE & INSIGHT WIDGETS ── */}
-                <div className="dashboard-grid-sidebar">
-                  {/* 1. Jam Kunjungan Tersibuk Widget (Desktop Only - Disembunyikan di Mobile) */}
-                  <div className="peak-insight-box desktop-only">
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
-                        <span>⏱️</span> Jam Kunjungan Tersibuk
-                      </span>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
-                        {dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari" : dailyMode === "last30" ? "30 Hari" : "Periode Aktif"}
-                      </span>
-                    </div>
-
-                    {(() => {
-                      const counts = Array(24).fill(0);
-                      activePeriodInfo.entries.forEach(l => {
-                        const h = new Date(l.tappedAt).getHours();
-                        if (h >= 0 && h < 24) counts[h]++;
-                      });
-                      const max = Math.max(...counts);
-                      if (max === 0) {
-                        return (
-                          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
-                            Belum ada riwayat tap yang tercatat pada rentang waktu ini.
-                          </p>
-                        );
-                      }
-                      const h = counts.indexOf(max);
-                      const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
-
-                      return (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10 }}>
-                          <div style={{ fontSize: "1.3rem" }}>🔥</div>
-                          <div>
-                            <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
-                            <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* 2. Ringkasan Status Outlet & Kartu */}
-                  <div className="peak-insight-box">
-                    <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>📊</span> Status Operasional Kartu
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Toko Aktif</div>
-                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", marginTop: 2 }}>{availableStores.length}</div>
-                      </div>
-                      <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Kartu Aktif</div>
-                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34D399", marginTop: 2 }}>{cards.length - sleepingCards.length}</div>
-                      </div>
-                    </div>
-                    {sleepingCards.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("tidur")}
-                        style={{
-                          width: "100%",
-                          marginTop: 10,
-                          padding: "7px 10px",
-                          background: "rgba(239, 68, 68, 0.1)",
-                          border: "1px solid rgba(239, 68, 68, 0.25)",
-                          borderRadius: 8,
-                          color: "#FCA5A5",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <span>😴</span> {sleepingCards.length} Kartu Belum Ada Tap ↗
-                      </button>
-                    )}
-                  </div>
-
-                  {/* 3. Scorecard Total Tap per Cafe (Top 5 & Tampilkan Semua) */}
-                  {cafeBreakdownList.length > 0 && (
-                    <div className="cafe-scorecard-box">
-                      <div className="cafe-scorecard-header">
-                        <div className="cafe-scorecard-title">
-                          <span>🏪</span>
-                          <span>
-                            Total Tap per Cafe — {
-                              dailyMode === "today" && !customDate ? "Hari Ini" :
-                              dailyMode === "last7" && !customDate ? "7 Hari Terakhir" :
-                              dailyMode === "last30" && !customDate ? "30 Hari Terakhir" :
-                              customDate ? formatDateShortIndo(customDate) : "Sepanjang Masa"
-                            }
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {search && (
-                            <button
-                              type="button"
-                              onClick={() => setSearch("")}
-                              style={{
-                                background: "rgba(239, 68, 68, 0.15)",
-                                border: "1px solid rgba(239, 68, 68, 0.3)",
-                                color: "#FCA5A5",
-                                borderRadius: 6,
-                                padding: "2px 8px",
-                                fontSize: "0.68rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                              }}
-                              title="Hapus filter pencarian cafe"
-                            >
-                              ✕ Reset
-                            </button>
-                          )}
-                          <span className="cafe-scorecard-meta">
-                            {activePeriodInfo.entries.length} TAP
-                          </span>
-                        </div>
+                {/* ── KOLOM SAMPING: SCORECARD CAFE & INSIGHT WIDGETS (Hanya Tampil Pada Tampilan Global Semua Toko) ── */}
+                {!search.trim() && (
+                  <div className="dashboard-grid-sidebar">
+                    {/* 1. Jam Kunjungan Tersibuk Widget (Desktop Only - Disembunyikan di Mobile) */}
+                    <div className="peak-insight-box desktop-only">
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                        <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span>⏱️</span> Jam Kunjungan Tersibuk
+                        </span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(99,102,241,0.15)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.3)" }}>
+                          {dailyMode === "today" ? "Hari Ini" : dailyMode === "last7" ? "7 Hari" : dailyMode === "last30" ? "30 Hari" : "Periode Aktif"}
+                        </span>
                       </div>
 
                       {(() => {
-                        const storesWithTaps = cafeBreakdownList.filter(c => c.count > 0);
-                        const allRegisteredStores = cafeBreakdownList;
-
-                        // Target list: jika ada pencarian, ikuti pencarian.
-                        // Jika tanpa pencarian: tampilkan hanya toko yang punya tap di periode ini.
-                        // Kalau kurang dari 5, tampilkan semuanya yang ada tap saja (jangan isi dengan toko tanpa tap).
-                        // Kalau lebih dari 5, tampilkan Top 5 dulu + tombol Tampilkan Semua.
-                        const targetList = search.trim()
-                          ? allRegisteredStores.filter(c =>
-                              c.storeName.toLowerCase().includes(search.toLowerCase()) ||
-                              c.code.toLowerCase().includes(search.toLowerCase())
-                            )
-                          : storesWithTaps;
-
-                        if (targetList.length === 0) {
+                        const counts = Array(24).fill(0);
+                        activePeriodInfo.entries.forEach(l => {
+                          const h = new Date(l.tappedAt).getHours();
+                          if (h >= 0 && h < 24) counts[h]++;
+                        });
+                        const max = Math.max(...counts);
+                        if (max === 0) {
                           return (
-                            <div style={{
-                              padding: "36px 16px",
-                              textAlign: "center",
-                              color: "var(--text-muted)",
-                            }}>
-                              <div style={{ fontSize: "1.8rem", marginBottom: 8 }}>☕</div>
-                              <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#CBD5E1", marginBottom: 4 }}>
-                                Belum Ada Aktivitas Tap
-                              </div>
-                              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-                                {search.trim()
-                                  ? `Tidak ditemukan toko yang cocok dengan "${search}".`
-                                  : `Belum ada cafe yang menerima tap pelanggan ${
-                                      dailyMode === "today" && !customDate ? "hari ini" :
-                                      dailyMode === "last7" && !customDate ? "dalam 7 hari terakhir" :
-                                      dailyMode === "last30" && !customDate ? "dalam 30 hari terakhir" :
-                                      customDate ? `pada ${formatDateShortIndo(customDate)}` : "pada periode ini"
-                                    }.`}
-                              </div>
-                            </div>
+                            <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, lineHeight: 1.4 }}>
+                              Belum ada riwayat tap yang tercatat pada rentang waktu ini.
+                            </p>
                           );
                         }
-
-                        const visibleStores = showAllSidebarStores ? targetList : targetList.slice(0, 5);
+                        const h = counts.indexOf(max);
+                        const label = `${String(h).padStart(2, "0")}.00 – ${String((h + 1) % 24).padStart(2, "0")}.00 WIB`;
 
                         return (
-                          <>
-                            <div className="cafe-scorecard-grid">
-                              {visibleStores.map((c, idx) => {
-                                const isSelected = search.toLowerCase() === c.storeName.toLowerCase();
-                                const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
-
-                                return (
-                                  <div
-                                    key={c.storeName}
-                                    onClick={() => setSearch(search.toLowerCase() === c.storeName.toLowerCase() ? "" : c.storeName)}
-                                    className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
-                                    title={`Klik untuk filter aktivitas ${c.storeName}`}
-                                  >
-                                    <div className="cafe-scorecard-left">
-                                      <span className="cafe-rank-badge">{rankBadge}</span>
-                                      <div className="cafe-name-wrap">
-                                        <div className="cafe-name-text">
-                                          <span>{c.storeName}</span>
-                                          {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
-                                        </div>
-                                        <div className="cafe-sub-text">
-                                          <span className="cafe-code-pill">{c.code}</span>
-                                          {c.count > 0 && <span>· {c.pct}%</span>}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="cafe-scorecard-right">
-                                      <div className="cafe-count-wrap">
-                                        <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
-                                          {c.count}
-                                        </span>
-                                        <span className="cafe-count-unit">tap</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)", borderRadius: 10 }}>
+                            <div style={{ fontSize: "1.3rem" }}>🔥</div>
+                            <div>
+                              <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#34D399" }}>{label}</div>
+                              <div style={{ fontSize: "0.72rem", color: "#A7F3D0" }}>{max} tap pelanggan tercatat</div>
                             </div>
-
-                            {/* Tombol Toggle: Tampilkan 5 Toko Secara Default, Sembunyikan Sisanya dengan Tombol */}
-                            {targetList.length > 5 && (
-                              <div style={{ padding: "0 14px 12px" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowAllSidebarStores(prev => !prev)}
-                                  style={{
-                                    width: "100%",
-                                    padding: "9px 14px",
-                                    background: "rgba(99, 102, 241, 0.1)",
-                                    border: "1px dashed rgba(99, 102, 241, 0.35)",
-                                    borderRadius: 8,
-                                    color: "#C7D2FE",
-                                    fontSize: "0.78rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 6,
-                                    transition: "all 0.15s ease",
-                                  }}
-                                >
-                                  <span>{showAllSidebarStores ? "▲" : "▼"}</span>
-                                  <span>
-                                    {showAllSidebarStores
-                                      ? "Tampilkan Lebih Sedikit"
-                                      : `Tampilkan Semua (${targetList.length} Toko)`}
-                                  </span>
-                                </button>
-                              </div>
-                            )}
-                          </>
+                          </div>
                         );
                       })()}
                     </div>
-                  )}
-                </div>
+
+                    {/* 2. Ringkasan Status Outlet & Kartu */}
+                    <div className="peak-insight-box">
+                      <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#F8FAFC", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>📊</span> Status Operasional Kartu
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Toko Aktif</div>
+                          <div style={{ fontSize: "1rem", fontWeight: 800, color: "#F8FAFC", marginTop: 2 }}>{availableStores.length}</div>
+                        </div>
+                        <div style={{ padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 600 }}>Kartu Aktif</div>
+                          <div style={{ fontSize: "1rem", fontWeight: 800, color: "#34D399", marginTop: 2 }}>{cards.length - sleepingCards.length}</div>
+                        </div>
+                      </div>
+                      {sleepingCards.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("tidur")}
+                          style={{
+                            width: "100%",
+                            marginTop: 10,
+                            padding: "7px 10px",
+                            background: "rgba(239, 68, 68, 0.1)",
+                            border: "1px solid rgba(239, 68, 68, 0.25)",
+                            borderRadius: 8,
+                            color: "#FCA5A5",
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span>😴</span> {sleepingCards.length} Kartu Belum Ada Tap ↗
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 3. Scorecard Total Tap per Cafe (Top 5 & Tampilkan Semua) */}
+                    {cafeBreakdownList.length > 0 && (
+                      <div className="cafe-scorecard-box">
+                        <div className="cafe-scorecard-header">
+                          <div className="cafe-scorecard-title">
+                            <span>🏪</span>
+                            <span>
+                              Total Tap per Cafe — {
+                                dailyMode === "today" && !customDate ? "Hari Ini" :
+                                dailyMode === "last7" && !customDate ? "7 Hari Terakhir" :
+                                dailyMode === "last30" && !customDate ? "30 Hari Terakhir" :
+                                customDate ? formatDateShortIndo(customDate) : "Sepanjang Masa"
+                              }
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            {search && (
+                              <button
+                                type="button"
+                                onClick={() => setSearch("")}
+                                style={{
+                                  background: "rgba(239, 68, 68, 0.15)",
+                                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                                  color: "#FCA5A5",
+                                  borderRadius: 6,
+                                  padding: "2px 8px",
+                                  fontSize: "0.68rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                }}
+                                title="Hapus filter pencarian cafe"
+                              >
+                                ✕ Reset
+                              </button>
+                            )}
+                            <span className="cafe-scorecard-meta">
+                              {activePeriodInfo.entries.length} TAP
+                            </span>
+                          </div>
+                        </div>
+
+                        {(() => {
+                          const storesWithTaps = cafeBreakdownList.filter(c => c.count > 0);
+                          const allRegisteredStores = cafeBreakdownList;
+
+                          // Target list: jika ada pencarian, ikuti pencarian.
+                          // Jika tanpa pencarian: tampilkan hanya toko yang punya tap di periode ini.
+                          // Kalau kurang dari 5, tampilkan semuanya yang ada tap saja (jangan isi dengan toko tanpa tap).
+                          // Kalau lebih dari 5, tampilkan Top 5 dulu + tombol Tampilkan Semua.
+                          const targetList = search.trim()
+                            ? allRegisteredStores.filter(c =>
+                                c.storeName.toLowerCase().includes(search.toLowerCase()) ||
+                                c.code.toLowerCase().includes(search.toLowerCase())
+                              )
+                            : storesWithTaps;
+
+                          if (targetList.length === 0) {
+                            return (
+                              <div style={{
+                                padding: "36px 16px",
+                                textAlign: "center",
+                                color: "var(--text-muted)",
+                              }}>
+                                <div style={{ fontSize: "1.8rem", marginBottom: 8 }}>☕</div>
+                                <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#CBD5E1", marginBottom: 4 }}>
+                                  Belum Ada Aktivitas Tap
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                                  {search.trim()
+                                    ? `Tidak ditemukan toko yang cocok dengan "${search}".`
+                                    : `Belum ada cafe yang menerima tap pelanggan ${
+                                        dailyMode === "today" && !customDate ? "hari ini" :
+                                        dailyMode === "last7" && !customDate ? "dalam 7 hari terakhir" :
+                                        dailyMode === "last30" && !customDate ? "dalam 30 hari terakhir" :
+                                        customDate ? `pada ${formatDateShortIndo(customDate)}` : "pada periode ini"
+                                      }.`}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          const visibleStores = showAllSidebarStores ? targetList : targetList.slice(0, 5);
+
+                          return (
+                            <>
+                              <div className="cafe-scorecard-grid">
+                                {visibleStores.map((c, idx) => {
+                                  const isSelected = search.toLowerCase() === c.storeName.toLowerCase();
+                                  const rankBadge = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+
+                                  return (
+                                    <div
+                                      key={c.storeName}
+                                      onClick={() => setSearch(search.toLowerCase() === c.storeName.toLowerCase() ? "" : c.storeName)}
+                                      className={`cafe-scorecard-item ${isSelected ? "selected" : ""}`}
+                                      title={`Klik untuk filter aktivitas ${c.storeName}`}
+                                    >
+                                      <div className="cafe-scorecard-left">
+                                        <span className="cafe-rank-badge">{rankBadge}</span>
+                                        <div className="cafe-name-wrap">
+                                          <div className="cafe-name-text">
+                                            <span>{c.storeName}</span>
+                                            {isSelected && <span className="cafe-filtered-pill">Terpilih</span>}
+                                          </div>
+                                          <div className="cafe-sub-text">
+                                            <span className="cafe-code-pill">{c.code}</span>
+                                            {c.count > 0 && <span>· {c.pct}%</span>}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="cafe-scorecard-right">
+                                        <div className="cafe-count-wrap">
+                                          <span className={`cafe-count-num ${c.count > 0 ? "has-taps" : "zero-taps"}`}>
+                                            {c.count}
+                                          </span>
+                                          <span className="cafe-count-unit">tap</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Tombol Toggle: Tampilkan 5 Toko Secara Default, Sembunyikan Sisanya dengan Tombol */}
+                              {targetList.length > 5 && (
+                                <div style={{ padding: "0 14px 12px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowAllSidebarStores(prev => !prev)}
+                                    style={{
+                                      width: "100%",
+                                      padding: "9px 14px",
+                                      background: "rgba(99, 102, 241, 0.1)",
+                                      border: "1px dashed rgba(99, 102, 241, 0.35)",
+                                      borderRadius: 8,
+                                      color: "#C7D2FE",
+                                      fontSize: "0.78rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: 6,
+                                      transition: "all 0.15s ease",
+                                    }}
+                                  >
+                                    <span>{showAllSidebarStores ? "▲" : "▼"}</span>
+                                    <span>
+                                      {showAllSidebarStores
+                                        ? "Tampilkan Lebih Sedikit"
+                                        : `Tampilkan Semua (${targetList.length} Toko)`}
+                                    </span>
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )
           )}

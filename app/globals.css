@@ -1373,6 +1373,18 @@ html, body {
   width: 100%;
 }
 
+/* Ketika memfilter toko/cafe tertentu: Sembunyikan sidebar global dan lebarkan feed tap 100% */
+.dashboard-grid-2col.single-store-view {
+  grid-template-columns: 1fr !important;
+  display: block !important;
+  width: 100% !important;
+}
+
+.dashboard-grid-2col.single-store-view .dashboard-grid-main {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 .dashboard-grid-sidebar {
   display: flex;
   flex-direction: column;
@@ -1468,6 +1480,10 @@ html, body {
   }
   .dashboard-grid-2col.show-mobile-outlets .dashboard-grid-main {
     display: none !important;
+  }
+  .dashboard-grid-2col.single-store-view .dashboard-grid-main {
+    display: block !important;
+    width: 100% !important;
   }
 }
 
