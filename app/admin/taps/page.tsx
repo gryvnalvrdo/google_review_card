@@ -2664,7 +2664,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${(activeTab === "harian" || activeTab === "tidur") && dailyMode === "today" && !customDate ? "active" : ""}`}
-                onClick={() => { setDailyMode("today"); setCustomDate(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
+                onClick={() => { setDailyMode("today"); setCustomDate(""); setSearch(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
                 title="Tampilkan total tap hari ini"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(16,185,129,0.1)", color: "#34D399", border: "1px solid rgba(16,185,129,0.25)" }}>
@@ -2679,7 +2679,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${(activeTab === "harian" || activeTab === "tidur") && dailyMode === "last7" && !customDate ? "active" : ""}`}
-                onClick={() => { setDailyMode("last7"); setCustomDate(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
+                onClick={() => { setDailyMode("last7"); setCustomDate(""); setSearch(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
                 title="Tampilkan total tap 7 hari terakhir (mingguan)"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(99,102,241,0.1)", color: "#A5B4FC", border: "1px solid rgba(99,102,241,0.25)" }}>
@@ -2694,7 +2694,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${(activeTab === "harian" || activeTab === "tidur") && dailyMode === "last30" && !customDate ? "active" : ""}`}
-                onClick={() => { setDailyMode("last30"); setCustomDate(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
+                onClick={() => { setDailyMode("last30"); setCustomDate(""); setSearch(""); if (activeTab !== "tidur") setActiveTab("harian"); }}
                 title="Tampilkan total tap 30 hari terakhir (bulanan)"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(245,158,11,0.1)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.25)" }}>
@@ -2709,7 +2709,7 @@ export default function TapsPage() {
               <button
                 type="button"
                 className={`hero-chip ${activeTab === "harian" && dailyMode === "all" && !customDate ? "active" : ""}`}
-                onClick={() => { setActiveTab("harian"); setDailyMode("all"); setCustomDate(""); }}
+                onClick={() => { setActiveTab("harian"); setDailyMode("all"); setCustomDate(""); setSearch(""); }}
                 title="Tampilkan semua riwayat tap sepanjang masa"
               >
                 <div className="hero-chip-icon" style={{ background: "rgba(139,92,246,0.1)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.25)" }}>
@@ -2862,7 +2862,7 @@ export default function TapsPage() {
                     max={toDateInputValue(new Date())}
                     onChange={(e) => {
                       setCustomDate(e.target.value);
-                      if (e.target.value) setDailyMode("custom");
+                      if (e.target.value) { setDailyMode("custom"); setSearch(""); }
                     }}
                     onClick={(e) => {
                       try {
@@ -2894,6 +2894,7 @@ export default function TapsPage() {
                         e.preventDefault();
                         setCustomDate("");
                         setDailyMode("today");
+                        setSearch("");
                       }}
                       style={{
                         position: "absolute",
@@ -2975,7 +2976,7 @@ export default function TapsPage() {
                       {dailyMode !== "all" && filtered.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => { setDailyMode("all"); setCustomDate(""); }}
+                          onClick={() => { setDailyMode("all"); setCustomDate(""); setSearch(""); }}
                           className="btn btn-ghost"
                           style={{ padding: "8px 16px", fontSize: "0.8rem", color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)" }}
                         >
