@@ -739,16 +739,20 @@ export default function PrintQRCodes() {
     if (mode === templateMode && ((mode === "default" && bgImage === defaultImg) || (mode === "custom" && bgImage === customImg))) {
       return;
     }
-    setTemplateMode(mode);
-    composedCanvases.current.clear();
-    setCodes([]); // Kosongkan daftar kartu lama agar tertutup saat ganti desain
-    setSaveResult(null);
     if (mode === "default") {
+      setTemplateMode("default");
+      composedCanvases.current.clear();
+      setCodes([]); // Tutup & bersihkan kartu yang sudah di-generate dari desain sebelumnya
+      setSaveResult(null);
       if (defaultImg) {
         setBgImage(defaultImg);
       }
     } else {
       if (customImg) {
+        setTemplateMode("custom");
+        composedCanvases.current.clear();
+        setCodes([]); // Tutup & bersihkan kartu yang sudah di-generate dari desain sebelumnya
+        setSaveResult(null);
         setBgImage(customImg);
         setShowPlacementEditor(true);
       } else {
