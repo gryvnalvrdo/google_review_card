@@ -43,8 +43,8 @@ const DEFAULT_PLACEMENT: QRPlacementConfig = {
   radius: 18,
   fgColor: "#000000",
   boxColor: "#FFFFFF",
-  dotStyle: "dots",
-  logoType: "google",
+  dotStyle: "squares",
+  logoType: "none",
   showCtaText: false,
   ctaText: "Tap Kartu NFC / Scan QR",
   ctaColor: "#FFFFFF",
@@ -367,10 +367,10 @@ function renderStyledQR(
   canvas: HTMLCanvasElement,
   text: string,
   size: number,
-  dotStyle: QRDotStyle = "dots",
+  dotStyle: QRDotStyle = "squares",
   fgColor: string = "#000000",
   bgColor: string = "transparent",
-  logoType: QRLogoType = "google"
+  logoType: QRLogoType = "none"
 ) {
   canvas.width = size;
   canvas.height = size;
@@ -556,10 +556,10 @@ function CardItem({ code, url, bgImage, placement, onCanvasReady }: CardItemProp
       qrCanvas,
       url,
       qrRes,
-      placement.dotStyle || "dots",
+      placement.dotStyle || "squares",
       placement.fgColor || "#000000",
       "transparent",
-      placement.logoType || "google"
+      placement.logoType || "none"
     );
 
     const composed = compositeCard(bgImage, qrCanvas, placement, code);
@@ -631,7 +631,7 @@ export default function PrintQRCodes() {
         setDefaultPlacement((prev) => {
           const next = typeof updater === "function" ? updater(prev) : updater;
           try {
-            localStorage.setItem("default_qr_placement", JSON.stringify({ placement: next }));
+            localStorage.setItem("default_qr_placement_v2", JSON.stringify({ placement: next }));
           } catch {}
           return next;
         });
@@ -713,7 +713,8 @@ export default function PrintQRCodes() {
     img.src = "/card-design.png";
 
     try {
-      const savedDefault = localStorage.getItem("default_qr_placement");
+      localStorage.removeItem("default_qr_placement"); // Bersihkan key lama jika ada
+      const savedDefault = localStorage.getItem("default_qr_placement_v2");
       if (savedDefault) {
         const parsed = JSON.parse(savedDefault);
         if (parsed.placement) {
@@ -801,8 +802,8 @@ export default function PrintQRCodes() {
           style: "white_box", // Kotak putih solid agar QR dummy bawaan klien 100% tertutup dan terhapus
           boxColor: "#FFFFFF",
           fgColor: "#000000",
-          dotStyle: "dots",
-          logoType: "google",
+          dotStyle: "squares",
+          logoType: "none",
           padding: 18,
           radius: 14,
           showCtaText: false,
@@ -1141,10 +1142,10 @@ export default function PrintQRCodes() {
       liveQrCanvasRef.current,
       "https://hantic.id/demo",
       innerSize,
-      effectivePlacement.dotStyle || "dots",
+      effectivePlacement.dotStyle || "squares",
       effectivePlacement.fgColor || "#000000",
       "transparent",
-      effectivePlacement.logoType || "google"
+      effectivePlacement.logoType || "none"
     );
   }, [effectivePlacement.dotStyle, effectivePlacement.fgColor, effectivePlacement.style, effectivePlacement.logoType, qrPrevSize, qrPrevPad]);
 
@@ -1596,7 +1597,7 @@ export default function PrintQRCodes() {
                           <div className="slider-item">
                             <div className="slider-header">
                               <span>Logo Tengah (Brand Watermark):</span>
-                              <strong style={{ color: "#A5B4FC" }}>
+                              <strong style={{ color: (!placement.logoType || placement.logoType === "none") ? "#94A3B8" : "#A5B4FC" }}>
                                 {placement.logoType === "google"
                                   ? "🔍 Google Official (4-Warna)"
                                   : placement.logoType === "star"
@@ -1609,8 +1610,15 @@ export default function PrintQRCodes() {
                             <div className="studio-chip-group">
                               <button
                                 type="button"
+                                onClick={() => setPlacement((p) => ({ ...p, logoType: "none" }))}
+                                className={`studio-chip ${(!placement.logoType || placement.logoType === "none") ? "active" : ""}`}
+                              >
+                                <span>🚫</span> Polos (Kosong)
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setPlacement((p) => ({ ...p, logoType: "google" }))}
-                                className={`studio-chip ${(!placement.logoType || placement.logoType === "google") ? "active" : ""}`}
+                                className={`studio-chip ${placement.logoType === "google" ? "active" : ""}`}
                               >
                                 <span>🔍</span> Google &quot;G&quot;
                               </button>
@@ -1628,16 +1636,9 @@ export default function PrintQRCodes() {
                               >
                                 <span>📶</span> NFC Contactless
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setPlacement((p) => ({ ...p, logoType: "none" }))}
-                                className={`studio-chip ${placement.logoType === "none" ? "active" : ""}`}
-                              >
-                                <span>🚫</span> Polos
-                              </button>
                             </div>
                             <p style={{ fontSize: "0.69rem", color: "#64748B", margin: "2px 0 0", lineHeight: 1.4 }}>
-                              Logo digambar pada level koreksi error tinggi (H) sehingga QR tetap 100% cepat terbaca oleh kamera HP.
+                              Pilihan polos membuat QR code bersih &amp; standar. Jika memilih logo, digambar pada level koreksi error tinggi (H) agar tetap cepat terbaca kamera HP.
                             </p>
                           </div>
 
@@ -1645,8 +1646,8 @@ export default function PrintQRCodes() {
                           <div className="slider-item" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
                             <div className="slider-header">
                               <span>Gaya Pola Titik QR:</span>
-                              <strong style={{ color: (!placement.dotStyle || placement.dotStyle === "dots") ? "#34D399" : placement.dotStyle === "rounded" ? "#A5B4FC" : "#FFF" }}>
-                                {(!placement.dotStyle || placement.dotStyle === "dots")
+                              <strong style={{ color: (!placement.dotStyle || placement.dotStyle === "squares") ? "#FFF" : placement.dotStyle === "rounded" ? "#A5B4FC" : "#34D399" }}>
+                                {placement.dotStyle === "dots"
                                   ? "🔵 Titik Bulat (Modern)"
                                   : placement.dotStyle === "rounded"
                                   ? "✨ Halus (Rounded)"
@@ -1656,13 +1657,28 @@ export default function PrintQRCodes() {
                             <div style={{ display: "flex", gap: 6 }}>
                               <button
                                 type="button"
+                                onClick={() => setPlacement((p) => ({ ...p, dotStyle: "squares" }))}
+                                className="print-btn"
+                                style={{
+                                  flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
+                                  background: (!placement.dotStyle || placement.dotStyle === "squares") ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.04)",
+                                  border: (!placement.dotStyle || placement.dotStyle === "squares") ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
+                                  color: (!placement.dotStyle || placement.dotStyle === "squares") ? "#FFF" : "#94A3B8",
+                                  fontWeight: (!placement.dotStyle || placement.dotStyle === "squares") ? 700 : 500,
+                                }}
+                              >
+                                ⬛ Kotak (Standar)
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setPlacement((p) => ({ ...p, dotStyle: "dots" }))}
                                 className="print-btn"
                                 style={{
                                   flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
-                                  background: (!placement.dotStyle || placement.dotStyle === "dots") ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.04)",
-                                  border: (!placement.dotStyle || placement.dotStyle === "dots") ? "1px solid #10B981" : "1px solid rgba(255,255,255,0.08)",
-                                  color: (!placement.dotStyle || placement.dotStyle === "dots") ? "#34D399" : "#94A3B8",
+                                  background: placement.dotStyle === "dots" ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.04)",
+                                  border: placement.dotStyle === "dots" ? "1px solid #10B981" : "1px solid rgba(255,255,255,0.08)",
+                                  color: placement.dotStyle === "dots" ? "#34D399" : "#94A3B8",
+                                  fontWeight: placement.dotStyle === "dots" ? 700 : 500,
                                 }}
                               >
                                 🔵 Titik Bulat
@@ -1676,22 +1692,10 @@ export default function PrintQRCodes() {
                                   background: placement.dotStyle === "rounded" ? "rgba(99, 102, 241, 0.25)" : "rgba(255,255,255,0.04)",
                                   border: placement.dotStyle === "rounded" ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
                                   color: placement.dotStyle === "rounded" ? "#C7D2FE" : "#94A3B8",
+                                  fontWeight: placement.dotStyle === "rounded" ? 700 : 500,
                                 }}
                               >
                                 ✨ Halus
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPlacement((p) => ({ ...p, dotStyle: "squares" }))}
-                                className="print-btn"
-                                style={{
-                                  flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
-                                  background: placement.dotStyle === "squares" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
-                                  border: placement.dotStyle === "squares" ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
-                                  color: placement.dotStyle === "squares" ? "#FFF" : "#94A3B8",
-                                }}
-                              >
-                                ⬛ Kotak
                               </button>
                             </div>
                           </div>
