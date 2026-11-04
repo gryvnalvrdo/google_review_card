@@ -1256,7 +1256,9 @@ export default function TapsPage() {
       ]);
       if (tapRes.ok) {
         const tapData = await tapRes.json();
-        const incomingLogs: TapLogEntry[] = tapData.logs ?? [];
+        const incomingLogs: TapLogEntry[] = (tapData.logs ?? []).sort(
+          (a: TapLogEntry, b: TapLogEntry) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime()
+        );
         setLogs(incomingLogs);
 
         // Check if there is a brand new tap arrived during background auto-refresh
@@ -1463,13 +1465,16 @@ export default function TapsPage() {
 
   const validLogs = useMemo(() => {
     // If cards have loaded, only keep logs whose code exists in active cards
-    if (cards.length === 0) return logs;
-    return logs
-      .filter(l => activeCodesSet.has(l.code))
-      .map(l => ({
-        ...l,
-        storeName: activeCardMap.get(l.code) || l.storeName,
-      }));
+    const raw = cards.length === 0
+      ? logs
+      : logs
+          .filter(l => activeCodesSet.has(l.code))
+          .map(l => ({
+            ...l,
+            storeName: activeCardMap.get(l.code) || l.storeName,
+          }));
+
+    return [...raw].sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
   }, [logs, cards, activeCodesSet, activeCardMap]);
 
   const thisMonthKey = getMonthKey(new Date().toISOString());

@@ -142,10 +142,15 @@ export async function resetCardTaps(code: string): Promise<void> {
           })
           .filter((e): e is TapLogEntry => e !== null && e.code !== code);
 
-        await vercelKv.del(TAP_LOG_KEY);
+        // Pastikan urutan selalu kronologis (newest-first)
+        remaining.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
+
         if (remaining.length > 0) {
-          // Gunakan lpush dengan urutan terbalik agar newest-first terjaga (sama dengan addTapLog)
-          await vercelKv.lpush(TAP_LOG_KEY, ...[...remaining].reverse().map((e) => JSON.stringify(e)));
+          const tempKey = `${TAP_LOG_KEY}:reset:${Date.now()}`;
+          await vercelKv.rpush(tempKey, ...remaining.map((e) => JSON.stringify(e)));
+          await vercelKv.rename(tempKey, TAP_LOG_KEY);
+        } else {
+          await vercelKv.del(TAP_LOG_KEY);
         }
       }
     } catch (e) {
@@ -337,17 +342,31 @@ export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
       }
     }
 
-    // Jika ada orphan log dari kartu yang sudah dihapus sebelumnya, bersihkan di Redis secara async
-    if (hasOrphan) {
+    // Cek apakah ada entri yang tidak berurutan secara kronologis
+    let isOutOfOrder = false;
+    for (let i = 0; i < validLogs.length - 1; i++) {
+      if (new Date(validLogs[i].tappedAt).getTime() < new Date(validLogs[i + 1].tappedAt).getTime()) {
+        isOutOfOrder = true;
+        break;
+      }
+    }
+
+    // Pastikan SELALU diurutkan dari yang terbaru (newest-first)
+    validLogs.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
+
+    // Jika ada orphan log atau urutan di Redis sempat teracak, rapikan kembali di Redis secara atomik
+    if (hasOrphan || isOutOfOrder) {
       (async () => {
         try {
-          await vercelKv.del(TAP_LOG_KEY);
           if (validLogs.length > 0) {
-            // Gunakan lpush dengan urutan terbalik agar newest-first terjaga
-            await vercelKv.lpush(TAP_LOG_KEY, ...[...validLogs].reverse().map((e) => JSON.stringify(e)));
+            const tempKey = `${TAP_LOG_KEY}:heal:${Date.now()}`;
+            await vercelKv.rpush(tempKey, ...validLogs.map((e) => JSON.stringify(e)));
+            await vercelKv.rename(tempKey, TAP_LOG_KEY);
+          } else {
+            await vercelKv.del(TAP_LOG_KEY);
           }
         } catch (err) {
-          console.error("Gagal auto-clean orphan tap_log:", err);
+          console.error("Gagal auto-heal urutan tap_log di KV:", err);
         }
       })();
     }
@@ -356,6 +375,8 @@ export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
   }
 
   const activeCodes = new Set(memoryStore.keys());
-  const valid = tapLogStore.filter((e) => activeCodes.has(e.code));
+  const valid = tapLogStore
+    .filter((e) => activeCodes.has(e.code))
+    .sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
   return valid.slice(0, limit);
 }

@@ -74,13 +74,16 @@ export default function AdminDashboard() {
   const cardUrlMap = useMemo(() => new Map(cards.map(c => [c.code, getPublicGoogleReviewUrl(c.googleReviewUrl || "", c.storeName)])), [cards]);
 
   const validTapLogs = useMemo(() => {
-    if (cards.length === 0) return tapLogs;
-    return tapLogs
-      .filter(l => activeCodesSet.has(l.code))
-      .map(l => ({
-        ...l,
-        storeName: activeCardMap.get(l.code) || l.storeName,
-      }));
+    const raw = cards.length === 0
+      ? tapLogs
+      : tapLogs
+          .filter(l => activeCodesSet.has(l.code))
+          .map(l => ({
+            ...l,
+            storeName: activeCardMap.get(l.code) || l.storeName,
+          }));
+
+    return [...raw].sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
   }, [tapLogs, cards, activeCodesSet, activeCardMap]);
 
   const unseenTapCount = useMemo(() => {
