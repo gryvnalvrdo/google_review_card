@@ -220,98 +220,112 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     return { x: 100, y: 100, size: 200, detected: false, qrFound: false, method: "fallback" };
   }
 
-  // Helper: decodes QR on a downscaled canvas (max 1400px), returns {x,y,size} in original coords or null
-  async function tryZxingOnCanvas(srcCanvas: HTMLCanvasElement, offsetX = 0, offsetY = 0, scaleX = 1, scaleY = 1) {
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Helper: decode QR dari HTMLCanvasElement menggunakan ZXing low-level API
+  // (HTMLCanvasElementLuminanceSource + HybridBinarizer + BinaryBitmap)
+  // Ini JAUH lebih reliable dari decodeFromImageElement karena tidak butuh <img> element
+  // ─────────────────────────────────────────────────────────────────────────────
+  function tryZxingDirect(
+    srcCanvas: HTMLCanvasElement,
+    offsetX = 0,
+    offsetY = 0,
+    dsFactor = 1
+  ): { x: number; y: number; size: number; text: string } | null {
     try {
-      const { BrowserQRCodeReader } = await import("@zxing/library");
-      const reader = new BrowserQRCodeReader();
-      const result = await (reader as any).decodeFromImageElement
-        ? reader.decodeFromImageElement(srcCanvas as unknown as HTMLImageElement)
-        : (reader as any).decode(srcCanvas);
+      // Gunakan require (sinkron) supaya tidak ada masalah async/await dengan ZXing
+      const zxing = require("@zxing/library");
+      const { QRCodeReader, HTMLCanvasElementLuminanceSource, HybridBinarizer, BinaryBitmap } = zxing;
+      if (!QRCodeReader || !HTMLCanvasElementLuminanceSource) return null;
 
-      if (result) {
-        const points = result.getResultPoints();
-        if (points && points.length >= 2) {
-          const xs = points.map((p: any) => p.getX() / scaleX + offsetX);
-          const ys = points.map((p: any) => p.getY() / scaleY + offsetY);
-          const minX = Math.min(...xs); const maxX = Math.max(...xs);
-          const minY = Math.min(...ys); const maxY = Math.max(...ys);
-          const distFinder = Math.max(maxX - minX, maxY - minY);
-          const coverSize = Math.round(distFinder * 1.52);
-          const cX = (minX + maxX) / 2; const cY = (minY + maxY) / 2;
-          const size = Math.round(Math.min(coverSize, Math.min(cardW, cardH) * 0.94));
-          return {
-            x: Math.max(0, Math.min(cardW - size, Math.round(cX - size / 2))),
-            y: Math.max(0, Math.min(cardH - size, Math.round(cY - size / 2))),
-            size,
-            text: result.getText() as string,
-          };
-        }
-      }
-    } catch { /* fall through */ }
-    return null;
+      const luminance = new HTMLCanvasElementLuminanceSource(srcCanvas);
+      const binarizer = new HybridBinarizer(luminance);
+      const bitmap = new BinaryBitmap(binarizer);
+      const reader = new QRCodeReader();
+      const result = reader.decode(bitmap);
+
+      const points = result.getResultPoints();
+      if (!points || points.length < 2) return null;
+
+      const xs = points.map((p: any) => p.getX() / dsFactor + offsetX);
+      const ys = points.map((p: any) => p.getY() / dsFactor + offsetY);
+      const minX = Math.min(...xs); const maxX = Math.max(...xs);
+      const minY = Math.min(...ys); const maxY = Math.max(...ys);
+      const distFinder = Math.max(maxX - minX, maxY - minY);
+      // 1.52x agar seluruh quiet-zone QR tertutup bersih
+      const coverSize = Math.round(distFinder * 1.52);
+      const cX = (minX + maxX) / 2;
+      const cY = (minY + maxY) / 2;
+      const size = Math.round(Math.min(coverSize, Math.min(cardW, cardH) * 0.94));
+      return {
+        x: Math.max(0, Math.min(cardW - size, Math.round(cX - size / 2))),
+        y: Math.max(0, Math.min(cardH - size, Math.round(cY - size / 2))),
+        size,
+        text: result.getText(),
+      };
+    } catch { return null; }
   }
 
-  // ─ Tier 1: ZXing multi-pass — downscaled full image + right-half crop + bottom-half crop ─
+  // ─ Tier 1: ZXing multi-pass (downscale + 4 region crop) ─
+  // Semua pass menggunakan tryZxingDirect (canvas native — tidak ada "undefined naturalWidth" bug)
   try {
-    // Create a full-card downscaled canvas (max 1400px on the long side)
     const maxDim = 1400;
     const longSide = Math.max(cardW, cardH);
     const dsFactor = longSide > maxDim ? maxDim / longSide : 1;
     const dsW = Math.round(cardW * dsFactor);
     const dsH = Math.round(cardH * dsFactor);
 
+    // Buat 1 canvas downscaled reusable
     const fullCanvas = document.createElement("canvas");
     fullCanvas.width = dsW; fullCanvas.height = dsH;
-    const fullCtx = fullCanvas.getContext("2d")!;
+    const fullCtx = fullCanvas.getContext("2d", { willReadFrequently: true })!;
     fullCtx.imageSmoothingEnabled = true;
     fullCtx.imageSmoothingQuality = "high";
     fullCtx.drawImage(img, 0, 0, dsW, dsH);
 
-    // 1a. Full downscaled image
-    let zxResult = await tryZxingOnCanvas(fullCanvas, 0, 0, dsFactor, dsFactor);
-    if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+    // Helper buat crop canvas
+    function cropCanvas(sx: number, sy: number, sw: number, sh: number): HTMLCanvasElement {
+      const c = document.createElement("canvas");
+      c.width = sw; c.height = sh;
+      c.getContext("2d")!.drawImage(fullCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+      return c;
+    }
 
-    // 1b. Right half crop (X: 40%–100%) — most common QR location
-    const rhX = Math.round(cardW * 0.40 * dsFactor);
+    // 1a. Full downscaled (paling umum)
+    let res = tryZxingDirect(fullCanvas, 0, 0, dsFactor);
+    if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
+
+    // 1b. Kanan (X: 40-100%) — QR sering di kanan seperti kartu Roti
+    const rhX = Math.round(dsW * 0.40);
     const rhW = dsW - rhX;
     if (rhW > 60) {
-      const rhCanvas = document.createElement("canvas");
-      rhCanvas.width = rhW; rhCanvas.height = dsH;
-      const rhCtx = rhCanvas.getContext("2d")!;
-      rhCtx.drawImage(fullCanvas, rhX, 0, rhW, dsH, 0, 0, rhW, dsH);
-      zxResult = await tryZxingOnCanvas(rhCanvas, Math.round(cardW * 0.40), 0, dsFactor, dsFactor);
-      if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+      res = tryZxingDirect(cropCanvas(rhX, 0, rhW, dsH), Math.round(cardW * 0.40), 0, dsFactor);
+      if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
     }
 
-    // 1c. Bottom half crop (Y: 40%–90%)
-    const bhY = Math.round(cardH * 0.40 * dsFactor);
-    const bhH = Math.round(cardH * 0.50 * dsFactor);
+    // 1c. Bawah (Y: 40-90%)
+    const bhY = Math.round(dsH * 0.40);
+    const bhH = Math.round(dsH * 0.50);
     if (bhH > 60) {
-      const bhCanvas = document.createElement("canvas");
-      bhCanvas.width = dsW; bhCanvas.height = bhH;
-      const bhCtx = bhCanvas.getContext("2d")!;
-      bhCtx.drawImage(fullCanvas, 0, bhY, dsW, bhH, 0, 0, dsW, bhH);
-      zxResult = await tryZxingOnCanvas(bhCanvas, 0, Math.round(cardH * 0.40), dsFactor, dsFactor);
-      if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+      res = tryZxingDirect(cropCanvas(0, bhY, dsW, bhH), 0, Math.round(cardH * 0.40), dsFactor);
+      if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
     }
 
-    // 1d. Center crop (X: 20%–80%, Y: 20%–80%)
-    const ccX = Math.round(cardW * 0.20 * dsFactor); const ccY = Math.round(cardH * 0.20 * dsFactor);
-    const ccW = Math.round(cardW * 0.60 * dsFactor); const ccH = Math.round(cardH * 0.60 * dsFactor);
-    if (ccW > 60 && ccH > 60) {
-      const ccCanvas = document.createElement("canvas");
-      ccCanvas.width = ccW; ccCanvas.height = ccH;
-      const ccCtx = ccCanvas.getContext("2d")!;
-      ccCtx.drawImage(fullCanvas, ccX, ccY, ccW, ccH, 0, 0, ccW, ccH);
-      zxResult = await tryZxingOnCanvas(ccCanvas, Math.round(cardW * 0.20), Math.round(cardH * 0.20), dsFactor, dsFactor);
-      if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+    // 1d. Kanan-bawah quadrant (X: 40-100%, Y: 40-100%) — QR pojok kanan bawah
+    if (rhW > 60 && bhH > 60) {
+      res = tryZxingDirect(cropCanvas(rhX, bhY, rhW, bhH), Math.round(cardW * 0.40), Math.round(cardH * 0.40), dsFactor);
+      if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
     }
-  } catch { /* ZXing unavailable, continue */ }
 
-  // ─ Tier 2: Pattern Transition Scan (improved: requires BOTH axis transitions + aspect ratio ~1:1) ─
+    // 1e. Kiri (X: 0-60%) — QR di sisi kiri
+    const lhW = Math.round(dsW * 0.60);
+    if (lhW > 60) {
+      res = tryZxingDirect(cropCanvas(0, 0, lhW, dsH), 0, 0, dsFactor);
+      if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
+    }
+  } catch { /* ZXing unavailable */ }
+
+  // ─ Tier 2: Pattern Transition Scan (mensyaratkan transisi KEDUA sumbu H+V) ─
   try {
-    // Work on a downscaled version for performance
     const maxDim = 800;
     const longSide = Math.max(cardW, cardH);
     const dsFactor = longSide > maxDim ? maxDim / longSide : 1;
@@ -343,8 +357,7 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
         }
       }
 
-      // Test multiple window sizes
-      const testSizes = [0.22, 0.30, 0.40].map((r) => Math.round(Math.min(gridW, gridH) * r));
+      const testSizes = [0.18, 0.26, 0.36].map((r) => Math.round(Math.min(gridW, gridH) * r));
       let bestScore = 0;
       let bestBox = { gx: 0, gy: 0, gSize: testSizes[1] };
 
@@ -371,13 +384,12 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
               }
             }
 
-            // Require BOTH axes to have high transitions (QR has both H and V; text only has H)
-            // Also require aspect ratio close to 1:1 (QR is square)
-            const score = Math.min(hTransitions, vTransitions);
-            // Penalty if hTransitions >> vTransitions (indicates horizontal text, not QR)
-            const axisRatio = vTransitions > 0 ? hTransitions / vTransitions : 99;
-            if (axisRatio > 4.0) continue; // Skip text-like regions
+            // Wajib ada transisi di KEDUA sumbu (QR = H+V, teks = H saja)
+            if (vTransitions === 0) continue;
+            const axisRatio = hTransitions / vTransitions;
+            if (axisRatio > 3.5 || axisRatio < 0.3) continue; // skip teks & garis vertikal
 
+            const score = Math.min(hTransitions, vTransitions);
             if (score > bestScore) {
               bestScore = score;
               bestBox = { gx, gy, gSize: winSize };
@@ -390,7 +402,7 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
       if (bestScore > minExpectedTransitions && bestScore > 30) {
         const realX = Math.round(bestBox.gx * step / dsFactor);
         const realY = Math.round(bestBox.gy * step / dsFactor);
-        const foundSize = Math.round(bestBox.gSize * step / dsFactor * 1.1);
+        const foundSize = Math.round(bestBox.gSize * step / dsFactor * 1.12);
         return {
           x: Math.max(0, Math.min(cardW - foundSize, realX)),
           y: Math.max(0, Math.min(cardH - foundSize, realY)),
@@ -403,13 +415,13 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     }
   } catch { /* Pattern scan failed */ }
 
-  // ─ Tier 3: Deteksi Kotak Kontainer Warna di Kartu (improved multi-column) ─
+  // ─ Tier 3: Deteksi Kotak Kontainer Warna (multi-column) ─
   const boxResult = detectBoxInImage(img);
   if (boxResult.detected) {
     return { ...boxResult, qrFound: false, method: "box" };
   }
 
-  // ─ Tier 4: Fallback ─
+  // ─ Tier 4: Fallback center ─
   return { ...boxResult, qrFound: false, method: "fallback" };
 }
 
