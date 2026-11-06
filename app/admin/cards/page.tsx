@@ -104,6 +104,17 @@ export default function CardsPage() {
     setBaseUrl(window.location.origin);
   }, []);
 
+  useEffect(() => {
+    if (editingCard || deleteConfirmCode) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [editingCard, deleteConfirmCode]);
+
   async function fetchCards() {
     try {
       const resCodes = await fetch("/api/admin/codes");
@@ -646,29 +657,83 @@ export default function CardsPage() {
       {editingCard && (
         <div
           style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)",
-            zIndex: 400, backdropFilter: "blur(6px)", display: "flex",
-            alignItems: "center", justifyContent: "center", padding: 16,
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.82)",
+            zIndex: 400,
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
           }}
           onClick={() => setEditingCard(null)}
         >
           <div
             className="card"
-            style={{ width: "min(100%, 460px)", background: "#13131C", padding: "26px 24px" }}
+            style={{
+              width: "min(100%, 480px)",
+              maxHeight: "min(90vh, 90dvh)",
+              background: "#13131C",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: 16,
+              display: "flex",
+              flexDirection: "column",
+              padding: 0,
+              overflow: "hidden",
+              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.75)",
+              margin: "auto",
+            }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#F0F0FF" }}>✏️ Edit Kartu Toko</h2>
-              <button onClick={() => setEditingCard(null)} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "0.75rem" }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px 20px",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+              background: "#151520",
+              flexShrink: 0,
+            }}>
+              <h2 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF", margin: 0 }}>
+                ✏️ Edit Kartu Toko
+              </h2>
+              <button
+                type="button"
+                onClick={() => setEditingCard(null)}
+                className="btn btn-ghost"
+                style={{ padding: "4px 8px", fontSize: "0.85rem", lineHeight: 1 }}
+                title="Tutup Modal"
+              >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit}>
-              <div className="form-group">
-                <label className="label">Kode Kartu</label>
-                <input className="input" value={editingCard.code || ""} disabled style={{ opacity: 0.6, cursor: "not-allowed" }} />
-              </div>
+            <form
+              onSubmit={handleEditSubmit}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                minHeight: 0,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  WebkitOverflowScrolling: "touch",
+                  padding: "18px 20px",
+                }}
+              >
+                <div className="form-group">
+                  <label className="label">Kode Kartu</label>
+                  <input className="input" value={editingCard.code || ""} disabled style={{ opacity: 0.6, cursor: "not-allowed" }} />
+                </div>
 
               {/* Link Kartu / NFC */}
               <div className="form-group" style={{
@@ -855,11 +920,30 @@ export default function CardsPage() {
                 );
               })()}
 
-              <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-                <button type="button" className="btn btn-ghost" style={{ flex: 1, justifyContent: "center" }} onClick={() => setEditingCard(null)}>
+              </div>
+
+              {/* Sticky Footer Action Buttons */}
+              <div style={{
+                display: "flex",
+                gap: 10,
+                padding: "14px 20px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                background: "#151520",
+                flexShrink: 0,
+              }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ flex: 1, justifyContent: "center" }}
+                  onClick={() => setEditingCard(null)}
+                >
                   Batal
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1, justifyContent: "center" }}
+                >
                   Simpan Perubahan
                 </button>
               </div>
