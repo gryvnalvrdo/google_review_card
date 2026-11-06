@@ -84,12 +84,10 @@ export default function CardsPage() {
     const match = pid.match(/placeid=([a-zA-Z0-9_\-]+)/i);
     if (match) pid = match[1];
     setEditPlaceId(pid);
-    if (pid) {
-      setEditingCard(prev => prev ? {
-        ...prev,
-        googleReviewUrl: `https://search.google.com/local/writereview?placeid=${pid}`,
-      } : null);
-    }
+    setEditingCard(prev => prev ? {
+      ...prev,
+      googleReviewUrl: pid ? `https://search.google.com/local/writereview?placeid=${pid}` : "",
+    } : null);
   }
   const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -164,10 +162,15 @@ export default function CardsPage() {
     e.preventDefault();
     if (!editingCard) return;
 
+    const pid = editPlaceId.trim();
+    const finalGoogleReviewUrl = pid
+      ? `https://search.google.com/local/writereview?placeid=${pid}`
+      : (editingCard.googleReviewUrl?.trim() || "");
+
     const isLocationOrStoreChanged = Boolean(
       originalCard && (
         originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase() ||
-        originalCard.googleReviewUrl.trim() !== editingCard.googleReviewUrl.trim()
+        originalCard.googleReviewUrl.trim() !== finalGoogleReviewUrl
       )
     );
 
@@ -176,8 +179,8 @@ export default function CardsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         code: editingCard.code,
-        storeName: editingCard.storeName,
-        googleReviewUrl: editingCard.googleReviewUrl,
+        storeName: editingCard.storeName.trim(),
+        googleReviewUrl: finalGoogleReviewUrl,
         price: editingCard.price ?? 50000,
         resetTaps: isLocationOrStoreChanged,
       }),
@@ -542,56 +545,139 @@ export default function CardsPage() {
                           </div>
                         </div>
 
-                        {/* Row 2: Details Grid */}
+                        {/* Row 2: Details Summary (Harga Jual & Target Ulasan) */}
                         <div style={{
-                          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-                          gap: 10, padding: "10px 14px", background: "rgba(0,0,0,0.3)", borderRadius: 10,
-                          fontSize: "0.78rem", border: "1px solid rgba(255,255,255,0.04)",
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 12,
+                          padding: "10px 14px",
+                          background: "rgba(0,0,0,0.25)",
+                          borderRadius: 10,
+                          fontSize: "0.78rem",
+                          border: "1px solid rgba(255,255,255,0.04)",
                         }}>
                           <div>
-                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Harga Jual</span>
-                            <strong style={{ color: "#34D399", fontSize: "0.88rem" }}>
+                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
+                            <strong style={{ color: "#34D399", fontSize: "0.92rem", fontWeight: 700 }}>
                               Rp {(card.price ?? 50000).toLocaleString("id-ID")}
                             </strong>
                           </div>
-                          <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                              <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", textTransform: "uppercase" }}>Link Kartu / NFC</span>
-                              <button
-                                type="button"
-                                onClick={() => copyLinkText(fullCardUrl)}
-                                title="Salin link kartu / NFC"
-                                style={{
-                                  background: "transparent",
-                                  border: "none",
-                                  color: copiedLinkText === fullCardUrl ? "#34D399" : "#A5B4FC",
-                                  cursor: "pointer",
-                                  fontSize: "0.7rem",
-                                  padding: "0 4px",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 3,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {copiedLinkText === fullCardUrl ? "✅ Tersalin" : "📋 Salin"}
-                              </button>
-                            </div>
-                            <a href={fullCardUrl} target="_blank" rel="noreferrer" style={{ color: "#A5B4FC", textDecoration: "none", wordBreak: "break-all" }}>
-                              {fullCardUrl} ↗
-                            </a>
-                          </div>
-                          <div>
-                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Target Google Review</span>
+                          <div style={{ textAlign: "right" }}>
+                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Target Google Review</span>
                             <a
                               href={getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName)}
                               target="_blank"
                               rel="noreferrer"
-                              style={{ color: "#FCD34D", textDecoration: "none", wordBreak: "break-all" }}
+                              style={{
+                                color: "#FCD34D",
+                                textDecoration: "none",
+                                fontWeight: 600,
+                                fontSize: "0.8rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                marginTop: 2,
+                              }}
                               title="Buka ulasan toko di Google Search"
                             >
-                              Buka Menu Ulasan ↗
+                              <span>⭐</span> Buka Menu Ulasan ↗
                             </a>
+                          </div>
+                        </div>
+
+                        {/* Row 2.5: Link NFC & Tombol Salin Cepat (Desktop & Mobile Optimized) */}
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          padding: "8px 12px",
+                          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.04) 100%)",
+                          border: "1px solid rgba(99, 102, 241, 0.2)",
+                          borderRadius: 10,
+                          flexWrap: "wrap",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>
+                            <span style={{
+                              fontSize: "0.68rem",
+                              fontWeight: 800,
+                              color: "#818CF8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              whiteSpace: "nowrap",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              background: "rgba(99, 102, 241, 0.15)",
+                              padding: "2px 7px",
+                              borderRadius: 5,
+                            }}>
+                              <span>📱</span> Link NFC
+                            </span>
+                            <a
+                              href={fullCardUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                color: "#C7D2FE",
+                                textDecoration: "none",
+                                fontSize: "0.8rem",
+                                fontFamily: "monospace",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                              title="Klik untuk membuka link kartu"
+                            >
+                              {fullCardUrl}
+                            </a>
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: "auto" }}>
+                            <a
+                              href={fullCardUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn btn-ghost"
+                              style={{
+                                padding: "4px 8px",
+                                fontSize: "0.72rem",
+                                color: "#94A3B8",
+                                borderRadius: 6,
+                                display: "inline-flex",
+                                alignItems: "center",
+                              }}
+                              title="Buka di tab baru"
+                            >
+                              ↗
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => copyLinkText(fullCardUrl)}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "6px 14px",
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                                borderRadius: 8,
+                                border: `1px solid ${copiedLinkText === fullCardUrl ? "rgba(16, 185, 129, 0.5)" : "rgba(99, 102, 241, 0.4)"}`,
+                                background: copiedLinkText === fullCardUrl
+                                  ? "linear-gradient(135deg, #059669, #10B981)"
+                                  : "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.35))",
+                                color: copiedLinkText === fullCardUrl ? "#FFFFFF" : "#E0E7FF",
+                                cursor: "pointer",
+                                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                                boxShadow: copiedLinkText === fullCardUrl
+                                  ? "0 2px 10px rgba(16, 185, 129, 0.3)"
+                                  : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                              }}
+                              title="Salin seluruh link URL NFC ke clipboard"
+                            >
+                              <span>{copiedLinkText === fullCardUrl ? "✅" : "📋"}</span>
+                              <span>{copiedLinkText === fullCardUrl ? "Tersalin!" : "Salin Link"}</span>
+                            </button>
                           </div>
                         </div>
 
@@ -733,67 +819,16 @@ export default function CardsPage() {
                   <input className="input" value={editingCard.code || ""} disabled style={{ opacity: 0.6, cursor: "not-allowed" }} />
                 </div>
 
-              {/* Link Kartu / NFC */}
-              <div className="form-group" style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                marginBottom: 16,
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    Link Kartu / NFC
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => copyLinkText(`${baseUrl}/c/${editingCard.code}`)}
-                    className="btn btn-ghost"
-                    style={{
-                      padding: "3px 9px",
-                      fontSize: "0.72rem",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      color: copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "#34D399" : "#A5B4FC",
-                      background: copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "rgba(52, 211, 153, 0.12)" : "rgba(99, 102, 241, 0.15)",
-                      border: `1px solid ${copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "rgba(52, 211, 153, 0.3)" : "rgba(99, 102, 241, 0.3)"}`,
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "✅ Link Tersalin!" : "📋 Salin Link"}
-                  </button>
+                <div className="form-group">
+                  <label className="label">Nama Toko / Resto</label>
+                  <input
+                    className="input"
+                    value={editingCard.storeName || ""}
+                    onChange={e => setEditingCard({ ...editingCard, storeName: e.target.value })}
+                    placeholder="Nama toko binaan"
+                    required
+                  />
                 </div>
-                <a
-                  href={`${baseUrl}/c/${editingCard.code}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    color: "#A5B4FC",
-                    textDecoration: "none",
-                    fontSize: "0.82rem",
-                    wordBreak: "break-all",
-                    display: "inline-block",
-                    lineHeight: 1.4,
-                  }}
-                  title="Buka link kartu di tab baru"
-                >
-                  {`${baseUrl}/c/${editingCard.code}`} ↗
-                </a>
-              </div>
-
-              <div className="form-group">
-                <label className="label">Nama Toko / Resto</label>
-                <input
-                  className="input"
-                  value={editingCard.storeName || ""}
-                  onChange={e => setEditingCard({ ...editingCard, storeName: e.target.value })}
-                  placeholder="Nama toko binaan"
-                  required
-                />
-              </div>
 
               {/* Google Place ID: Cukup edit ini jika toko pindah lokasi */}
               <div className="form-group">
@@ -827,24 +862,6 @@ export default function CardsPage() {
                     <span>✅</span> URL Review Google aktif
                   </div>
                 )}
-              </div>
-
-              <div className="form-group">
-                <label className="label" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  Google Review URL (Otomatis dari Place ID)
-                </label>
-                <input
-                  className="input"
-                  value={editingCard.googleReviewUrl || ""}
-                  onChange={e => {
-                    const url = e.target.value;
-                    setEditingCard({ ...editingCard, googleReviewUrl: url });
-                    const match = url.match(/placeid=([a-zA-Z0-9_\-]+)/i);
-                    if (match) setEditPlaceId(match[1]);
-                  }}
-                  required
-                  style={{ fontSize: "0.8rem", color: "#CBD5E1" }}
-                />
               </div>
 
               <div className="form-group">

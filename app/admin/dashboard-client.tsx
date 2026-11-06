@@ -63,7 +63,6 @@ export default function AdminDashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
-  const [copiedEditLink, setCopiedEditLink] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [tapLogs, setTapLogs] = useState<TapLogEntry[]>([]);
   const [lastVisitedAt, setLastVisitedAt] = useState<string | null>(null);
@@ -359,68 +358,9 @@ export default function AdminDashboard() {
           style={isEditing ? { opacity: 0.6, cursor: "not-allowed" } : {}}
         />
         {isEditing && (
-          <>
-            <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 8 }}>
-              Kode kartu unik tidak dapat diubah saat mengedit.
-            </p>
-            {code && (
-              <div style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                marginTop: 6,
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                    Link Kartu / NFC
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = `${baseUrl || (typeof window !== "undefined" ? window.location.origin : "")}/c/${code.trim()}`;
-                      navigator.clipboard.writeText(url).then(() => {
-                        setCopiedEditLink(true);
-                        setTimeout(() => setCopiedEditLink(false), 2500);
-                      });
-                    }}
-                    className="btn btn-ghost"
-                    style={{
-                      padding: "3px 9px",
-                      fontSize: "0.72rem",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      color: copiedEditLink ? "#34D399" : "#A5B4FC",
-                      background: copiedEditLink ? "rgba(52, 211, 153, 0.12)" : "rgba(99, 102, 241, 0.15)",
-                      border: `1px solid ${copiedEditLink ? "rgba(52, 211, 153, 0.3)" : "rgba(99, 102, 241, 0.3)"}`,
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {copiedEditLink ? "✅ Link Tersalin!" : "📋 Salin Link"}
-                  </button>
-                </div>
-                <a
-                  href={`${baseUrl || (typeof window !== "undefined" ? window.location.origin : "")}/c/${code.trim()}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    color: "#A5B4FC",
-                    textDecoration: "none",
-                    fontSize: "0.82rem",
-                    wordBreak: "break-all",
-                    display: "inline-block",
-                    lineHeight: 1.4,
-                  }}
-                  title="Buka link kartu di tab baru"
-                >
-                  {`${baseUrl || (typeof window !== "undefined" ? window.location.origin : "")}/c/${code.trim()}`} ↗
-                </a>
-              </div>
-            )}
-          </>
+          <p style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+            Kode kartu unik tidak dapat diubah saat mengedit.
+          </p>
         )}
       </div>
 
