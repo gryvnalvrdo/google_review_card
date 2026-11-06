@@ -721,6 +721,7 @@ interface CardItemProps {
   placement: QRPlacementConfig;
   upscaleFactor: number;
   onCanvasReady: (code: string, canvas: HTMLCanvasElement) => void;
+  onPreview?: () => void;
 }
 
 function CardItem({
@@ -730,6 +731,7 @@ function CardItem({
   placement,
   upscaleFactor,
   onCanvasReady,
+  onPreview,
 }: CardItemProps) {
   const previewRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
@@ -765,7 +767,10 @@ function CardItem({
   const previewH = Math.round(targetH * (previewW / targetW));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: ready ? 1 : 0.35, transition: "opacity 0.3s" }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: ready ? 1 : 0.35, transition: "opacity 0.3s" }}
+      onClick={onPreview}
+    >
       <div
         style={{
           borderRadius: 10,
@@ -778,11 +783,27 @@ function CardItem({
           cursor: "pointer",
         }}
         className="card-thumb"
+        onClick={(e) => {
+          e.stopPropagation();
+          onPreview?.();
+        }}
+        title="Klik gambar kartu untuk melihat close-up detail resolusi penuh"
       >
-        <canvas ref={previewRef} width={previewW} height={previewH} style={{ display: "block", width: previewW, height: previewH }} />
+        <canvas
+          ref={previewRef}
+          width={previewW}
+          height={previewH}
+          style={{ display: "block", width: previewW, height: previewH, cursor: "pointer" }}
+        />
       </div>
 
-      <code style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.28)", letterSpacing: "0.1em", fontFamily: "monospace" }}>
+      <code
+        style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.28)", letterSpacing: "0.1em", fontFamily: "monospace", cursor: "pointer" }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onPreview?.();
+        }}
+      >
         {code}
       </code>
     </div>
@@ -1217,15 +1238,47 @@ export default function PrintQRCodes() {
     composedCanvases.current.set(code, canvas);
   }, []);
 
+  // Helper yang menjamin SELALU mengembalikan canvas kartu (dari cache atau di-render instan on-demand)
+  const getOrGenerateCardCanvas = useCallback(
+    (code: string): HTMLCanvasElement | null => {
+      let canvas = composedCanvases.current.get(code);
+      if (!canvas) {
+        const bg =
+          enhancedBgCanvas ||
+          (bgImage ? enhanceBackgroundImage(bgImage, upscaleFactor, sharpenLevel) : null);
+        if (!bg) return null;
 
+        const qrCanvas = document.createElement("canvas");
+        const qrRes = Math.max(Math.round(placement.size * upscaleFactor), 512 * upscaleFactor);
+        renderStyledQR(
+          qrCanvas,
+          `${baseUrl}/c/${code}`,
+          qrRes,
+          placement.dotStyle || "squares",
+          placement.fgColor || "#000000",
+          "transparent",
+          placement.logoType || "none"
+        );
+
+        canvas = compositeCard(bg, qrCanvas, placement, upscaleFactor, code);
+        composedCanvases.current.set(code, canvas);
+      }
+      return canvas;
+    },
+    [enhancedBgCanvas, bgImage, upscaleFactor, sharpenLevel, placement, baseUrl]
+  );
 
   function handleOpenPreview(code: string) {
-    const canvas = composedCanvases.current.get(code);
+    const canvas = getOrGenerateCardCanvas(code);
     if (canvas) {
-      setPreviewDataUrl(canvas.toDataURL("image/png"));
-      setPreviewCode(code);
-    } else {
-      handleDownloadSingle(code);
+      try {
+        const dataUrl = canvas.toDataURL("image/png");
+        setPreviewDataUrl(dataUrl);
+        setPreviewCode(code);
+        setPreviewZoomed(false);
+      } catch (err) {
+        console.error("Gagal membuka preview close-up:", err);
+      }
     }
   }
 
@@ -1249,7 +1302,7 @@ export default function PrintQRCodes() {
   }, []);
 
   function handleDownloadSingle(code: string) {
-    const canvas = composedCanvases.current.get(code);
+    const canvas = getOrGenerateCardCanvas(code);
     if (!canvas) return;
     canvas.toBlob((blob) => {
       if (blob) {
@@ -1262,11 +1315,14 @@ export default function PrintQRCodes() {
   async function handleDownloadAllPngDirect() {
     setIsSaving(true);
     setProgress("Mendownload file PNG...");
-    for (const [code, canvas] of composedCanvases.current) {
-      canvas.toBlob((blob) => {
-        if (blob) saveAs(blob, `Kartu_${code}.png`);
-      }, "image/png");
-      await new Promise((r) => setTimeout(r, 220));
+    for (const code of codes) {
+      const canvas = getOrGenerateCardCanvas(code);
+      if (canvas) {
+        canvas.toBlob((blob) => {
+          if (blob) saveAs(blob, `Kartu_${code}.png`);
+        }, "image/png");
+        await new Promise((r) => setTimeout(r, 220));
+      }
     }
     await autoSaveToStock(codes);
     setIsSaving(false);
@@ -1345,12 +1401,15 @@ export default function PrintQRCodes() {
     setIsZipping(true);
     const zip = new JSZip();
     let i = 0;
-    for (const [code, canvas] of composedCanvases.current) {
+    for (const code of codes) {
       i++;
-      setProgress(`Menyiapkan ${i}/${composedCanvases.current.size} — ${code}`);
-      const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/png"));
-      const ab = await blob.arrayBuffer();
-      zip.file(`Kartu_${code}.png`, ab);
+      setProgress(`Menyiapkan ${i}/${codes.length} — ${code}`);
+      const canvas = getOrGenerateCardCanvas(code);
+      if (canvas) {
+        const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/png"));
+        const ab = await blob.arrayBuffer();
+        zip.file(`Kartu_${code}.png`, ab);
+      }
     }
     setProgress("Membuat ZIP...");
     const content = await zip.generateAsync({ type: "blob" });
@@ -3270,7 +3329,8 @@ export default function PrintQRCodes() {
                   key={code}
                   className="card-wrap"
                   onClick={() => handleOpenPreview(code)}
-                  title="Klik kartu untuk melihat close-up resolusi tinggi"
+                  style={{ cursor: "pointer" }}
+                  title="Klik gambar kartu untuk melihat close-up detail resolusi penuh"
                 >
                   <button
                     type="button"
@@ -3287,6 +3347,7 @@ export default function PrintQRCodes() {
                     placement={effectivePlacement}
                     upscaleFactor={upscaleFactor}
                     onCanvasReady={handleCanvasReady}
+                    onPreview={() => handleOpenPreview(code)}
                   />
                   <div className="card-actions-row">
                     <button
