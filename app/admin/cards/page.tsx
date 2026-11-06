@@ -95,6 +95,7 @@ export default function CardsPage() {
   }
   const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copiedLinkText, setCopiedLinkText] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const qrOnlyRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const [baseUrl, setBaseUrl] = useState("");
@@ -215,6 +216,13 @@ export default function CardsPage() {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedCode(text);
       setTimeout(() => setCopiedCode(null), 2000);
+    });
+  }
+
+  function copyLinkText(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedLinkText(text);
+      setTimeout(() => setCopiedLinkText(null), 2000);
     });
   }
 
@@ -538,7 +546,28 @@ export default function CardsPage() {
                             </strong>
                           </div>
                           <div>
-                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase" }}>Link Kartu / NFC</span>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", textTransform: "uppercase" }}>Link Kartu / NFC</span>
+                              <button
+                                type="button"
+                                onClick={() => copyLinkText(fullCardUrl)}
+                                title="Salin link kartu / NFC"
+                                style={{
+                                  background: "transparent",
+                                  border: "none",
+                                  color: copiedLinkText === fullCardUrl ? "#34D399" : "#A5B4FC",
+                                  cursor: "pointer",
+                                  fontSize: "0.7rem",
+                                  padding: "0 4px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {copiedLinkText === fullCardUrl ? "✅ Tersalin" : "📋 Salin"}
+                              </button>
+                            </div>
                             <a href={fullCardUrl} target="_blank" rel="noreferrer" style={{ color: "#A5B4FC", textDecoration: "none", wordBreak: "break-all" }}>
                               {fullCardUrl} ↗
                             </a>
@@ -639,6 +668,57 @@ export default function CardsPage() {
               <div className="form-group">
                 <label className="label">Kode Kartu</label>
                 <input className="input" value={editingCard.code || ""} disabled style={{ opacity: 0.6, cursor: "not-allowed" }} />
+              </div>
+
+              {/* Link Kartu / NFC */}
+              <div className="form-group" style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: 8,
+                padding: "10px 12px",
+                marginBottom: 16,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Link Kartu / NFC
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyLinkText(`${baseUrl}/c/${editingCard.code}`)}
+                    className="btn btn-ghost"
+                    style={{
+                      padding: "3px 9px",
+                      fontSize: "0.72rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      color: copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "#34D399" : "#A5B4FC",
+                      background: copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "rgba(52, 211, 153, 0.12)" : "rgba(99, 102, 241, 0.15)",
+                      border: `1px solid ${copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "rgba(52, 211, 153, 0.3)" : "rgba(99, 102, 241, 0.3)"}`,
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {copiedLinkText === `${baseUrl}/c/${editingCard.code}` ? "✅ Link Tersalin!" : "📋 Salin Link"}
+                  </button>
+                </div>
+                <a
+                  href={`${baseUrl}/c/${editingCard.code}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    color: "#A5B4FC",
+                    textDecoration: "none",
+                    fontSize: "0.82rem",
+                    wordBreak: "break-all",
+                    display: "inline-block",
+                    lineHeight: 1.4,
+                  }}
+                  title="Buka link kartu di tab baru"
+                >
+                  {`${baseUrl}/c/${editingCard.code}`} ↗
+                </a>
               </div>
 
               <div className="form-group">
