@@ -440,9 +440,9 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
       // Tambah 15% quiet zone → faktor total ≈ 1.34x (jauh lebih akurat dari 1.52x lama)
       const coverSize = Math.round(distFinder * 1.34);
 
-      // Batasi ukuran hapus maks 45% dari sisi terpendek kartu
-      // agar tidak pernah menghapus bagian luar QR (ilustrasi, border, dsb.)
-      const maxAllowedSize = Math.round(Math.min(cardW, cardH) * 0.45);
+      // Batasi ukuran maks 85% dari sisi terpendek kartu
+      // agar mendukung semua variasi desain kartu: QR kecil (200px) hingga QR besar (500px+)
+      const maxAllowedSize = Math.round(Math.min(cardW, cardH) * 0.85);
       const size = Math.min(coverSize, maxAllowedSize);
 
       const cX = (minX + maxX) / 2;

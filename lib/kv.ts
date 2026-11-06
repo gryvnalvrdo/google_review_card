@@ -227,13 +227,32 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
   if (hasKv && vercelKv) {
     const codes = await vercelKv.smembers<string[]>(INDEX_KEY);
     if (!codes || codes.length === 0) return [];
-    const [records, taps, rawLogs] = await Promise.all([
-      Promise.all(codes.map((c) => getCard(c))),
-      Promise.all(codes.map((c) =>
-        vercelKv.get<number>(TAP_PREFIX + c).then((v) => v ?? 0)
-      )),
+
+    const cardKeys = codes.map((c) => KEY_PREFIX + c);
+    const tapKeys = codes.map((c) => TAP_PREFIX + c);
+
+    // Optimasi MGET: Ambil seluruh data kartu dan tap dalam 1 batch command Redis
+    // (Menghemat 99% kuota command Redis dibandingkan loop GET per kartu)
+    const [rawRecords, rawTaps, rawLogs] = await Promise.all([
+      cardKeys.length > 0
+        ? vercelKv.mget<CardRecord[]>(...cardKeys).catch(() => Promise.all(codes.map((c) => getCard(c))))
+        : [],
+      tapKeys.length > 0
+        ? vercelKv.mget<number[]>(...tapKeys).catch(() => Promise.all(codes.map((c) => vercelKv!.get<number>(TAP_PREFIX + c).then((v) => v ?? 0))))
+        : [],
       vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1).catch(() => []),
     ]);
+
+    const records = (rawRecords as (CardRecord | null)[]) ?? [];
+    const taps = ((rawTaps as (number | null)[]) ?? []).map((v) => (typeof v === "number" ? v : 0));
+
+    // Warm-up memory cache untuk semua kartu yang diambil
+    const now = Date.now();
+    for (const r of records) {
+      if (r && r.code) {
+        cardMemCache.set(r.code, { card: r, expires: now + 45000 });
+      }
+    }
 
     // Hitung riwayat log per kode kartu agar angka di Daftar Kartu selalu 100% konsisten
     // dengan halaman Riwayat Tap (menghindari selisih akibat log masa lalu ter-trim atau async delay)
