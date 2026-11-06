@@ -29,9 +29,6 @@ interface QRPlacementConfig {
   boxColor?: string;
   dotStyle?: QRDotStyle;
   logoType?: QRLogoType;
-  showCtaText?: boolean;
-  ctaText?: string;
-  ctaColor?: string;
 }
 
 const DEFAULT_PLACEMENT: QRPlacementConfig = {
@@ -45,9 +42,6 @@ const DEFAULT_PLACEMENT: QRPlacementConfig = {
   boxColor: "#FFFFFF",
   dotStyle: "squares",
   logoType: "none",
-  showCtaText: false,
-  ctaText: "Tap Kartu NFC / Scan QR",
-  ctaColor: "#FFFFFF",
 };
 
 // ─── Filter Pertajam Gambar (Anti-Blur Unsharp Mask Filter) ───────────────────
@@ -120,6 +114,7 @@ function enhanceBackgroundImage(
 }
 
 // ─── Smart Box Detection Algorithm ────────────────────────────────────────────
+// Improved: scan multiple X columns (25%, 50%, 75%, 85%) so right-side white boxes are detected
 function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: number; detected: boolean } {
   const cardW = img.naturalWidth || DEFAULT_CARD_W;
   const cardH = img.naturalHeight || DEFAULT_CARD_H;
@@ -133,46 +128,42 @@ function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: 
     if (!ctx) throw new Error("No 2d context");
     ctx.drawImage(img, 0, 0, cardW, cardH);
 
-    // Ambil sampel di beberapa titik vertikal (tengah, bawah-tengah, atas-tengah)
-    const midX = Math.floor(cardW / 2);
-    const candidateYs = [
-      Math.floor(cardH * 0.62), // Posisi paling umum untuk QR pada kartu ulasan
-      Math.floor(cardH / 2),
-      Math.floor(cardH * 0.40),
-    ];
-
+    const imgData = ctx.getImageData(0, 0, cardW, cardH).data;
     const cornerPix = ctx.getImageData(Math.floor(cardW * 0.05), Math.floor(cardH * 0.05), 1, 1).data;
 
-    for (const testY of candidateYs) {
-      const centerPix = ctx.getImageData(midX, testY, 1, 1).data;
-      const tr = centerPix[0];
-      const tg = centerPix[1];
-      const tb = centerPix[2];
+    // Scan multiple X columns × multiple Y rows — catches right-side, left-side, and center boxes
+    const candidateXs = [0.25, 0.50, 0.75, 0.85].map((r) => Math.floor(cardW * r));
+    const candidateYs = [0.60, 0.50, 0.40, 0.70].map((r) => Math.floor(cardH * r));
 
-      const cornerDiff = Math.abs(tr - cornerPix[0]) + Math.abs(tg - cornerPix[1]) + Math.abs(tb - cornerPix[2]);
-      if (cornerDiff > 35) {
-        // Kontainer terdeteksi pada baris ini! Scan batas bounding box-nya:
+    let bestResult: { x: number; y: number; size: number; detected: boolean } | null = null;
+    let bestBoxArea = 0;
+
+    for (const testX of candidateXs) {
+      for (const testY of candidateYs) {
+        const pix = ctx.getImageData(testX, testY, 1, 1).data;
+        const tr = pix[0]; const tg = pix[1]; const tb = pix[2];
+
+        const cornerDiff = Math.abs(tr - cornerPix[0]) + Math.abs(tg - cornerPix[1]) + Math.abs(tb - cornerPix[2]);
+        // Also check the pixel is reasonably bright (a container box, not a dark area)
+        const brightness = (tr + tg + tb) / 3;
+        if (cornerDiff < 35 || brightness < 160) continue;
+
         const step = Math.max(1, Math.floor(Math.min(cardW, cardH) / 380));
-        const startX = Math.floor(cardW * 0.08);
-        const endX = Math.floor(cardW * 0.92);
+        const startX = Math.max(0, Math.floor(testX - cardW * 0.35));
+        const endX = Math.min(cardW, Math.floor(testX + cardW * 0.35));
         const startY = Math.max(0, Math.floor(testY - cardH * 0.3));
         const endY = Math.min(cardH, Math.floor(testY + cardH * 0.3));
 
         let minX = cardW, maxX = 0, minY = cardH, maxY = 0, matches = 0;
-        const imgData = ctx.getImageData(0, 0, cardW, cardH).data;
 
         for (let y = startY; y < endY; y += step) {
           for (let x = startX; x < endX; x += step) {
             const idx = (y * cardW + x) * 4;
-            const r = imgData[idx];
-            const g = imgData[idx + 1];
-            const b = imgData[idx + 2];
+            const r = imgData[idx]; const g = imgData[idx + 1]; const b = imgData[idx + 2];
             const diff = Math.abs(r - tr) + Math.abs(g - tg) + Math.abs(b - tb);
-            if (diff < 50) {
-              if (x < minX) minX = x;
-              if (x > maxX) maxX = x;
-              if (y < minY) minY = y;
-              if (y > maxY) maxY = y;
+            if (diff < 45) {
+              if (x < minX) minX = x; if (x > maxX) maxX = x;
+              if (y < minY) minY = y; if (y > maxY) maxY = y;
               matches++;
             }
           }
@@ -180,13 +171,15 @@ function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: 
 
         const boxW = maxX - minX;
         const boxH = maxY - minY;
-        if (matches > 20 && boxW > cardW * 0.16 && boxH > cardH * 0.16) {
+        const boxArea = boxW * boxH;
+        if (matches > 20 && boxW > cardW * 0.14 && boxH > cardH * 0.14 && boxArea > bestBoxArea) {
           const rawSize = Math.min(boxW, boxH);
           const safeMargin = Math.round(rawSize * 0.04);
           const finalSize = Math.round(rawSize - safeMargin * 2);
           const cX = minX + boxW / 2;
           const cY = minY + boxH / 2;
-          return {
+          bestBoxArea = boxArea;
+          bestResult = {
             x: Math.round(cX - finalSize / 2),
             y: Math.round(cY - finalSize / 2),
             size: finalSize,
@@ -195,6 +188,8 @@ function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: 
         }
       }
     }
+
+    if (bestResult) return bestResult;
   } catch (err) {
     console.warn("Auto-detect box fallback:", err);
   }
@@ -225,108 +220,164 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     return { x: 100, y: 100, size: 200, detected: false, qrFound: false, method: "fallback" };
   }
 
-  // 1. Tier 1: Decode QR code nyata menggunakan ZXing BrowserQRCodeReader
-  try {
-    const { BrowserQRCodeReader } = await import("@zxing/library");
-    const reader = new BrowserQRCodeReader();
-    const result = await reader.decodeFromImageElement(img);
+  // Helper: decodes QR on a downscaled canvas (max 1400px), returns {x,y,size} in original coords or null
+  async function tryZxingOnCanvas(srcCanvas: HTMLCanvasElement, offsetX = 0, offsetY = 0, scaleX = 1, scaleY = 1) {
+    try {
+      const { BrowserQRCodeReader } = await import("@zxing/library");
+      const reader = new BrowserQRCodeReader();
+      const result = await (reader as any).decodeFromImageElement
+        ? reader.decodeFromImageElement(srcCanvas as unknown as HTMLImageElement)
+        : (reader as any).decode(srcCanvas);
 
-    if (result) {
-      const points = result.getResultPoints();
-      if (points && points.length >= 2) {
-        const xs = points.map((p) => p.getX());
-        const ys = points.map((p) => p.getY());
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-
-        const distFinder = Math.max(maxX - minX, maxY - minY);
-        // Lebar total QR ~1.36-1.40x jarak finder. Gunakan 1.48x agar kotak penutup
-        // 100% menutupi seluruh batas & quiet-zone QR lama klien tanpa ada sisa
-        const coverSize = Math.round(distFinder * 1.48);
-        const cX = (minX + maxX) / 2;
-        const cY = (minY + maxY) / 2;
-
-        const size = Math.round(Math.min(coverSize, Math.min(cardW, cardH) * 0.94));
-        const x = Math.max(0, Math.min(cardW - size, Math.round(cX - size / 2)));
-        const y = Math.max(0, Math.min(cardH - size, Math.round(cY - size / 2)));
-
-        return {
-          x,
-          y,
-          size,
-          detected: true,
-          qrFound: true,
-          method: "zxing",
-          text: result.getText(),
-        };
+      if (result) {
+        const points = result.getResultPoints();
+        if (points && points.length >= 2) {
+          const xs = points.map((p: any) => p.getX() / scaleX + offsetX);
+          const ys = points.map((p: any) => p.getY() / scaleY + offsetY);
+          const minX = Math.min(...xs); const maxX = Math.max(...xs);
+          const minY = Math.min(...ys); const maxY = Math.max(...ys);
+          const distFinder = Math.max(maxX - minX, maxY - minY);
+          const coverSize = Math.round(distFinder * 1.52);
+          const cX = (minX + maxX) / 2; const cY = (minY + maxY) / 2;
+          const size = Math.round(Math.min(coverSize, Math.min(cardW, cardH) * 0.94));
+          return {
+            x: Math.max(0, Math.min(cardW - size, Math.round(cX - size / 2))),
+            y: Math.max(0, Math.min(cardH - size, Math.round(cY - size / 2))),
+            size,
+            text: result.getText() as string,
+          };
+        }
       }
-    }
-  } catch (err) {
-    // ZXing scan pass, lanjutkan ke deteksi pola mockup
+    } catch { /* fall through */ }
+    return null;
   }
 
-  // 2. Tier 2: Pattern Transition Scan untuk Graphic Mockup QR
-  // Jika klien menempel mockup QR dummy/ilustrasi yang bukan QR valid,
-  // algoritma ini memindai area dengan transisi hitam-putih frekuensi tinggi khas QR code.
+  // ─ Tier 1: ZXing multi-pass — downscaled full image + right-half crop + bottom-half crop ─
   try {
+    // Create a full-card downscaled canvas (max 1400px on the long side)
+    const maxDim = 1400;
+    const longSide = Math.max(cardW, cardH);
+    const dsFactor = longSide > maxDim ? maxDim / longSide : 1;
+    const dsW = Math.round(cardW * dsFactor);
+    const dsH = Math.round(cardH * dsFactor);
+
+    const fullCanvas = document.createElement("canvas");
+    fullCanvas.width = dsW; fullCanvas.height = dsH;
+    const fullCtx = fullCanvas.getContext("2d")!;
+    fullCtx.imageSmoothingEnabled = true;
+    fullCtx.imageSmoothingQuality = "high";
+    fullCtx.drawImage(img, 0, 0, dsW, dsH);
+
+    // 1a. Full downscaled image
+    let zxResult = await tryZxingOnCanvas(fullCanvas, 0, 0, dsFactor, dsFactor);
+    if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+
+    // 1b. Right half crop (X: 40%–100%) — most common QR location
+    const rhX = Math.round(cardW * 0.40 * dsFactor);
+    const rhW = dsW - rhX;
+    if (rhW > 60) {
+      const rhCanvas = document.createElement("canvas");
+      rhCanvas.width = rhW; rhCanvas.height = dsH;
+      const rhCtx = rhCanvas.getContext("2d")!;
+      rhCtx.drawImage(fullCanvas, rhX, 0, rhW, dsH, 0, 0, rhW, dsH);
+      zxResult = await tryZxingOnCanvas(rhCanvas, Math.round(cardW * 0.40), 0, dsFactor, dsFactor);
+      if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+    }
+
+    // 1c. Bottom half crop (Y: 40%–90%)
+    const bhY = Math.round(cardH * 0.40 * dsFactor);
+    const bhH = Math.round(cardH * 0.50 * dsFactor);
+    if (bhH > 60) {
+      const bhCanvas = document.createElement("canvas");
+      bhCanvas.width = dsW; bhCanvas.height = bhH;
+      const bhCtx = bhCanvas.getContext("2d")!;
+      bhCtx.drawImage(fullCanvas, 0, bhY, dsW, bhH, 0, 0, dsW, bhH);
+      zxResult = await tryZxingOnCanvas(bhCanvas, 0, Math.round(cardH * 0.40), dsFactor, dsFactor);
+      if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+    }
+
+    // 1d. Center crop (X: 20%–80%, Y: 20%–80%)
+    const ccX = Math.round(cardW * 0.20 * dsFactor); const ccY = Math.round(cardH * 0.20 * dsFactor);
+    const ccW = Math.round(cardW * 0.60 * dsFactor); const ccH = Math.round(cardH * 0.60 * dsFactor);
+    if (ccW > 60 && ccH > 60) {
+      const ccCanvas = document.createElement("canvas");
+      ccCanvas.width = ccW; ccCanvas.height = ccH;
+      const ccCtx = ccCanvas.getContext("2d")!;
+      ccCtx.drawImage(fullCanvas, ccX, ccY, ccW, ccH, 0, 0, ccW, ccH);
+      zxResult = await tryZxingOnCanvas(ccCanvas, Math.round(cardW * 0.20), Math.round(cardH * 0.20), dsFactor, dsFactor);
+      if (zxResult) return { ...zxResult, detected: true, qrFound: true, method: "zxing" };
+    }
+  } catch { /* ZXing unavailable, continue */ }
+
+  // ─ Tier 2: Pattern Transition Scan (improved: requires BOTH axis transitions + aspect ratio ~1:1) ─
+  try {
+    // Work on a downscaled version for performance
+    const maxDim = 800;
+    const longSide = Math.max(cardW, cardH);
+    const dsFactor = longSide > maxDim ? maxDim / longSide : 1;
+    const dsW = Math.round(cardW * dsFactor);
+    const dsH = Math.round(cardH * dsFactor);
+
     const canvas = document.createElement("canvas");
-    canvas.width = cardW;
-    canvas.height = cardH;
+    canvas.width = dsW; canvas.height = dsH;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (ctx) {
-      ctx.drawImage(img, 0, 0, cardW, cardH);
-      const imgData = ctx.getImageData(0, 0, cardW, cardH).data;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, dsW, dsH);
+      const imgData = ctx.getImageData(0, 0, dsW, dsH).data;
 
-      const step = Math.max(2, Math.floor(Math.min(cardW, cardH) / 160));
-      const gridW = Math.floor(cardW / step);
-      const gridH = Math.floor(cardH / step);
+      const step = Math.max(2, Math.floor(Math.min(dsW, dsH) / 120));
+      const gridW = Math.floor(dsW / step);
+      const gridH = Math.floor(dsH / step);
       const lum = new Uint8Array(gridW * gridH);
 
       for (let gy = 0; gy < gridH; gy++) {
         const py = gy * step;
         for (let gx = 0; gx < gridW; gx++) {
           const px = gx * step;
-          const idx = (py * cardW + px) * 4;
+          const idx = (py * dsW + px) * 4;
           lum[gy * gridW + gx] = Math.round(
             imgData[idx] * 0.299 + imgData[idx + 1] * 0.587 + imgData[idx + 2] * 0.114
           );
         }
       }
 
-      const testSizes = [0.26, 0.35, 0.44].map((r) => Math.round(Math.min(gridW, gridH) * r));
+      // Test multiple window sizes
+      const testSizes = [0.22, 0.30, 0.40].map((r) => Math.round(Math.min(gridW, gridH) * r));
       let bestScore = 0;
       let bestBox = { gx: 0, gy: 0, gSize: testSizes[1] };
 
       for (const winSize of testSizes) {
-        if (winSize < 12) continue;
+        if (winSize < 10) continue;
         const scanStep = Math.max(2, Math.floor(winSize / 4));
 
         for (let gy = 0; gy <= gridH - winSize; gy += scanStep) {
           for (let gx = 0; gx <= gridW - winSize; gx += scanStep) {
             let hTransitions = 0;
             let vTransitions = 0;
-            const threshold = 40;
+            const threshold = 45;
 
             for (let y = gy; y < gy + winSize; y += 2) {
               const rowStart = y * gridW;
               for (let x = gx + 1; x < gx + winSize; x++) {
-                if (Math.abs(lum[rowStart + x] - lum[rowStart + x - 1]) > threshold) {
-                  hTransitions++;
-                }
+                if (Math.abs(lum[rowStart + x] - lum[rowStart + x - 1]) > threshold) hTransitions++;
               }
             }
 
             for (let x = gx; x < gx + winSize; x += 2) {
               for (let y = gy + 1; y < gy + winSize; y++) {
-                if (Math.abs(lum[y * gridW + x] - lum[(y - 1) * gridW + x]) > threshold) {
-                  vTransitions++;
-                }
+                if (Math.abs(lum[y * gridW + x] - lum[(y - 1) * gridW + x]) > threshold) vTransitions++;
               }
             }
 
+            // Require BOTH axes to have high transitions (QR has both H and V; text only has H)
+            // Also require aspect ratio close to 1:1 (QR is square)
             const score = Math.min(hTransitions, vTransitions);
+            // Penalty if hTransitions >> vTransitions (indicates horizontal text, not QR)
+            const axisRatio = vTransitions > 0 ? hTransitions / vTransitions : 99;
+            if (axisRatio > 4.0) continue; // Skip text-like regions
+
             if (score > bestScore) {
               bestScore = score;
               bestBox = { gx, gy, gSize: winSize };
@@ -335,14 +386,14 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
         }
       }
 
-      const minExpectedTransitions = bestBox.gSize * bestBox.gSize * 0.035;
-      if (bestScore > minExpectedTransitions && bestScore > 24) {
-        const foundSize = Math.round(bestBox.gSize * step * 1.1);
-        const foundX = Math.max(0, Math.min(cardW - foundSize, Math.round(bestBox.gx * step)));
-        const foundY = Math.max(0, Math.min(cardH - foundSize, Math.round(bestBox.gy * step)));
+      const minExpectedTransitions = bestBox.gSize * bestBox.gSize * 0.045;
+      if (bestScore > minExpectedTransitions && bestScore > 30) {
+        const realX = Math.round(bestBox.gx * step / dsFactor);
+        const realY = Math.round(bestBox.gy * step / dsFactor);
+        const foundSize = Math.round(bestBox.gSize * step / dsFactor * 1.1);
         return {
-          x: foundX,
-          y: foundY,
+          x: Math.max(0, Math.min(cardW - foundSize, realX)),
+          y: Math.max(0, Math.min(cardH - foundSize, realY)),
           size: foundSize,
           detected: true,
           qrFound: true,
@@ -350,26 +401,16 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
         };
       }
     }
-  } catch (err) {
-    // Pattern scan pass
-  }
+  } catch { /* Pattern scan failed */ }
 
-  // 3. Tier 3: Deteksi Kotak Kontainer Warna di Kartu
+  // ─ Tier 3: Deteksi Kotak Kontainer Warna di Kartu (improved multi-column) ─
   const boxResult = detectBoxInImage(img);
   if (boxResult.detected) {
-    return {
-      ...boxResult,
-      qrFound: false,
-      method: "box",
-    };
+    return { ...boxResult, qrFound: false, method: "box" };
   }
 
-  // 4. Tier 4: Fallback
-  return {
-    ...boxResult,
-    qrFound: false,
-    method: "fallback",
-  };
+  // ─ Tier 4: Fallback ─
+  return { ...boxResult, qrFound: false, method: "fallback" };
 }
 
 function generateRandomCode(length = 6): string {
@@ -520,22 +561,7 @@ function compositeCard(
     ctx.drawImage(qrCanvas, boxX, boxY, boxSize, boxSize);
   }
 
-  // 3. Optional Call-to-Action (CTA) Text di bawah QR
-  if (placement.showCtaText && placement.ctaText && placement.ctaText.trim()) {
-    ctx.save();
-    const ctaY = boxY + boxSize + Math.max(16 * scale, Math.floor(targetH * 0.024));
-    const ctaX = boxX + boxSize / 2;
-    const fontSize = Math.max(14 * scale, Math.min(36 * scale, Math.round(boxSize * 0.075)));
-    ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-    ctx.shadowBlur = 8 * scale;
-    ctx.shadowOffsetY = 2 * scale;
-    ctx.fillStyle = placement.ctaColor || "#FFFFFF";
-    ctx.fillText(placement.ctaText.trim(), ctaX, ctaY);
-    ctx.restore();
-  }
+  // 3. Optional Call-to-Action (CTA) Text di bawah QR — DIHAPUS
 
   return out;
 }
@@ -871,9 +897,6 @@ export default function PrintQRCodes() {
                   logoType: next.logoType,
                   fgColor: next.fgColor,
                   boxColor: next.boxColor,
-                  showCtaText: next.showCtaText,
-                  ctaText: next.ctaText,
-                  ctaColor: next.ctaColor,
                 },
               })
             );
@@ -905,7 +928,7 @@ export default function PrintQRCodes() {
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const liveQrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<"qr" | "position" | "resolution" | "labels">("qr");
+  const [inspectorTab, setInspectorTab] = useState<"qr" | "position" | "resolution">("qr");
 
   // Helper untuk update posisi dari pointer drag / click langsung di kartu
   const updatePlacementFromPointer = useCallback(
@@ -1091,9 +1114,6 @@ export default function PrintQRCodes() {
           logoType: "none",
           padding: 16,
           radius: 14,
-          showCtaText: false,
-          ctaText: "Tap Kartu NFC / Scan QR",
-          ctaColor: "#FFFFFF",
         };
 
         setPlacement(newPlacement);
@@ -1584,36 +1604,6 @@ export default function PrintQRCodes() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              {/* Quick Resolution Selector */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: "0.75rem", color: "#94A3B8", fontWeight: 600 }}>Kualitas:</span>
-                <div className="template-toggle-group">
-                  <button
-                    type="button"
-                    className={`template-toggle-btn ${upscaleFactor === 1 ? "active" : ""}`}
-                    onClick={() => setUpscaleFactor(1)}
-                    title="1x Resolusi Normal (Ukuran Asli File)"
-                  >
-                    1x Normal
-                  </button>
-                  <button
-                    type="button"
-                    className={`template-toggle-btn ${upscaleFactor === 2 ? "active" : ""}`}
-                    onClick={() => setUpscaleFactor(2)}
-                    title="2x HD (300 DPI) - Standar Cetak Kartu PVC Bebas Blur"
-                  >
-                    ✨ 2x HD (300 DPI)
-                  </button>
-                  <button
-                    type="button"
-                    className={`template-toggle-btn ${upscaleFactor === 3 ? "active" : ""}`}
-                    onClick={() => setUpscaleFactor(3)}
-                    title="3x Ultra HD - Sangat Tajam untuk Percetakan Industri"
-                  >
-                    💎 3x Ultra HD
-                  </button>
-                </div>
-              </div>
 
               <button
                 type="button"
@@ -1796,30 +1786,6 @@ export default function PrintQRCodes() {
                       </div>
                     </div>
 
-                    {/* Live CTA Text Preview in Card */}
-                    {placement.showCtaText && placement.ctaText && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          left: qrPrevLeft + qrPrevSize / 2,
-                          top: qrPrevTop + qrPrevSize + 6,
-                          transform: "translateX(-50%)",
-                          color: placement.ctaColor || "#FFFFFF",
-                          fontSize: Math.max(9, Math.round(qrPrevSize * 0.08)),
-                          fontWeight: 700,
-                          textShadow: "0 2px 6px rgba(0,0,0,0.85)",
-                          pointerEvents: "none",
-                          whiteSpace: "nowrap",
-                          textAlign: "center",
-                          maxWidth: prevW - 16,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {placement.ctaText}
-                      </div>
-                    )}
-
                     {/* Drag Hint */}
                     <span className="live-drag-hint">👆 Klik atau Tarik QR di Kartu</span>
                   </div>
@@ -1968,13 +1934,6 @@ export default function PrintQRCodes() {
                       className={`studio-tab-btn ${inspectorTab === "resolution" ? "active" : ""}`}
                     >
                       <span>🚀</span> Resolusi &amp; Kualitas
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setInspectorTab("labels")}
-                      className={`studio-tab-btn ${inspectorTab === "labels" ? "active" : ""}`}
-                    >
-                      <span>💬</span> Teks Ajakan (CTA)
                     </button>
                   </div>
 
@@ -2634,263 +2593,7 @@ export default function PrintQRCodes() {
                       </div>
                     </>
                   )}
-
-                  {/* ════ TAB 3: TEKS AJAKAN (CTA) ════ */}
-                  {inspectorTab === "labels" && (
-                    <>
-                      {/* Sub-Card 1: Call-to-Action (CTA) Text & Quick Presets */}
-                      <div className="inspector-card">
-                        <div className="inspector-card-title">
-                          <span>💬</span> Kalimat &amp; Redaksi Ajakan
-                        </div>
-
-                        <div className="slider-group-grid">
-                          <div className="studio-switch-row">
-                            <div>
-                              <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#E2E8F0" }}>Teks di Bawah QR Code</div>
-                              <div style={{ fontSize: "0.68rem", color: "#94A3B8" }}>Cetak kalimat ajakan ulasan presisi di bawah QR</div>
-                            </div>
-                            <input
-                              type="checkbox"
-                              checked={placement.showCtaText || false}
-                              onChange={(e) => setPlacement((p) => ({ ...p, showCtaText: e.target.checked }))}
-                              style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#6366F1" }}
-                            />
-                          </div>
-
-                          {placement.showCtaText ? (
-                            <>
-                              <div className="slider-item">
-                                <span style={{ fontSize: "0.74rem", color: "#94A3B8", fontWeight: 600 }}>Pilih Kalimat Cepat:</span>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                  {[
-                                    "Tap Kartu NFC / Scan QR",
-                                    "Beri Ulasan Bintang 5 ⭐",
-                                    "Scan Disini untuk Review ⭐⭐⭐⭐⭐",
-                                    "Ulas Pengalaman Anda di Google",
-                                  ].map((text) => (
-                                    <button
-                                      key={text}
-                                      type="button"
-                                      onClick={() => setPlacement((p) => ({ ...p, ctaText: text }))}
-                                      className="nudge-btn"
-                                      style={{
-                                        textAlign: "left",
-                                        padding: "7px 11px",
-                                        borderColor: placement.ctaText === text ? "rgba(99,102,241,0.7)" : undefined,
-                                        background: placement.ctaText === text ? "rgba(99,102,241,0.22)" : undefined,
-                                        color: placement.ctaText === text ? "#C7D2FE" : undefined,
-                                        fontWeight: placement.ctaText === text ? 700 : 500,
-                                      }}
-                                    >
-                                      {text}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div className="slider-item">
-                                <span style={{ fontSize: "0.74rem", color: "#CBD5E1", fontWeight: 600 }}>Kustom Teks Ulasan:</span>
-                                <input
-                                  type="text"
-                                  value={placement.ctaText || ""}
-                                  onChange={(e) => setPlacement((p) => ({ ...p, ctaText: e.target.value }))}
-                                  placeholder="Ketik kalimat ajakan ulasan bebas..."
-                                  style={{
-                                    width: "100%",
-                                    boxSizing: "border-box",
-                                    padding: "9px 12px",
-                                    fontSize: "0.82rem",
-                                    borderRadius: 8,
-                                    background: "rgba(255, 255, 255, 0.06)",
-                                    border: "1px solid rgba(255, 255, 255, 0.16)",
-                                    color: "#FFFFFF",
-                                    outline: "none",
-                                    boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3)",
-                                  }}
-                                />
-                                <span style={{ fontSize: "0.68rem", color: "#64748B" }}>
-                                  Teks ini akan dicetak otomatis di bawah QR Code dengan bayangan tajam agar mudah dibaca.
-                                </span>
-                              </div>
-                            </>
-                          ) : (
-                            <div style={{
-                              padding: "16px 14px",
-                              borderRadius: 10,
-                              background: "rgba(255, 255, 255, 0.02)",
-                              border: "1px dashed rgba(255, 255, 255, 0.08)",
-                              textAlign: "center",
-                              fontSize: "0.75rem",
-                              color: "#64748B",
-                              lineHeight: 1.5,
-                            }}>
-                              Aktifkan opsi di atas jika Anda ingin mencetak teks ajakan ulasan (CTA) langsung pada fisik kartu.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Sub-Card 2: Warna & Pratinjau Tampilan Teks */}
-                      <div className="inspector-card">
-                        <div className="inspector-card-title">
-                          <span>🎨</span> Warna &amp; Pratinjau Teks
-                        </div>
-
-                        <div className="slider-group-grid">
-                          {placement.showCtaText ? (
-                            <>
-                              <div className="slider-item">
-                                <div className="slider-header">
-                                  <span>Warna Teks CTA:</span>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={{ width: 12, height: 12, borderRadius: "50%", background: placement.ctaColor || "#FFFFFF", border: "1px solid rgba(255,255,255,0.3)" }} />
-                                    <strong style={{ color: "#E2E8F0" }}>{placement.ctaColor || "#FFFFFF"}</strong>
-                                  </div>
-                                </div>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                  {[
-                                    { name: "Putih", hex: "#FFFFFF" },
-                                    { name: "Emas", hex: "#FBBF24" },
-                                    { name: "Biru", hex: "#60A5FA" },
-                                    { name: "Hijau", hex: "#34D399" },
-                                    { name: "Hitam", hex: "#000000" },
-                                  ].map((c) => (
-                                    <button
-                                      key={c.hex}
-                                      type="button"
-                                      onClick={() => setPlacement((p) => ({ ...p, ctaColor: c.hex }))}
-                                      className={`color-swatch-btn ${(placement.ctaColor || "#FFFFFF") === c.hex ? "active" : ""}`}
-                                      style={{ background: c.hex, border: c.hex === "#FFFFFF" ? "1px solid rgba(255,255,255,0.3)" : undefined }}
-                                      title={`${c.name} (${c.hex})`}
-                                    />
-                                  ))}
-                                  <div
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 6,
-                                      padding: "4px 8px",
-                                      borderRadius: 8,
-                                      background: "rgba(255, 255, 255, 0.05)",
-                                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                                    }}
-                                  >
-                                    <span style={{ fontSize: "0.72rem", color: "#CBD5E1", fontWeight: 600 }}>🎨 Kustom:</span>
-                                    <label
-                                      style={{
-                                        position: "relative",
-                                        width: 22,
-                                        height: 22,
-                                        borderRadius: 6,
-                                        background: placement.ctaColor || "#FFFFFF",
-                                        border: "1px solid rgba(255, 255, 255, 0.3)",
-                                        cursor: "pointer",
-                                        display: "inline-block",
-                                        overflow: "hidden",
-                                        boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
-                                        flexShrink: 0,
-                                      }}
-                                      title="Pilih warna teks bebas"
-                                    >
-                                      <input
-                                        type="color"
-                                        value={placement.ctaColor || "#FFFFFF"}
-                                        onChange={(e) => setPlacement((p) => ({ ...p, ctaColor: e.target.value }))}
-                                        style={{
-                                          position: "absolute",
-                                          top: -6,
-                                          left: -6,
-                                          width: 36,
-                                          height: 36,
-                                          opacity: 0,
-                                          cursor: "pointer",
-                                        }}
-                                      />
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={placement.ctaColor || "#FFFFFF"}
-                                      onChange={(e) => setPlacement((p) => ({ ...p, ctaColor: e.target.value }))}
-                                      maxLength={7}
-                                      placeholder="#FFFFFF"
-                                      style={{
-                                        width: 66,
-                                        padding: "2px 4px",
-                                        fontSize: "0.72rem",
-                                        fontFamily: "monospace",
-                                        fontWeight: 600,
-                                        background: "rgba(0,0,0,0.3)",
-                                        border: "1px solid rgba(255,255,255,0.1)",
-                                        borderRadius: 4,
-                                        color: "#93C5FD",
-                                        outline: "none",
-                                        textAlign: "center",
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Live Preview Box */}
-                              <div style={{
-                                marginTop: 6,
-                                padding: "14px 16px",
-                                borderRadius: 10,
-                                background: "rgba(0, 0, 0, 0.45)",
-                                border: "1px solid rgba(255, 255, 255, 0.08)",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: 6,
-                              }}>
-                                <span style={{ fontSize: "0.68rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-                                  Pratinjau Teks Pada Kartu
-                                </span>
-                                <div style={{
-                                  fontSize: "0.95rem",
-                                  fontWeight: 700,
-                                  color: placement.ctaColor || "#FFFFFF",
-                                  textShadow: "0 2px 8px rgba(0,0,0,0.9)",
-                                  textAlign: "center",
-                                  wordBreak: "break-word",
-                                }}>
-                                  {placement.ctaText || "Tap Kartu NFC / Scan QR"}
-                                </div>
-                                <span style={{ fontSize: "0.66rem", color: "#94A3B8", textAlign: "center", marginTop: 2 }}>
-                                  Otomatis diselaraskan tepat di bawah posisi QR Code
-                                </span>
-                              </div>
-                            </>
-                          ) : (
-                            <div style={{
-                              padding: "24px 16px",
-                              borderRadius: 10,
-                              background: "rgba(0, 0, 0, 0.25)",
-                              border: "1px dashed rgba(255, 255, 255, 0.08)",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 8,
-                              textAlign: "center",
-                            }}>
-                              <span style={{ fontSize: "1.3rem" }}>✨</span>
-                              <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#94A3B8" }}>
-                                Mode Bersih (Tanpa Teks Tambahan)
-                              </div>
-                              <div style={{ fontSize: "0.7rem", color: "#64748B", maxWidth: 260 }}>
-                                Kartu akan dicetak minimalis &amp; bersih hanya menampilkan QR Code dan desain latar belakang klien.
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* ════ TAB 4: RESOLUSI & KUALITAS CETAK (ANTI-BLUR) ════ */}
+                  {/* ════ TAB 3: RESOLUSI & KUALITAS CETAK (ANTI-BLUR) ════ */}
                   {inspectorTab === "resolution" && (
                     <>
                       {/* Sub-Card 1: Resolusi & Skala Ekspor */}
