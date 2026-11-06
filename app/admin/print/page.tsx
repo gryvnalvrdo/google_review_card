@@ -205,6 +205,160 @@ function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: 
   };
 }
 
+// ─── Deteksi Modul Dummy QR di Dalam Kotak Kontainer ─────────────────────────
+// Memisahkan area dummy QR dari ilustrasi/teks lain (seperti "///" atau "Scan QR Code")
+function findInnerQROrDarkContent(
+  img: HTMLImageElement,
+  box: { x: number; y: number; size: number }
+): { x: number; y: number; size: number } | null {
+  try {
+    const cardW = img.naturalWidth || DEFAULT_CARD_W;
+    const cardH = img.naturalHeight || DEFAULT_CARD_H;
+    const canvas = document.createElement("canvas");
+    canvas.width = cardW;
+    canvas.height = cardH;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0, cardW, cardH);
+
+    // Amati bagian tengah kotak kontainer (abaikan 14% atas untuk ikon/slash & 14% bawah untuk teks "Scan QR")
+    const marginV = Math.floor(box.size * 0.14);
+    const startY = Math.max(0, box.y + marginV);
+    const endY = Math.min(cardH, box.y + box.size - marginV);
+    const marginH = Math.floor(box.size * 0.08);
+    const startX = Math.max(0, box.x + marginH);
+    const endX = Math.min(cardW, box.x + box.size - marginH);
+
+    const step = Math.max(2, Math.floor(box.size / 220));
+    let minX = cardW, maxX = 0, minY = cardH, maxY = 0;
+    let darkPixelCount = 0;
+
+    for (let y = startY; y < endY; y += step) {
+      for (let x = startX; x < endX; x += step) {
+        const p = ctx.getImageData(x, y, 1, 1).data;
+        const lum = p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114;
+        // Pixel modul QR gelap (luminance < 115)
+        if (lum < 115 && p[3] > 100) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+          darkPixelCount++;
+        }
+      }
+    }
+
+    if (darkPixelCount > 30 && maxX > minX && maxY > minY) {
+      const rawW = maxX - minX;
+      const rawH = maxY - minY;
+      const ratio = rawW / (rawH || 1);
+      // Dummy QR berbentuk mendekati bujur sangkar (0.7 - 1.42) dan ukurannya minimal 22% dari container
+      if (ratio >= 0.7 && ratio <= 1.42 && rawW > box.size * 0.22) {
+        // Beri sedikit margin quiet zone ~14%
+        const qrSize = Math.round(Math.max(rawW, rawH) * 1.14);
+        const cX = (minX + maxX) / 2;
+        const cY = (minY + maxY) / 2;
+        return {
+          x: Math.max(0, Math.min(cardW - qrSize, Math.round(cX - qrSize / 2))),
+          y: Math.max(0, Math.min(cardH - qrSize, Math.round(cY - qrSize / 2))),
+          size: qrSize,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("findInnerQROrDarkContent error:", err);
+  }
+  return null;
+}
+
+// ─── Deteksi Warna Latar Asli Area Dummy QR (Quiet Zone Sampling) ─────────────
+function detectQRBackgroundColor(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  cardW: number,
+  cardH: number
+): string {
+  const samples: [number, number, number][] = [];
+  const edgeDist = Math.max(4, Math.round(size * 0.025));
+  const steps = 16;
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const px = Math.round(x + t * size);
+    const py = Math.round(y + t * size);
+
+    const testPoints = [
+      [px, Math.max(0, y - edgeDist)],
+      [px, Math.min(cardH - 1, y + size + edgeDist)],
+      [Math.max(0, x - edgeDist), py],
+      [Math.min(cardW - 1, x + size + edgeDist), py],
+    ];
+
+    for (const [sx, sy] of testPoints) {
+      if (sx >= 0 && sx < cardW && sy >= 0 && sy < cardH) {
+        const d = ctx.getImageData(sx, sy, 1, 1).data;
+        if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
+      }
+    }
+  }
+
+  if (samples.length === 0) return "#FFFFFF";
+
+  // Filter keluar pixel gelap jika ada garis / teks yang menempel pada tepi
+  const nonDark = samples.filter(([r, g, b]) => (r + g + b) / 3 > 75);
+  const useSamples = nonDark.length > 5 ? nonDark : samples;
+
+  const avg = useSamples.reduce(
+    (acc, s) => [acc[0] + s[0], acc[1] + s[1], acc[2] + s[2]],
+    [0, 0, 0]
+  );
+  const n = useSamples.length;
+  return `rgb(${Math.round(avg[0] / n)},${Math.round(avg[1] / n)},${Math.round(avg[2] / n)})`;
+}
+
+// ─── Hapus Pixel QR Dummy Langsung dari Data Gambar (True Pixel Erase) ────────
+function eraseDummyQRCodeFromImage(
+  img: HTMLImageElement,
+  qrBox: { x: number; y: number; size: number },
+  fillColor?: string
+): Promise<HTMLImageElement> {
+  return new Promise((resolve) => {
+    try {
+      const cardW = img.naturalWidth || DEFAULT_CARD_W;
+      const cardH = img.naturalHeight || DEFAULT_CARD_H;
+      const canvas = document.createElement("canvas");
+      canvas.width = cardW;
+      canvas.height = cardH;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) {
+        resolve(img);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, cardW, cardH);
+
+      const bg = fillColor || detectQRBackgroundColor(ctx, qrBox.x, qrBox.y, qrBox.size, cardW, cardH);
+      ctx.fillStyle = bg;
+
+      // Beri margin ekstra 4px agar tidak ada sisa modul hitam QR di tepinya
+      const pad = Math.max(3, Math.round(qrBox.size * 0.015));
+      const ex = Math.max(0, qrBox.x - pad);
+      const ey = Math.max(0, qrBox.y - pad);
+      const es = Math.min(Math.min(cardW - ex, cardH - ey), qrBox.size + pad * 2);
+      ctx.fillRect(ex, ey, es, es);
+
+      const cleanImg = new Image();
+      cleanImg.onload = () => resolve(cleanImg);
+      cleanImg.onerror = () => resolve(img);
+      cleanImg.src = canvas.toDataURL("image/png");
+    } catch (err) {
+      console.error("Gagal menghapus dummy QR dari gambar:", err);
+      resolve(img);
+    }
+  });
+}
+
 // ─── Smart QR & Mockup Detection Algorithm (Multi-Tier) ──────────────────────
 async function detectClientQRCode(img: HTMLImageElement): Promise<{
   x: number;
@@ -416,9 +570,14 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     }
   } catch { /* Pattern scan failed */ }
 
-  // ─ Tier 3: Deteksi Kotak Kontainer Warna (multi-column) ─
+  // ─ Tier 3: Deteksi Kotak Kontainer Warna & Modul QR di Dalamnya ─
   const boxResult = detectBoxInImage(img);
   if (boxResult.detected) {
+    // Periksa apakah ada dummy QR di dalam kontainer ini (seperti pada ilustrasi kartu roti/kafe)
+    const innerQR = findInnerQROrDarkContent(img, boxResult);
+    if (innerQR) {
+      return { ...innerQR, detected: true, qrFound: true, method: "box" };
+    }
     return { ...boxResult, qrFound: false, method: "box" };
   }
 
@@ -523,59 +682,6 @@ function drawNfcLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, icon
   ctx.restore();
 }
 
-// ─── Sampling Warna Sekitar Area QR Dummy (untuk erase otomatis) ─────────────
-function sampleSurroundingColor(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  canvasW: number,
-  canvasH: number
-): string {
-  const margin = Math.max(14, Math.round(size * 0.07));
-  const samples: [number, number, number][] = [];
-  const steps = 16;
-
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const px = Math.round(x + t * size);
-    const py = Math.round(y + t * size);
-
-    // Tepi atas (di luar kotak)
-    const topY = Math.max(0, y - margin);
-    if (px >= 0 && px < canvasW) {
-      const d = ctx.getImageData(px, topY, 1, 1).data;
-      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
-    }
-    // Tepi bawah
-    const botY = Math.min(canvasH - 1, y + size + margin);
-    if (px >= 0 && px < canvasW) {
-      const d = ctx.getImageData(px, botY, 1, 1).data;
-      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
-    }
-    // Tepi kiri
-    const lX = Math.max(0, x - margin);
-    if (py >= 0 && py < canvasH) {
-      const d = ctx.getImageData(lX, py, 1, 1).data;
-      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
-    }
-    // Tepi kanan
-    const rX = Math.min(canvasW - 1, x + size + margin);
-    if (py >= 0 && py < canvasH) {
-      const d = ctx.getImageData(rX, py, 1, 1).data;
-      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
-    }
-  }
-
-  if (samples.length === 0) return "#FFFFFF";
-  const avg = samples.reduce(
-    (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
-    [0, 0, 0]
-  );
-  const n = samples.length;
-  return `rgb(${Math.round(avg[0] / n)},${Math.round(avg[1] / n)},${Math.round(avg[2] / n)})`;
-}
-
 function compositeCard(
   enhancedBgCanvas: HTMLCanvasElement,
   qrCanvas: HTMLCanvasElement,
@@ -590,7 +696,7 @@ function compositeCard(
   out.height = targetH;
   const ctx = out.getContext("2d", { willReadFrequently: true })!;
 
-  // 1. Gambar latar desain (sudah melalui proses upscaling & penajam anti-blur)
+  // 1. Gambar latar desain (sudah melalui proses upscaling & penajam anti-blur, dan sudah bersih dari QR dummy)
   ctx.drawImage(enhancedBgCanvas, 0, 0, targetW, targetH);
 
   const scale = upscaleFactor;
@@ -598,26 +704,7 @@ function compositeCard(
   const boxY = Math.round(placement.y * scale);
   const boxSize = Math.round(placement.size * scale);
 
-  // 2a. Hapus pixel QR dummy lama via sampling warna background sekitar (true erase)
-  if (placement.eraseBackground) {
-    const eraseRad = Math.max(0, Math.round((placement.radius ?? 14) * scale));
-    const bgColor = sampleSurroundingColor(ctx, boxX, boxY, boxSize, targetW, targetH);
-    ctx.fillStyle = bgColor;
-    ctx.beginPath();
-    ctx.moveTo(boxX + eraseRad, boxY);
-    ctx.lineTo(boxX + boxSize - eraseRad, boxY);
-    ctx.arcTo(boxX + boxSize, boxY, boxX + boxSize, boxY + eraseRad, eraseRad);
-    ctx.lineTo(boxX + boxSize, boxY + boxSize - eraseRad);
-    ctx.arcTo(boxX + boxSize, boxY + boxSize, boxX + boxSize - eraseRad, boxY + boxSize, eraseRad);
-    ctx.lineTo(boxX + eraseRad, boxY + boxSize);
-    ctx.arcTo(boxX, boxY + boxSize, boxX, boxY + boxSize - eraseRad, eraseRad);
-    ctx.lineTo(boxX, boxY + eraseRad);
-    ctx.arcTo(boxX, boxY, boxX + eraseRad, boxY, eraseRad);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // 2b. Kotak putih / warna solid penutup (jika dipilih opsi white_box)
+  // 2. Kotak putih / warna solid penutup (jika dipilih opsi white_box)
   if (placement.style === "white_box") {
     const pad = Math.min(Math.round((placement.padding ?? 18) * scale), Math.floor(boxSize * 0.3));
     const rad = Math.round((placement.radius ?? 18) * scale);
@@ -932,6 +1019,7 @@ export default function PrintQRCodes() {
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [defaultImg, setDefaultImg] = useState<HTMLImageElement | null>(null);
   const [customImg, setCustomImg] = useState<HTMLImageElement | null>(null);
+  const [rawCustomImg, setRawCustomImg] = useState<HTMLImageElement | null>(null); // Menyimpan desain asli tanpa erase
   const [bgLoaded, setBgLoaded] = useState(false);
 
   // QR Placement State (Terpisah antara Template Standar dan Desain Klien)
@@ -1012,7 +1100,6 @@ export default function PrintQRCodes() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const liveQrCanvasRef = useRef<HTMLCanvasElement>(null);
-  const liveCompositeRef = useRef<HTMLCanvasElement>(null); // Canvas overlay untuk tampilkan hasil erase di live preview
   const [isDragging, setIsDragging] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<"qr" | "position" | "resolution">("qr");
 
@@ -1156,6 +1243,7 @@ export default function PrintQRCodes() {
       setBgImage(defaultImg);
     }
     setCustomImg(null);
+    setRawCustomImg(null);
     setCustomImageName("");
     try {
       localStorage.removeItem("custom_qr_placement");
@@ -1163,6 +1251,16 @@ export default function PrintQRCodes() {
     composedCanvases.current.clear();
     setCodes([]); // Kosongkan daftar kartu lama
     setSaveResult(null);
+  }
+
+  // Kembalikan ke gambar asli klien (sebelum QR dummy dihapus)
+  function handleRestoreOriginalImage() {
+    if (!rawCustomImg) return;
+    setCustomImg(rawCustomImg);
+    setBgImage(rawCustomImg);
+    composedCanvases.current.clear();
+    setSnapFeedback("↺ Desain dikembalikan ke gambar asli klien.");
+    setTimeout(() => setSnapFeedback(null), 3500);
   }
 
   // Handle File Upload Desain Klien
@@ -1176,8 +1274,8 @@ export default function PrintQRCodes() {
       const dataUrl = event.target?.result as string;
       const img = new Image();
       img.onload = async () => {
-        setCustomImg(img);
-        setBgImage(img);
+        // Simpan gambar mentah asli untuk opsi revert
+        setRawCustomImg(img);
         setTemplateMode("custom");
         setShowPlacementEditor(true);
         composedCanvases.current.clear();
@@ -1185,16 +1283,28 @@ export default function PrintQRCodes() {
         setSaveResult(null);
 
         setIsScanningMock(true);
-        setSnapFeedback("🔍 Memindai QR dummy pada gambar klien...");
+        setSnapFeedback("🔍 Memindai & menghapus mockup QR pada kartu...");
         const result = await detectClientQRCode(img);
+
+        // HAPUS PIXEL QR DUMMY LANGSUNG DARI DATA GAMBAR (True Pixel Erase)
+        let activeImg = img;
+        if (result.detected || result.qrFound) {
+          activeImg = await eraseDummyQRCodeFromImage(img, {
+            x: result.x,
+            y: result.y,
+            size: result.size,
+          });
+        }
+        setCustomImg(activeImg);
+        setBgImage(activeImg);
         setIsScanningMock(false);
 
         const newPlacement: QRPlacementConfig = {
           x: result.x,
           y: result.y,
           size: result.size,
-          style: "transparent", // QR langsung di atas background yang sudah dierase bersih
-          eraseBackground: true, // Hapus pixel QR dummy via sampling warna sekitar
+          style: "transparent", // QR baru duduk bersih langsung di atas gambar yang sudah dihapus dummy QR-nya
+          eraseBackground: false,
           boxColor: "#FFFFFF",
           fgColor: "#000000",
           dotStyle: "squares",
@@ -1212,12 +1322,10 @@ export default function PrintQRCodes() {
 
         if (result.qrFound) {
           setSnapFeedback(
-            result.method === "zxing"
-              ? "🎯 Berhasil mendeteksi QR mockup klien! Area QR lama otomatis dihapus & diganti QR review aktif."
-              : "🎯 Berhasil mendeteksi pola QR mockup klien! Area QR lama otomatis ditutup bersih & diganti QR baru."
+            "🎯 Mockup QR klien berhasil dihapus dari gambar & diganti QR review aktif!"
           );
         } else if (result.detected) {
-          setSnapFeedback("✅ Area kotak desain kartu terdeteksi! Ukuran & posisi QR disesuaikan.");
+          setSnapFeedback("✅ Area kotak desain kartu terdeteksi & dibersihkan! Ukuran & posisi QR disesuaikan.");
         } else {
           setSnapFeedback("ℹ️ QR bawaan tidak terdeteksi otomatis, posisi QR ditempatkan di tengah. Anda dapat menggeser posisi atau menyesuaikan ukuran.");
         }
@@ -1448,29 +1556,47 @@ export default function PrintQRCodes() {
   }
 
   async function handleDetectAndReplaceQR() {
-    if (!bgImage) return;
-    setSnapFeedback("🔍 Sedang memindai QR code pada desain kartu...");
-    const result = await detectClientQRCode(bgImage);
+    const sourceImg = rawCustomImg || customImg || bgImage;
+    if (!sourceImg) return;
+    setIsScanningMock(true);
+    setSnapFeedback("🔍 Sedang memindai & menghapus mockup QR pada kartu...");
+    const result = await detectClientQRCode(sourceImg);
+
+    // HAPUS PIXEL QR DUMMY LANGSUNG DARI DATA GAMBAR (True Pixel Erase)
+    let activeImg = sourceImg;
+    if (result.detected || result.qrFound) {
+      activeImg = await eraseDummyQRCodeFromImage(sourceImg, {
+        x: result.x,
+        y: result.y,
+        size: result.size,
+      });
+    }
+
+    setCustomImg(activeImg);
+    setBgImage(activeImg);
+    setIsScanningMock(false);
 
     setPlacement((prev) => ({
       ...prev,
       x: result.x,
       y: result.y,
       size: result.size,
-      style: "transparent", // QR langsung di atas background yang dierase bersih
-      eraseBackground: true, // Hapus pixel QR dummy via sampling warna sekitar
+      style: "transparent",
+      eraseBackground: false,
       padding: Math.max(16, prev.padding || 18),
       radius: Math.max(12, prev.radius || 14),
     }));
 
+    composedCanvases.current.clear();
+
     if (result.qrFound) {
       setSnapFeedback(
-        `🎯 QR Code bawaan klien terdeteksi! Area QR lama otomatis dihapus & ditimpa QR unik baru.`
+        `🎯 Mockup QR klien berhasil dihapus dari gambar & diganti QR review aktif!`
       );
     } else if (result.detected) {
-      setSnapFeedback("✅ Area kotak desain kartu terdeteksi! Posisi QR disesuaikan.");
+      setSnapFeedback("✅ Area kotak desain kartu terdeteksi & dibersihkan! Posisi QR disesuaikan.");
     } else {
-      setSnapFeedback("ℹ️ QR bawaan tidak terdeteksi otomatis, posisi QR diratakan di tengah kartu. Anda dapat menggeser/mengatur ukurannya.");
+      setSnapFeedback("ℹ️ QR bawaan tidak terdeteksi otomatis, posisi QR diratakan di tengah kartu.");
     }
     setTimeout(() => setSnapFeedback(null), 4500);
   }
@@ -1585,85 +1711,6 @@ export default function PrintQRCodes() {
       effectivePlacement.logoType || "none"
     );
   }, [effectivePlacement.dotStyle, effectivePlacement.fgColor, effectivePlacement.style, effectivePlacement.logoType, qrPrevSize, qrPrevPad]);
-
-  // ── Live composite canvas: tampilkan hasil erase + QR asli di preview Studio ──
-  useEffect(() => {
-    const cvs = liveCompositeRef.current;
-    if (!cvs || !enhancedBgCanvas || !effectivePlacement.eraseBackground) {
-      // Jika tidak ada eraseBackground, sembunyikan canvas overlay ini
-      if (cvs) {
-        const ctx = cvs.getContext("2d");
-        if (ctx) ctx.clearRect(0, 0, cvs.width, cvs.height);
-      }
-      return;
-    }
-
-    // Render composite card skala kecil ke canvas overlay preview
-    cvs.width = prevW;
-    cvs.height = prevH;
-    const ctx = cvs.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-
-    // Skala dari canvas enhanced ke preview
-    const scaleX = prevW / enhancedBgCanvas.width;
-    const scaleY = prevH / enhancedBgCanvas.height;
-
-    // 1. Gambar background (sudah enhanced)
-    ctx.drawImage(enhancedBgCanvas, 0, 0, prevW, prevH);
-
-    // 2. Erase area QR dummy: sample warna sekitar di preview scale
-    const eX = Math.round(effectivePlacement.x * scaleX);
-    const eY = Math.round(effectivePlacement.y * scaleY);
-    const eSize = Math.round(effectivePlacement.size * scaleX);
-    const eRad = Math.max(0, Math.round((effectivePlacement.radius ?? 14) * scaleX));
-    const bgColor = sampleSurroundingColor(ctx, eX, eY, eSize, prevW, prevH);
-    ctx.fillStyle = bgColor;
-    ctx.beginPath();
-    ctx.moveTo(eX + eRad, eY);
-    ctx.lineTo(eX + eSize - eRad, eY);
-    ctx.arcTo(eX + eSize, eY, eX + eSize, eY + eRad, eRad);
-    ctx.lineTo(eX + eSize, eY + eSize - eRad);
-    ctx.arcTo(eX + eSize, eY + eSize, eX + eSize - eRad, eY + eSize, eRad);
-    ctx.lineTo(eX + eRad, eY + eSize);
-    ctx.arcTo(eX, eY + eSize, eX, eY + eSize - eRad, eRad);
-    ctx.lineTo(eX, eY + eRad);
-    ctx.arcTo(eX, eY, eX + eRad, eY, eRad);
-    ctx.closePath();
-    ctx.fill();
-
-    // 3. Gambar QR di atas area yang sudah dierase
-    const qrCanvas = document.createElement("canvas");
-    renderStyledQR(
-      qrCanvas,
-      "https://hantic.id/demo",
-      Math.max(32, eSize),
-      effectivePlacement.dotStyle || "squares",
-      effectivePlacement.fgColor || "#000000",
-      "transparent",
-      effectivePlacement.logoType || "none"
-    );
-    if (effectivePlacement.style === "white_box") {
-      const pad = Math.round((effectivePlacement.padding ?? 16) * scaleX);
-      const rad = Math.round((effectivePlacement.radius ?? 14) * scaleX);
-      ctx.fillStyle = effectivePlacement.boxColor || "#FFFFFF";
-      ctx.beginPath();
-      ctx.moveTo(eX + rad, eY);
-      ctx.lineTo(eX + eSize - rad, eY);
-      ctx.arcTo(eX + eSize, eY, eX + eSize, eY + rad, rad);
-      ctx.lineTo(eX + eSize, eY + eSize - rad);
-      ctx.arcTo(eX + eSize, eY + eSize, eX + eSize - rad, eY + eSize, rad);
-      ctx.lineTo(eX + rad, eY + eSize);
-      ctx.arcTo(eX, eY + eSize, eX, eY + eSize - rad, eRad);
-      ctx.lineTo(eX, eY + rad);
-      ctx.arcTo(eX, eY, eX + rad, eY, rad);
-      ctx.closePath();
-      ctx.fill();
-      ctx.drawImage(qrCanvas, eX + pad, eY + pad, eSize - pad * 2, eSize - pad * 2);
-    } else {
-      ctx.drawImage(qrCanvas, eX, eY, eSize, eSize);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enhancedBgCanvas, effectivePlacement, prevW, prevH, upscaleFactor]);
 
   return (
     <>
@@ -1824,15 +1871,28 @@ export default function PrintQRCodes() {
 
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   {templateMode === "custom" && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="print-btn print-btn-ghost"
-                      style={{ fontSize: "0.72rem", padding: "5px 12px" }}
-                      title="Ganti dengan file gambar kartu lain"
-                    >
-                      🔄 Ganti Gambar
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="print-btn print-btn-ghost"
+                        style={{ fontSize: "0.72rem", padding: "5px 12px" }}
+                        title="Ganti dengan file gambar kartu lain"
+                      >
+                        🔄 Ganti Gambar
+                      </button>
+                      {rawCustomImg && (
+                        <button
+                          type="button"
+                          onClick={handleRestoreOriginalImage}
+                          className="print-btn print-btn-ghost"
+                          style={{ fontSize: "0.72rem", padding: "5px 12px", color: "#FCD34D" }}
+                          title="Kembalikan gambar ke desain asli klien sebelum QR dummy dihapus"
+                        >
+                          ↺ Desain Asli
+                        </button>
+                      )}
+                    </>
                   )}
                   <button
                     type="button"
@@ -1878,7 +1938,7 @@ export default function PrintQRCodes() {
                     }}
                     title="Klik atau geser QR Code ke posisi yang diinginkan"
                   >
-                    {/* Background Card Image */}
+                    {/* Background Card Image (Sudah bersih dari QR dummy) */}
                     {bgImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -1896,24 +1956,6 @@ export default function PrintQRCodes() {
                       <div style={{ color: "#666", fontSize: "0.8rem" }}>Loading desain...</div>
                     )}
 
-                    {/* Composite erase + QR canvas overlay (hanya saat eraseBackground aktif) */}
-                    {placement.eraseBackground && (
-                      <canvas
-                        ref={liveCompositeRef}
-                        width={prevW}
-                        height={prevH}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: prevW,
-                          height: prevH,
-                          pointerEvents: "none",
-                          display: "block",
-                        }}
-                      />
-                    )}
-
                     {/* QR Code Overlay Box (Interactive Target Dragging) */}
                     <div
                       className="qr-target-overlay"
@@ -1922,13 +1964,10 @@ export default function PrintQRCodes() {
                         top: qrPrevTop,
                         width: qrPrevSize,
                         height: qrPrevSize,
-                        // Saat eraseBackground aktif, visual sudah dihandle canvas overlay — ini hanya drag handle transparan
-                        borderRadius: placement.eraseBackground ? 4 : (placement.style === "white_box" ? qrPrevRad : 4),
-                        background: placement.eraseBackground ? "transparent" : (placement.style === "white_box" ? (placement.boxColor || "#FFFFFF") : "transparent"),
-                        padding: (!placement.eraseBackground && placement.style === "white_box") ? qrPrevPad : 0,
+                        borderRadius: placement.style === "white_box" ? qrPrevRad : 4,
+                        background: placement.style === "white_box" ? (placement.boxColor || "#FFFFFF") : "transparent",
+                        padding: placement.style === "white_box" ? qrPrevPad : 0,
                         boxSizing: "border-box",
-                        // Tampilkan border dashed samar sebagai penanda drag area saat eraseBackground aktif
-                        outline: placement.eraseBackground ? "1.5px dashed rgba(99,102,241,0.6)" : "none",
                       }}
                       onPointerDown={(e) => {
                         e.stopPropagation();
@@ -1958,7 +1997,7 @@ export default function PrintQRCodes() {
                         ref={liveQrCanvasRef}
                         width={placement.style === "white_box" ? Math.max(16, qrPrevSize - qrPrevPad * 2) : qrPrevSize}
                         height={placement.style === "white_box" ? Math.max(16, qrPrevSize - qrPrevPad * 2) : qrPrevSize}
-                        style={{ width: "100%", height: "100%", display: placement.eraseBackground ? "none" : "block", pointerEvents: "none" }}
+                        style={{ width: "100%", height: "100%", display: "block", pointerEvents: "none" }}
                       />
 
                       {/* Small Indicator Tag */}
@@ -2550,10 +2589,10 @@ export default function PrintQRCodes() {
                               gap: 8,
                             }}>
                               <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#EDE9FE", display: "flex", alignItems: "center", gap: 6 }}>
-                                <span>🎯</span> Deteksi &amp; Hapus Mockup QR Klien (Auto-Replace)
+                                <span>🎯</span> Deteksi &amp; Hapus Mockup QR Klien
                               </div>
                               <div style={{ fontSize: "0.7rem", color: "#94A3B8", lineHeight: 1.4 }}>
-                                Otomatis mendeteksi lokasi QR mockup lama, menutupnya dengan kotak solid bersih, dan menggantinya dengan QR Google Review yang berfungsi.
+                                Otomatis mendeteksi lokasi mockup QR dummy, menghapus pixel QR lama hingga bersih, dan menggantinya dengan QR Google Review yang berfungsi.
                               </div>
                               <button
                                 type="button"
@@ -2572,11 +2611,31 @@ export default function PrintQRCodes() {
                                   justifyContent: "center",
                                   gap: 6,
                                 }}
-                                title="Pindai gambar kartu klien dan hapus QR dummy"
+                                title="Pindai gambar kartu klien dan hapus QR dummy langsung dari gambar"
                               >
                                 <span>🎯</span>
-                                <span>{isScanningMock ? "Memindai QR Dummy..." : "Pindai & Hapus QR Dummy Sekarang"}</span>
+                                <span>{isScanningMock ? "Memindai & Menghapus..." : "Pindai & Hapus QR Dummy Sekarang"}</span>
                               </button>
+                              {rawCustomImg && (
+                                <button
+                                  type="button"
+                                  onClick={handleRestoreOriginalImage}
+                                  className="print-btn print-btn-ghost"
+                                  style={{
+                                    width: "100%",
+                                    padding: "6px 12px",
+                                    fontSize: "0.72rem",
+                                    color: "#FCD34D",
+                                    borderColor: "rgba(245, 158, 11, 0.3)",
+                                    justifyContent: "center",
+                                    gap: 6,
+                                  }}
+                                  title="Kembalikan gambar ke file asli sebelum QR dummy dihapus"
+                                >
+                                  <span>↺</span>
+                                  <span>Kembalikan ke Desain Asli Klien</span>
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <div style={{
