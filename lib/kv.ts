@@ -110,20 +110,48 @@ if (!hasKv && memoryStore.size === 0) {
   }
 }
 
+// Cache memori jangka pendek per serverless container untuk kartu (TTL 45 detik)
+// Sangat krusial agar NFC tap instan (<5ms), menghemat kuota Upstash,
+// dan mencegah error koneksi/rate-limit menampilkan "kartu belum aktif".
+const cardMemCache = new Map<string, { card: CardRecord | null; expires: number }>();
+
 export async function getCard(code: string): Promise<CardRecord | null> {
-  if (hasKv && vercelKv) {
-    // Retry hingga 3x untuk menangani transient error Vercel KV.
-    // Jika semua retry gagal karena exception (bukan karena data null/not found),
-    // akan throw error → route handler bisa tampilkan halaman retry, bukan "kartu belum aktif".
-    const data = await retryOrThrow(() =>
-      vercelKv!.get<CardRecord>(KEY_PREFIX + code)
-    );
-    return data ?? null;
+  const normalized = (code || "").trim();
+  if (!normalized) return null;
+
+  const now = Date.now();
+  const cached = cardMemCache.get(normalized);
+  if (cached && cached.expires > now) {
+    return cached.card;
   }
-  return memoryStore.get(code) ?? null;
+
+  if (hasKv && vercelKv) {
+    try {
+      // Retry hingga 3x untuk menangani transient error Vercel KV.
+      const data = await retryOrThrow(() =>
+        vercelKv!.get<CardRecord>(KEY_PREFIX + normalized)
+      );
+      const res = data ?? null;
+      cardMemCache.set(normalized, { card: res, expires: now + 45000 });
+      return res;
+    } catch (err) {
+      // Jika terjadi error koneksi ke KV tetapi sebelumnya ada cache di memori (meskipun stale),
+      // gunakan data cache tersebut agar pelanggan tidak pernah terblokir!
+      if (cached?.card) {
+        console.warn("KV fetch error, using stale cached card for code=" + normalized, err);
+        return cached.card;
+      }
+      throw err;
+    }
+  }
+
+  return memoryStore.get(normalized) ?? null;
 }
 
 export async function setCard(record: CardRecord): Promise<void> {
+  // Update cache memori lokal segera
+  cardMemCache.set(record.code, { card: record, expires: Date.now() + 45000 });
+
   if (hasKv && vercelKv) {
     await vercelKv.set(KEY_PREFIX + record.code, record);
     await vercelKv.sadd(INDEX_KEY, record.code);
@@ -175,6 +203,7 @@ export async function resetCardTaps(code: string): Promise<void> {
 }
 
 export async function deleteCard(code: string): Promise<void> {
+  cardMemCache.delete(code);
   await resetCardTaps(code);
   if (hasKv && vercelKv) {
     await Promise.all([

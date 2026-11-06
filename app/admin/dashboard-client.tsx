@@ -160,11 +160,12 @@ export default function AdminDashboard() {
     };
     window.addEventListener("storage", handleStorage);
 
-    // Auto-refresh background tiap 20 detik
+    // Auto-refresh background tiap 45 detik hanya jika tab browser sedang aktif/dilihat user
     const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       loadCards();
       loadTapLogs();
-    }, 20000);
+    }, 45000);
 
     return () => {
       clearInterval(interval);

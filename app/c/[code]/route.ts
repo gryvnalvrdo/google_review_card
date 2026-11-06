@@ -76,7 +76,7 @@ const NOT_ACTIVE_HTML = `<!doctype html>
 </html>`;
 
 // HTML halaman "Menghubungkan..." — tampil saat terjadi error koneksi sementara ke KV.
-// Auto-refresh setelah 3 detik agar pelanggan tidak perlu tap ulang.
+// Auto-refresh setelah 2 detik agar pelanggan tidak perlu tap ulang.
 function retryHtml(code: string) {
   return `<!doctype html>
 <html lang="id">
@@ -84,7 +84,7 @@ function retryHtml(code: string) {
     <meta charset="utf-8" />
     <title>Menghubungkan...</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="refresh" content="3;url=/c/${code}" />
+    <meta http-equiv="refresh" content="2;url=/c/${code}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -145,8 +145,8 @@ function retryHtml(code: string) {
     <div class="card">
       <div class="spinner"></div>
       <h1>Menghubungkan...</h1>
-      <p>Sedang menghubungkan ke server.<br>Halaman akan otomatis diarahkan dalam beberapa detik.</p>
-      <div class="badge">⏳ Memuat ulang otomatis...</div>
+      <p>Sedang menghubungkan ke server ulasan.<br>Halaman akan otomatis dialihkan dalam 2 detik.</p>
+      <div class="badge">⏳ Mengalihkan otomatis...</div>
     </div>
   </body>
 </html>`;
@@ -156,24 +156,38 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { code: string } }
 ) {
-  let card;
+  const rawCode = params?.code || "";
+  const code = rawCode.trim();
+  let card = null;
 
   try {
-    card = await getCard(params.code);
-  } catch {
+    card = await getCard(code);
+    // Toleransi variasi penulisan huruf besar/kecil dari NFC writer / scanner
+    if (!card && code) {
+      if (code !== code.toLowerCase()) {
+        card = await getCard(code.toLowerCase());
+      }
+      if (!card && code !== code.toUpperCase()) {
+        card = await getCard(code.toUpperCase());
+      }
+    }
+  } catch (err) {
+    console.error("KV connection error on tap code=" + code, err);
     // Gagal koneksi ke Vercel KV (semua retry habis) → tampilkan halaman retry otomatis.
-    // Pelanggan tidak perlu tap ulang; halaman akan auto-refresh dalam 3 detik.
-    return new NextResponse(retryHtml(params.code), {
+    // Pelanggan tidak perlu tap ulang; halaman akan auto-refresh dalam 2 detik.
+    return new NextResponse(retryHtml(code), {
       status: 503,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store, no-cache, must-revalidate",
-        "Retry-After": "3",
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Retry-After": "2",
       },
     });
   }
 
-  if (!card || !isAllowedReviewUrl(card.googleReviewUrl)) {
+  // Jika kartu memang tidak terdaftar sama sekali di database
+  if (!card) {
     return new NextResponse(NOT_ACTIVE_HTML, {
       status: 200,
       headers: {
@@ -183,17 +197,36 @@ export async function GET(
     });
   }
 
-  // Catat tap dulu sebelum redirect agar tidak hilang di Vercel serverless
-  await Promise.allSettled([
-    incrementTapCount(params.code),
-    addTapLog({ code: card.code, storeName: card.storeName, tappedAt: new Date().toISOString() }),
-  ]);
+  // Cek kevalidan URL Google Review
+  let targetUrl = card.googleReviewUrl?.trim();
+  if (!targetUrl || !isAllowedReviewUrl(targetUrl)) {
+    // Fail-safe: jika toko terdaftar tapi URL ulasan bermasalah,
+    // arahkan langsung ke pencarian ulasan nama toko di Google,
+    // jangan pernah menampilkan "Kartu Belum Aktif" pada kartu toko yang sudah ada!
+    if (card.storeName && card.storeName.trim()) {
+      targetUrl = `https://www.google.com/search?q=${encodeURIComponent(card.storeName.trim())}+ulasan`;
+    } else {
+      return new NextResponse(NOT_ACTIVE_HTML, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      });
+    }
+  }
 
-  return NextResponse.redirect(card.googleReviewUrl, {
+  // Catat tap di background tanpa memblokir kecepatan redirect
+  Promise.allSettled([
+    incrementTapCount(card.code || code),
+    addTapLog({ code: card.code || code, storeName: card.storeName, tappedAt: new Date().toISOString() }),
+  ]).catch(() => {});
+
+  return NextResponse.redirect(targetUrl, {
     status: 302,
     headers: {
       // Cegah browser/cache menyimpan redirect ini — penting untuk NFC tap di mobile
-      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
       "Pragma": "no-cache",
     },
   });

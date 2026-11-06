@@ -221,13 +221,13 @@ function findInnerQROrDarkContent(
     if (!ctx) return null;
     ctx.drawImage(img, 0, 0, cardW, cardH);
 
-    // Filter ketat: cari HANYA di area tengah kotak (zona QR)
-    // - Abaikan 18% dari kiri dan kanan (menghindari garis tepi / outline toast)
-    // - Abaikan 24% dari atas (menghindari ikon atau garis ilustrasi "///")
-    // - Abaikan 22% dari bawah (menghindari teks "Scan QR Code")
-    const marginH = Math.floor(box.size * 0.18);
-    const marginTop = Math.floor(box.size * 0.24);
-    const marginBottom = Math.floor(box.size * 0.22);
+    // Filter presisi: cari di area dalam kotak (zona QR)
+    // - Margin horizontal 10% (menghindari garis tepi / outline toast)
+    // - Margin atas 12% (menghindari ikon atau garis ilustrasi "///")
+    // - Margin bawah 10% (menghindari teks "Scan QR Code")
+    const marginH = Math.floor(box.size * 0.10);
+    const marginTop = Math.floor(box.size * 0.12);
+    const marginBottom = Math.floor(box.size * 0.10);
 
     const startX = Math.max(0, box.x + marginH);
     const endX = Math.min(cardW, box.x + box.size - marginH);
@@ -235,17 +235,17 @@ function findInnerQROrDarkContent(
     const endY = Math.min(cardH, box.y + box.size - marginBottom);
 
     // Ambil sampel warna background kontainer di 4 sudut search window (pasti putih bersih)
-    const p1 = ctx.getImageData(startX + 8, startY + 8, 1, 1).data;
-    const p2 = ctx.getImageData(endX - 8, startY + 8, 1, 1).data;
-    const p3 = ctx.getImageData(startX + 8, endY - 8, 1, 1).data;
-    const p4 = ctx.getImageData(endX - 8, endY - 8, 1, 1).data;
+    const p1 = ctx.getImageData(startX + 4, startY + 4, 1, 1).data;
+    const p2 = ctx.getImageData(endX - 4, startY + 4, 1, 1).data;
+    const p3 = ctx.getImageData(startX + 4, endY - 4, 1, 1).data;
+    const p4 = ctx.getImageData(endX - 4, endY - 4, 1, 1).data;
 
     const bgR = Math.round((p1[0] + p2[0] + p3[0] + p4[0]) / 4);
     const bgG = Math.round((p1[1] + p2[1] + p3[1] + p4[1]) / 4);
     const bgB = Math.round((p1[2] + p2[2] + p3[2] + p4[2]) / 4);
     const containerBg = `rgb(${bgR},${bgG},${bgB})`;
 
-    const step = Math.max(2, Math.floor(box.size / 220));
+    const step = Math.max(1, Math.floor(box.size / 280));
     let minX = cardW, maxX = 0, minY = cardH, maxY = 0;
     let darkPixelCount = 0;
 
@@ -255,7 +255,7 @@ function findInnerQROrDarkContent(
         const lum = p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114;
         const diffFromBg = Math.abs(p[0] - bgR) + Math.abs(p[1] - bgG) + Math.abs(p[2] - bgB);
         // Pixel modul hitam QR: kontras dengan background kontainer dan luminance gelap (< 125)
-        if (diffFromBg > 55 && lum < 125 && p[3] > 100) {
+        if (diffFromBg > 50 && lum < 125 && p[3] > 100) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
@@ -270,8 +270,8 @@ function findInnerQROrDarkContent(
       const rawW = maxX - minX;
       const rawH = maxY - minY;
       const ratio = rawW / (rawH || 1);
-      // Dummy QR berbentuk mendekati bujur sangkar (0.72 - 1.38) dan ukurannya proporsional (>18% container)
-      if (ratio >= 0.72 && ratio <= 1.38 && rawW > box.size * 0.18) {
+      // Dummy QR berbentuk mendekati bujur sangkar (0.70 - 1.40) dan ukurannya proporsional (>18% container)
+      if (ratio >= 0.70 && ratio <= 1.40 && rawW > box.size * 0.18) {
         // Beri sedikit padding quiet zone ~6% agar tepi modul QR tertutup bersih
         const pad = Math.round(Math.max(rawW, rawH) * 0.06);
         const qrSize = Math.max(rawW, rawH) + pad * 2;
@@ -291,59 +291,12 @@ function findInnerQROrDarkContent(
   return null;
 }
 
-// ─── Deteksi Warna Latar Asli Area Dummy QR (Quiet Zone Sampling) ─────────────
-function detectQRBackgroundColor(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  cardW: number,
-  cardH: number
-): string {
-  const samples: [number, number, number][] = [];
-  const inset = Math.max(3, Math.round(size * 0.03)); // 3% inset di dalam box quiet zone
-  const steps = 12;
-
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const px = Math.round(x + t * size);
-    const py = Math.round(y + t * size);
-
-    const testPoints = [
-      [px, Math.min(cardH - 1, y + inset)],
-      [px, Math.max(0, y + size - inset)],
-      [Math.min(cardW - 1, x + inset), py],
-      [Math.max(0, x + size - inset), py],
-    ];
-
-    for (const [sx, sy] of testPoints) {
-      if (sx >= 0 && sx < cardW && sy >= 0 && sy < cardH) {
-        const d = ctx.getImageData(sx, sy, 1, 1).data;
-        if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
-      }
-    }
-  }
-
-  if (samples.length === 0) return "#FFFFFF";
-
-  // Filter keluar pixel gelap modul hitam QR
-  const nonDark = samples.filter(([r, g, b]) => (r + g + b) / 3 > 80);
-  const useSamples = nonDark.length > 3 ? nonDark : samples;
-
-  const avg = useSamples.reduce(
-    (acc, s) => [acc[0] + s[0], acc[1] + s[1], acc[2] + s[2]],
-    [0, 0, 0]
-  );
-  const n = useSamples.length;
-  return `rgb(${Math.round(avg[0] / n)},${Math.round(avg[1] / n)},${Math.round(avg[2] / n)})`;
-}
-
 // ─── Hapus Pixel QR Dummy Langsung dari Data Gambar (True Pixel Erase) ────────
 function eraseDummyQRCodeFromImage(
   img: HTMLImageElement,
   qrBox: { x: number; y: number; size: number },
   fillColor?: string
-): Promise<HTMLImageElement> {
+): Promise<{ image: HTMLImageElement; erasedBox: { x: number; y: number; size: number } }> {
   return new Promise((resolve) => {
     try {
       const cardW = img.naturalWidth || DEFAULT_CARD_W;
@@ -353,25 +306,81 @@ function eraseDummyQRCodeFromImage(
       canvas.height = cardH;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) {
-        resolve(img);
+        resolve({ image: img, erasedBox: qrBox });
         return;
       }
       ctx.drawImage(img, 0, 0, cardW, cardH);
 
-      // Warna penghapus: gunakan fillColor jika diberikan, atau sampling quiet zone
-      const bg = fillColor || detectQRBackgroundColor(ctx, qrBox.x, qrBox.y, qrBox.size, cardW, cardH);
-      ctx.fillStyle = bg;
+      // ── Langkah 1: Cari modul gelap QR di dalam qrBox untuk batas presisi ──
+      // Mencegah penghapusan area di luar QR (seperti border toast, ilustrasi, dsb.)
+      const step = Math.max(1, Math.floor(qrBox.size / 280));
+      let minX = cardW, maxX = 0, minY = cardH, maxY = 0;
+      let darkCount = 0;
 
-      // Hapus HANYA kotak dummy QR persis di posisinya (tanpa merusak elemen luar)
-      ctx.fillRect(qrBox.x, qrBox.y, qrBox.size, qrBox.size);
+      for (let y = qrBox.y; y < Math.min(cardH, qrBox.y + qrBox.size); y += step) {
+        for (let x = qrBox.x; x < Math.min(cardW, qrBox.x + qrBox.size); x += step) {
+          const p = ctx.getImageData(x, y, 1, 1).data;
+          const lum = p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114;
+          if (lum < 115 && p[3] > 100) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            darkCount++;
+          }
+        }
+      }
+
+      let eraseX = qrBox.x;
+      let eraseY = qrBox.y;
+      let eraseSize = qrBox.size;
+
+      if (darkCount > 25 && maxX > minX && maxY > minY) {
+        const rawW = maxX - minX;
+        const rawH = maxY - minY;
+        const ratio = rawW / (rawH || 1);
+        if (ratio >= 0.70 && ratio <= 1.40) {
+          // Tambahkan quiet zone secukupnya (maks 6%) agar modul QR tercover bersih
+          const qz = Math.max(3, Math.round(Math.max(rawW, rawH) * 0.05));
+          const cX = (minX + maxX) / 2;
+          const cY = (minY + maxY) / 2;
+          const targetSize = Math.max(rawW, rawH) + qz * 2;
+          eraseX = Math.max(0, Math.min(cardW - targetSize, Math.round(cX - targetSize / 2)));
+          eraseY = Math.max(0, Math.min(cardH - targetSize, Math.round(cY - targetSize / 2)));
+          eraseSize = targetSize;
+        }
+      }
+
+      // ── Langkah 2: Sampling warna background quiet zone tepat di sebelah modul QR ──
+      let bg = fillColor;
+      if (!bg) {
+        const samplePts = [
+          [Math.max(0, eraseX - 4), Math.max(0, eraseY - 4)],
+          [Math.min(cardW - 1, eraseX + eraseSize + 4), Math.max(0, eraseY - 4)],
+          [Math.max(0, eraseX - 4), Math.min(cardH - 1, eraseY + eraseSize + 4)],
+          [Math.min(cardW - 1, eraseX + eraseSize + 4), Math.min(cardH - 1, eraseY + eraseSize + 4)],
+        ];
+        let sr = 0, sg = 0, sb = 0, sc = 0;
+        for (const [sx, sy] of samplePts) {
+          const d = ctx.getImageData(sx, sy, 1, 1).data;
+          if (d[3] > 100) {
+            sr += d[0]; sg += d[1]; sb += d[2]; sc++;
+          }
+        }
+        bg = sc > 0 ? `rgb(${Math.round(sr / sc)},${Math.round(sg / sc)},${Math.round(sb / sc)})` : "#FFFFFF";
+      }
+
+      // ── Langkah 3: Hapus HANYA area QR yang presisi ──
+      ctx.fillStyle = bg;
+      ctx.fillRect(eraseX, eraseY, eraseSize, eraseSize);
 
       const cleanImg = new Image();
-      cleanImg.onload = () => resolve(cleanImg);
-      cleanImg.onerror = () => resolve(img);
+      cleanImg.onload = () => resolve({ image: cleanImg, erasedBox: { x: eraseX, y: eraseY, size: eraseSize } });
+      cleanImg.onerror = () => resolve({ image: img, erasedBox: qrBox });
       cleanImg.src = canvas.toDataURL("image/png");
     } catch (err) {
       console.error("Gagal menghapus dummy QR dari gambar:", err);
-      resolve(img);
+      resolve({ image: img, erasedBox: qrBox });
     }
   });
 }
@@ -419,16 +428,25 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
       const points = result.getResultPoints();
       if (!points || points.length < 2) return null;
 
+      // Konversi dari koordinat crop+downscale ke koordinat asli kartu
       const xs = points.map((p: any) => p.getX() / dsFactor + offsetX);
       const ys = points.map((p: any) => p.getY() / dsFactor + offsetY);
       const minX = Math.min(...xs); const maxX = Math.max(...xs);
       const minY = Math.min(...ys); const maxY = Math.max(...ys);
       const distFinder = Math.max(maxX - minX, maxY - minY);
-      // 1.52x agar seluruh quiet-zone QR tertutup bersih
-      const coverSize = Math.round(distFinder * 1.52);
+
+      // Finder patterns QR code menempati ~6/7 dari lebar QR total.
+      // distFinder ≈ 0.857 * QR_size → QR_size ≈ distFinder * 1.167
+      // Tambah 15% quiet zone → faktor total ≈ 1.34x (jauh lebih akurat dari 1.52x lama)
+      const coverSize = Math.round(distFinder * 1.34);
+
+      // Batasi ukuran hapus maks 45% dari sisi terpendek kartu
+      // agar tidak pernah menghapus bagian luar QR (ilustrasi, border, dsb.)
+      const maxAllowedSize = Math.round(Math.min(cardW, cardH) * 0.45);
+      const size = Math.min(coverSize, maxAllowedSize);
+
       const cX = (minX + maxX) / 2;
       const cY = (minY + maxY) / 2;
-      const size = Math.round(Math.min(coverSize, Math.min(cardW, cardH) * 0.94));
       return {
         x: Math.max(0, Math.min(cardW - size, Math.round(cX - size / 2))),
         y: Math.max(0, Math.min(cardH - size, Math.round(cY - size / 2))),
@@ -471,7 +489,8 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     const rhX = Math.round(dsW * 0.40);
     const rhW = dsW - rhX;
     if (rhW > 60) {
-      res = tryZxingDirect(cropCanvas(rhX, 0, rhW, dsH), Math.round(cardW * 0.40), 0, dsFactor);
+      // Offset ke koordinat asli kartu: rhX piksel crop → rhX/dsFactor piksel asli
+      res = tryZxingDirect(cropCanvas(rhX, 0, rhW, dsH), Math.round(rhX / dsFactor), 0, dsFactor);
       if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
     }
 
@@ -479,13 +498,13 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     const bhY = Math.round(dsH * 0.40);
     const bhH = Math.round(dsH * 0.50);
     if (bhH > 60) {
-      res = tryZxingDirect(cropCanvas(0, bhY, dsW, bhH), 0, Math.round(cardH * 0.40), dsFactor);
+      res = tryZxingDirect(cropCanvas(0, bhY, dsW, bhH), 0, Math.round(bhY / dsFactor), dsFactor);
       if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
     }
 
     // 1d. Kanan-bawah quadrant (X: 40-100%, Y: 40-100%) — QR pojok kanan bawah
     if (rhW > 60 && bhH > 60) {
-      res = tryZxingDirect(cropCanvas(rhX, bhY, rhW, bhH), Math.round(cardW * 0.40), Math.round(cardH * 0.40), dsFactor);
+      res = tryZxingDirect(cropCanvas(rhX, bhY, rhW, bhH), Math.round(rhX / dsFactor), Math.round(bhY / dsFactor), dsFactor);
       if (res) return { ...res, detected: true, qrFound: true, method: "zxing" };
     }
 
@@ -497,7 +516,25 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     }
   } catch { /* ZXing unavailable */ }
 
-  // ─ Tier 2: Pattern Transition Scan (mensyaratkan transisi KEDUA sumbu H+V) ─
+  // ─ Tier 2: Deteksi Kotak Kontainer Warna & Modul QR di Dalamnya ─
+  // Sangat andal untuk desain kartu dengan kotak putih atau shape (seperti kartu roti/kafe)
+  const boxResult = detectBoxInImage(img);
+  if (boxResult.detected) {
+    const innerQR = findInnerQROrDarkContent(img, boxResult);
+    if (innerQR) {
+      return {
+        x: innerQR.x,
+        y: innerQR.y,
+        size: innerQR.size,
+        detected: true,
+        qrFound: true,
+        method: "box",
+        bgColor: innerQR.bgColor,
+      };
+    }
+  }
+
+  // ─ Tier 3: Pattern Transition Scan (Fallback jika tidak ada kontainer khusus) ─
   try {
     const maxDim = 800;
     const longSide = Math.max(cardW, cardH);
@@ -588,22 +625,7 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
     }
   } catch { /* Pattern scan failed */ }
 
-  // ─ Tier 3: Deteksi Kotak Kontainer Warna & Modul QR di Dalamnya ─
-  const boxResult = detectBoxInImage(img);
   if (boxResult.detected) {
-    // Periksa apakah ada dummy QR di dalam kontainer ini (seperti pada ilustrasi kartu roti/kafe)
-    const innerQR = findInnerQROrDarkContent(img, boxResult);
-    if (innerQR) {
-      return {
-        x: innerQR.x,
-        y: innerQR.y,
-        size: innerQR.size,
-        detected: true,
-        qrFound: true,
-        method: "box",
-        bgColor: innerQR.bgColor,
-      };
-    }
     return { ...boxResult, qrFound: false, method: "box" };
   }
 
@@ -1315,21 +1337,24 @@ export default function PrintQRCodes() {
         // HANYA hapus pixel jika dummy QR BENAR-BENAR TERDETEKSI (qrFound === true)!
         // JANGAN pernah menghapus kotak kontainer jika tidak ada dummy QR di dalamnya!
         let activeImg = img;
+        let finalPlacement = { x: result.x, y: result.y, size: result.size };
         if (result.qrFound) {
-          activeImg = await eraseDummyQRCodeFromImage(
+          const eraseRes = await eraseDummyQRCodeFromImage(
             img,
             { x: result.x, y: result.y, size: result.size },
             result.bgColor
           );
+          activeImg = eraseRes.image;
+          finalPlacement = eraseRes.erasedBox;
         }
         setCustomImg(activeImg);
         setBgImage(activeImg);
         setIsScanningMock(false);
 
         const newPlacement: QRPlacementConfig = {
-          x: result.x,
-          y: result.y,
-          size: result.size,
+          x: finalPlacement.x,
+          y: finalPlacement.y,
+          size: finalPlacement.size,
           style: "transparent", // QR baru duduk bersih langsung di atas gambar yang sudah dihapus dummy QR-nya
           eraseBackground: false,
           boxColor: "#FFFFFF",
@@ -1592,12 +1617,15 @@ export default function PrintQRCodes() {
     // HANYA hapus pixel jika dummy QR BENAR-BENAR TERDETEKSI (qrFound === true)!
     // JANGAN pernah menghapus kotak kontainer jika tidak ada dummy QR di dalamnya!
     let activeImg = sourceImg;
+    let finalPlacement = { x: result.x, y: result.y, size: result.size };
     if (result.qrFound) {
-      activeImg = await eraseDummyQRCodeFromImage(
+      const eraseRes = await eraseDummyQRCodeFromImage(
         sourceImg,
         { x: result.x, y: result.y, size: result.size },
         result.bgColor
       );
+      activeImg = eraseRes.image;
+      finalPlacement = eraseRes.erasedBox;
     }
 
     setCustomImg(activeImg);
@@ -1606,9 +1634,9 @@ export default function PrintQRCodes() {
 
     setPlacement((prev) => ({
       ...prev,
-      x: result.x,
-      y: result.y,
-      size: result.size,
+      x: finalPlacement.x,
+      y: finalPlacement.y,
+      size: finalPlacement.size,
       style: "transparent",
       eraseBackground: false,
       padding: Math.max(16, prev.padding || 18),
