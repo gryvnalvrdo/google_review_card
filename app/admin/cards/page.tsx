@@ -547,8 +547,9 @@ export default function CardsPage() {
 
                         {/* Row 2: Details Summary (Harga Jual & Target Ulasan) */}
                         <div style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                           gap: 12,
                           padding: "10px 14px",
                           background: "rgba(0,0,0,0.25)",
@@ -558,29 +559,36 @@ export default function CardsPage() {
                         }}>
                           <div>
                             <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
-                            <strong style={{ color: "#34D399", fontSize: "0.92rem", fontWeight: 700 }}>
+                            <strong style={{ color: "#34D399", fontSize: "0.95rem", fontWeight: 700 }}>
                               Rp {(card.price ?? 50000).toLocaleString("id-ID")}
                             </strong>
                           </div>
                           <div style={{ textAlign: "right" }}>
-                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Target Google Review</span>
+                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>Target Google Review</span>
                             <a
                               href={getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName)}
                               target="_blank"
                               rel="noreferrer"
                               style={{
                                 color: "#FCD34D",
+                                background: "rgba(245, 158, 11, 0.12)",
+                                border: "1px solid rgba(245, 158, 11, 0.25)",
+                                borderRadius: 7,
+                                padding: "4px 10px",
                                 textDecoration: "none",
                                 fontWeight: 600,
-                                fontSize: "0.8rem",
+                                fontSize: "0.78rem",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 4,
-                                marginTop: 2,
+                                gap: 5,
+                                whiteSpace: "nowrap",
+                                transition: "all 0.15s ease",
                               }}
                               title="Buka ulasan toko di Google Search"
                             >
-                              <span>⭐</span> Buka Menu Ulasan ↗
+                              <span>⭐</span>
+                              <span>Buka Menu Ulasan</span>
+                              <span style={{ fontSize: "0.72rem", opacity: 0.8 }}>↗</span>
                             </a>
                           </div>
                         </div>
@@ -588,122 +596,139 @@ export default function CardsPage() {
                         {/* Row 2.5: Link NFC & Tombol Salin Cepat (Desktop & Mobile Optimized) */}
                         <div style={{
                           display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 10,
-                          padding: "8px 12px",
+                          flexDirection: "column",
+                          gap: 8,
+                          padding: "10px 12px",
                           background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.04) 100%)",
                           border: "1px solid rgba(99, 102, 241, 0.2)",
                           borderRadius: 10,
-                          flexWrap: "wrap",
                         }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>
-                            <span style={{
-                              fontSize: "0.68rem",
-                              fontWeight: 800,
-                              color: "#818CF8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.5px",
-                              whiteSpace: "nowrap",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                              background: "rgba(99, 102, 241, 0.15)",
-                              padding: "2px 7px",
-                              borderRadius: 5,
-                            }}>
-                              <span>📱</span> Link NFC
-                            </span>
-                            <a
-                              href={fullCardUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                color: "#C7D2FE",
-                                textDecoration: "none",
-                                fontSize: "0.8rem",
-                                fontFamily: "monospace",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
+                          {/* Top: NFC Badge + URL + Buka ↗ */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
+                              <span style={{
+                                fontSize: "0.68rem",
+                                fontWeight: 800,
+                                color: "#818CF8",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
                                 whiteSpace: "nowrap",
-                              }}
-                              title="Klik untuk membuka link kartu"
-                            >
-                              {fullCardUrl}
-                            </a>
-                          </div>
-
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: "auto" }}>
-                            <a
-                              href={fullCardUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn btn-ghost"
-                              style={{
-                                padding: "4px 8px",
-                                fontSize: "0.72rem",
-                                color: "#94A3B8",
-                                borderRadius: 6,
                                 display: "inline-flex",
                                 alignItems: "center",
+                                gap: 4,
+                                background: "rgba(99, 102, 241, 0.15)",
+                                padding: "2px 7px",
+                                borderRadius: 5,
+                                flexShrink: 0,
+                              }}>
+                                <span>📱</span> Link NFC
+                              </span>
+                              <a
+                                href={fullCardUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  color: "#C7D2FE",
+                                  textDecoration: "none",
+                                  fontSize: "0.78rem",
+                                  fontFamily: "monospace",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  flex: 1,
+                                  minWidth: 0,
+                                }}
+                                title="Klik untuk membuka link kartu"
+                              >
+                                {fullCardUrl}
+                              </a>
+                            </div>
+
+                            <a
+                              href={fullCardUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                fontSize: "0.74rem",
+                                color: "#A5B4FC",
+                                textDecoration: "none",
+                                fontWeight: 600,
+                                flexShrink: 0,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                                padding: "3px 8px",
+                                borderRadius: 6,
+                                background: "rgba(255,255,255,0.05)",
+                                border: "1px solid rgba(255,255,255,0.08)",
                               }}
                               title="Buka di tab baru"
                             >
-                              ↗
+                              Buka ↗
                             </a>
-                            <button
-                              type="button"
-                              onClick={() => copyLinkText(fullCardUrl)}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "6px 14px",
-                                fontSize: "0.78rem",
-                                fontWeight: 700,
-                                borderRadius: 8,
-                                border: `1px solid ${copiedLinkText === fullCardUrl ? "rgba(16, 185, 129, 0.5)" : "rgba(99, 102, 241, 0.4)"}`,
-                                background: copiedLinkText === fullCardUrl
-                                  ? "linear-gradient(135deg, #059669, #10B981)"
-                                  : "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.35))",
-                                color: copiedLinkText === fullCardUrl ? "#FFFFFF" : "#E0E7FF",
-                                cursor: "pointer",
-                                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                                boxShadow: copiedLinkText === fullCardUrl
-                                  ? "0 2px 10px rgba(16, 185, 129, 0.3)"
-                                  : "0 2px 8px rgba(0, 0, 0, 0.2)",
-                              }}
-                              title="Salin seluruh link URL NFC ke clipboard"
-                            >
-                              <span>{copiedLinkText === fullCardUrl ? "✅" : "📋"}</span>
-                              <span>{copiedLinkText === fullCardUrl ? "Tersalin!" : "Salin Link"}</span>
-                            </button>
                           </div>
+
+                          {/* Bottom: Tombol Salin Lebar & Nyaman untuk Mobile & Desktop */}
+                          <button
+                            type="button"
+                            onClick={() => copyLinkText(fullCardUrl)}
+                            style={{
+                              width: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 8,
+                              padding: "8px 14px",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              borderRadius: 8,
+                              border: `1px solid ${copiedLinkText === fullCardUrl ? "rgba(16, 185, 129, 0.5)" : "rgba(99, 102, 241, 0.35)"}`,
+                              background: copiedLinkText === fullCardUrl
+                                ? "linear-gradient(135deg, #059669, #10B981)"
+                                : "linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(79, 70, 229, 0.32))",
+                              color: copiedLinkText === fullCardUrl ? "#FFFFFF" : "#E0E7FF",
+                              cursor: "pointer",
+                              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                              boxShadow: copiedLinkText === fullCardUrl
+                                ? "0 2px 10px rgba(16, 185, 129, 0.3)"
+                                : "0 2px 8px rgba(0, 0, 0, 0.15)",
+                            }}
+                            title="Salin seluruh link URL NFC ke clipboard"
+                          >
+                            <span>{copiedLinkText === fullCardUrl ? "✅" : "📋"}</span>
+                            <span>{copiedLinkText === fullCardUrl ? "Link NFC Berhasil Disalin!" : "Salin Link Kartu NFC"}</span>
+                          </button>
                         </div>
 
-                        {/* Row 3: Action Buttons (Riwayat Tap & High-Res QR Download) */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10, alignItems: "stretch" }}>
+                        {/* Row 3: Action Buttons (Riwayat Tap & High-Res QR Download - 2 Kolom Sejajar Rapi) */}
+                        <div style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 8,
+                          alignItems: "stretch",
+                        }}>
                           <Link
                             href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
                             className="btn btn-ghost"
                             style={{
                               justifyContent: "center",
-                              padding: "9px 14px",
-                              fontSize: "0.82rem",
+                              padding: "8px 10px",
+                              fontSize: "0.78rem",
                               fontWeight: 700,
                               color: "#C7D2FE",
                               borderColor: "rgba(99,102,241,0.35)",
                               background: "rgba(99,102,241,0.08)",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: 6,
+                              gap: 5,
                               textDecoration: "none",
                               transition: "all 0.15s ease",
+                              whiteSpace: "nowrap",
                             }}
-                            title={`Lihat seluruh riwayat aktivitas tap pelanggan untuk ${card.storeName}`}
+                            title={`Lihat riwayat aktivitas tap ${card.storeName}`}
                           >
                             <span>📊</span>
-                            <span>Lihat Riwayat Tap ({card.tapCount ?? 0}) ↗</span>
+                            <span>Riwayat ({card.tapCount ?? 0}) ↗</span>
                           </Link>
 
                           <button
@@ -713,19 +738,21 @@ export default function CardsPage() {
                             className="btn btn-ghost"
                             style={{
                               justifyContent: "center",
-                              padding: "9px 14px",
-                              fontSize: "0.82rem",
+                              padding: "8px 10px",
+                              fontSize: "0.78rem",
                               fontWeight: 700,
                               color: "#34D399",
                               borderColor: "rgba(16,185,129,0.3)",
                               background: "rgba(16,185,129,0.06)",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: 6,
+                              gap: 5,
+                              whiteSpace: "nowrap",
                             }}
                             title="Download QR Code resolusi tinggi (1000px PNG) untuk cetak fisik"
                           >
-                            {downloadingQrCode === card.code ? "⏳ Mengunduh QR..." : "📷 Unduh QR Code High-Res (PNG)"}
+                            <span>📷</span>
+                            <span>{downloadingQrCode === card.code ? "Mengunduh..." : "Unduh QR"}</span>
                           </button>
                         </div>
                       </div>
