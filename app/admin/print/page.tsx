@@ -29,6 +29,7 @@ interface QRPlacementConfig {
   boxColor?: string;
   dotStyle?: QRDotStyle;
   logoType?: QRLogoType;
+  eraseBackground?: boolean; // Hapus pixel QR dummy lama via sampling warna sekitar
 }
 
 const DEFAULT_PLACEMENT: QRPlacementConfig = {
@@ -522,6 +523,59 @@ function drawNfcLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, icon
   ctx.restore();
 }
 
+// ─── Sampling Warna Sekitar Area QR Dummy (untuk erase otomatis) ─────────────
+function sampleSurroundingColor(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  canvasW: number,
+  canvasH: number
+): string {
+  const margin = Math.max(14, Math.round(size * 0.07));
+  const samples: [number, number, number][] = [];
+  const steps = 16;
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const px = Math.round(x + t * size);
+    const py = Math.round(y + t * size);
+
+    // Tepi atas (di luar kotak)
+    const topY = Math.max(0, y - margin);
+    if (px >= 0 && px < canvasW) {
+      const d = ctx.getImageData(px, topY, 1, 1).data;
+      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
+    }
+    // Tepi bawah
+    const botY = Math.min(canvasH - 1, y + size + margin);
+    if (px >= 0 && px < canvasW) {
+      const d = ctx.getImageData(px, botY, 1, 1).data;
+      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
+    }
+    // Tepi kiri
+    const lX = Math.max(0, x - margin);
+    if (py >= 0 && py < canvasH) {
+      const d = ctx.getImageData(lX, py, 1, 1).data;
+      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
+    }
+    // Tepi kanan
+    const rX = Math.min(canvasW - 1, x + size + margin);
+    if (py >= 0 && py < canvasH) {
+      const d = ctx.getImageData(rX, py, 1, 1).data;
+      if (d[3] > 10) samples.push([d[0], d[1], d[2]]);
+    }
+  }
+
+  if (samples.length === 0) return "#FFFFFF";
+  const avg = samples.reduce(
+    (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+    [0, 0, 0]
+  );
+  const n = samples.length;
+  return `rgb(${Math.round(avg[0] / n)},${Math.round(avg[1] / n)},${Math.round(avg[2] / n)})`;
+}
+
 function compositeCard(
   enhancedBgCanvas: HTMLCanvasElement,
   qrCanvas: HTMLCanvasElement,
@@ -534,7 +588,7 @@ function compositeCard(
   const targetH = enhancedBgCanvas.height;
   out.width = targetW;
   out.height = targetH;
-  const ctx = out.getContext("2d")!;
+  const ctx = out.getContext("2d", { willReadFrequently: true })!;
 
   // 1. Gambar latar desain (sudah melalui proses upscaling & penajam anti-blur)
   ctx.drawImage(enhancedBgCanvas, 0, 0, targetW, targetH);
@@ -544,7 +598,26 @@ function compositeCard(
   const boxY = Math.round(placement.y * scale);
   const boxSize = Math.round(placement.size * scale);
 
-  // 2. Kotak putih / warna solid penutup (jika dipilih opsi white_box)
+  // 2a. Hapus pixel QR dummy lama via sampling warna background sekitar (true erase)
+  if (placement.eraseBackground) {
+    const eraseRad = Math.max(0, Math.round((placement.radius ?? 14) * scale));
+    const bgColor = sampleSurroundingColor(ctx, boxX, boxY, boxSize, targetW, targetH);
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.moveTo(boxX + eraseRad, boxY);
+    ctx.lineTo(boxX + boxSize - eraseRad, boxY);
+    ctx.arcTo(boxX + boxSize, boxY, boxX + boxSize, boxY + eraseRad, eraseRad);
+    ctx.lineTo(boxX + boxSize, boxY + boxSize - eraseRad);
+    ctx.arcTo(boxX + boxSize, boxY + boxSize, boxX + boxSize - eraseRad, boxY + boxSize, eraseRad);
+    ctx.lineTo(boxX + eraseRad, boxY + boxSize);
+    ctx.arcTo(boxX, boxY + boxSize, boxX, boxY + boxSize - eraseRad, eraseRad);
+    ctx.lineTo(boxX, boxY + eraseRad);
+    ctx.arcTo(boxX, boxY, boxX + eraseRad, boxY, eraseRad);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 2b. Kotak putih / warna solid penutup (jika dipilih opsi white_box)
   if (placement.style === "white_box") {
     const pad = Math.min(Math.round((placement.padding ?? 18) * scale), Math.floor(boxSize * 0.3));
     const rad = Math.round((placement.radius ?? 18) * scale);
@@ -1119,7 +1192,8 @@ export default function PrintQRCodes() {
           x: result.x,
           y: result.y,
           size: result.size,
-          style: "white_box", // Kotak putih solid agar QR dummy bawaan klien 100% tertutup dan terhapus
+          style: "transparent", // QR langsung di atas background yang sudah dierase bersih
+          eraseBackground: true, // Hapus pixel QR dummy via sampling warna sekitar
           boxColor: "#FFFFFF",
           fgColor: "#000000",
           dotStyle: "squares",
@@ -1382,7 +1456,8 @@ export default function PrintQRCodes() {
       x: result.x,
       y: result.y,
       size: result.size,
-      style: "white_box", // Wajib kotak putih solid agar QR lama 100% terhapus dan bersih
+      style: "transparent", // QR langsung di atas background yang dierase bersih
+      eraseBackground: true, // Hapus pixel QR dummy via sampling warna sekitar
       padding: Math.max(16, prev.padding || 18),
       radius: Math.max(12, prev.radius || 14),
     }));
@@ -1561,37 +1636,79 @@ export default function PrintQRCodes() {
           </div>
 
           {/* ── Template Selection Bar ── */}
-          <div className="template-bar">
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#EDE9FE" }}>Pilihan Template:</span>
-              <div className="template-toggle-group">
-                <button
-                  type="button"
-                  className={`template-toggle-btn ${templateMode === "default" ? "active" : ""}`}
-                  onClick={() => handleSelectMode("default")}
-                >
-                  💳 Standar Hantic
-                </button>
-                <button
-                  type="button"
-                  className={`template-toggle-btn ${templateMode === "custom" ? "active" : ""}`}
-                  onClick={() => {
-                    if (!customImg) {
-                      fileInputRef.current?.click();
-                    } else {
-                      handleSelectMode("custom");
-                    }
-                  }}
-                  title={customImg ? "Gunakan desain custom yang sudah diupload" : "Upload gambar kartu khusus dari klien"}
-                >
-                  {customImg
-                    ? `🎨 ${customImageName ? customImageName.slice(0, 16) : "Desain Klien"}`
-                    : "📁 Upload Desain Klien"}
-                </button>
-              </div>
+          <div className="template-bar" style={{ flexDirection: "column", gap: 0, padding: 0, overflow: "hidden" }}>
 
-              {/* Tombol Cepat: Auto-Detect & Hapus QR Dummy (Hanya di mode Desain Klien) */}
-              {templateMode === "custom" && (
+            {/* Row 1: Pilihan Template */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 16px", borderBottom: templateMode === "custom" ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#94A3B8", letterSpacing: "0.04em", textTransform: "uppercase", minWidth: 110 }}>
+                📁 Pilih Template:
+              </span>
+
+              {/* Template: Standar Hantic */}
+              <button
+                type="button"
+                className={`template-toggle-btn ${templateMode === "default" ? "active" : ""}`}
+                onClick={() => handleSelectMode("default")}
+                title="Gunakan template kartu standar Hantic"
+              >
+                💳 Standar Hantic
+              </button>
+
+              {/* Template: Desain Klien — tampil sebagai chip + tombol × jika sudah diupload */}
+              {customImg ? (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 0, borderRadius: 8, overflow: "hidden", border: templateMode === "custom" ? "1.5px solid #818CF8" : "1px solid rgba(255,255,255,0.12)" }}>
+                  <button
+                    type="button"
+                    className={`template-toggle-btn ${templateMode === "custom" ? "active" : ""}`}
+                    onClick={() => handleSelectMode("custom")}
+                    style={{ borderRadius: 0, border: "none", borderRight: "1px solid rgba(255,255,255,0.12)" }}
+                    title={`Aktifkan desain klien: ${customImageName}`}
+                  >
+                    🎨 {customImageName ? customImageName.slice(0, 18) : "Desain Klien"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCloseAndResetCustom}
+                    style={{ background: templateMode === "custom" ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.04)", border: "none", color: "#F87171", cursor: "pointer", padding: "0 10px", fontSize: "0.85rem", lineHeight: 1, alignSelf: "stretch", display: "flex", alignItems: "center" }}
+                    title="Hapus desain klien & kembali ke Standar Hantic"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="template-toggle-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ borderStyle: "dashed" }}
+                  title="Upload gambar kartu khusus dari klien"
+                >
+                  ＋ Upload Desain Klien
+                </button>
+              )}
+
+              {/* Spacer + tombol Studio di kanan */}
+              <div style={{ flex: 1 }} />
+              <button
+                type="button"
+                className={`print-btn ${showPlacementEditor ? "print-btn-indigo" : "print-btn-ghost"}`}
+                onClick={() => setShowPlacementEditor((prev) => !prev)}
+                style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
+                title="Buka / tutup Studio Desain untuk mengatur gaya QR, warna, logo, dan posisi"
+              >
+                <span>🎨</span>
+                <span>{showPlacementEditor ? "Tutup Studio" : "Buka Studio Desain"}</span>
+              </button>
+            </div>
+
+            {/* Row 2: Aksi Desain Klien — hanya muncul saat mode custom */}
+            {templateMode === "custom" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 16px", background: "rgba(99,102,241,0.04)" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#818CF8", letterSpacing: "0.04em", textTransform: "uppercase", minWidth: 110 }}>
+                  ⚡ Aksi Klien:
+                </span>
+
+                {/* Pindai & Hapus QR Dummy */}
                 <button
                   type="button"
                   onClick={handleDetectAndReplaceQR}
@@ -1599,45 +1716,40 @@ export default function PrintQRCodes() {
                   className="print-btn"
                   style={{
                     fontSize: "0.74rem",
-                    padding: "6px 14px",
+                    padding: "5px 14px",
                     gap: 6,
                     fontWeight: 700,
-                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                    background: isScanningMock ? "rgba(99,102,241,0.2)" : "linear-gradient(135deg, #4F46E5, #7C3AED)",
                     border: "1px solid rgba(99,102,241,0.5)",
                     color: "#FFF",
                     boxShadow: "0 2px 8px rgba(99, 102, 241, 0.25)",
                   }}
-                  title="Pindai gambar desain klien dan otomatis hapus mock QR bawaan dengan kotak solid bersih"
+                  title="Pindai QR mockup bawaan klien, hapus pixel-nya, dan ganti dengan QR unik Google Review"
                 >
                   <span>🎯</span>
-                  <span>{isScanningMock ? "Memindai..." : "Auto-Detect & Hapus QR Dummy"}</span>
+                  <span>{isScanningMock ? "⏳ Memindai..." : "Pindai & Hapus QR Dummy"}</span>
                 </button>
-              )}
-            </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                {/* Ganti Gambar Klien */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="print-btn print-btn-ghost"
+                  style={{ fontSize: "0.74rem", padding: "5px 12px", gap: 5 }}
+                  title="Ganti dengan file gambar kartu lain"
+                >
+                  🔄 Ganti Gambar
+                </button>
 
-              <button
-                type="button"
-                className={`print-btn ${showPlacementEditor ? "print-btn-indigo" : "print-btn-ghost"}`}
-                onClick={() => setShowPlacementEditor((prev) => !prev)}
-                style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
-                title="Buka Studio Desain untuk mengatur logo tengah, gaya titik, warna, posisi QR, dan penajam anti-blur"
-              >
-                <span>🎨</span>
-                <span>{showPlacementEditor ? "Tutup Studio Desain" : "Kustomisasi Desain QR"}</span>
-              </button>
-
-              {templateMode === "default" ? (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#94A3B8", background: "rgba(255,255,255,0.03)", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <span>💳</span> Template Standar Hantic
+                {/* Info: nama file aktif */}
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#FCD34D", background: "rgba(245,158,11,0.08)", padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.2)" }}>
+                  <span>🖼️</span>
+                  <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {customImageName || "Desain Klien"}
+                  </span>
                 </div>
-              ) : (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "#FCD34D", background: "rgba(245,158,11,0.1)", padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(245,158,11,0.25)" }}>
-                  <span>🎨</span> Desain Kustom Klien
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* ── QR Placement & Position Adjuster Panel (BISA DIAKSES BAIK STANDAR MAUPUN CUSTOM) ── */}
