@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import QRCode from "qrcode";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -13,7 +13,7 @@ const DEFAULT_QR_SIZE = 280;
 const DEFAULT_QR_PAD = 22;
 const DEFAULT_BOX_SIZE = DEFAULT_QR_SIZE + DEFAULT_QR_PAD * 2;
 const DEFAULT_BOX_X = Math.round((DEFAULT_CARD_W - DEFAULT_BOX_SIZE) / 2);
-const DEFAULT_BOX_Y = 438;
+const DEFAULT_BOX_Y = 448; // Presisi tepat di tengah area kosong antara Logo Google (y=405) dan Ikon NFC (y=823)
 
 type QRDotStyle = "dots" | "rounded" | "squares";
 export type QRLogoType = "none" | "google" | "star" | "nfc";
@@ -50,6 +50,75 @@ const DEFAULT_PLACEMENT: QRPlacementConfig = {
   ctaColor: "#FFFFFF",
 };
 
+// ─── Filter Pertajam Gambar (Anti-Blur Unsharp Mask Filter) ───────────────────
+function applySharpenFilter(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  amount = 0.28
+) {
+  try {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const src = imgData.data;
+    const output = new Uint8ClampedArray(src.length);
+    output.set(src);
+
+    const rowBytes = width * 4;
+    for (let y = 1; y < height - 1; y++) {
+      const yOffset = y * rowBytes;
+      for (let x = 1; x < width - 1; x++) {
+        const idx = yOffset + x * 4;
+        for (let c = 0; c < 3; c++) {
+          const val = src[idx + c];
+          const neighbors =
+            (src[idx - 4 + c] +
+              src[idx + 4 + c] +
+              src[idx - rowBytes + c] +
+              src[idx + rowBytes + c]) *
+            0.25;
+          const sharp = val + (val - neighbors) * amount;
+          output[idx + c] = sharp < 0 ? 0 : sharp > 255 ? 255 : sharp;
+        }
+      }
+    }
+    imgData.data.set(output);
+    ctx.putImageData(imgData, 0, 0);
+  } catch (err) {
+    console.warn("Sharpen filter skipped:", err);
+  }
+}
+
+// ─── Upscale & Enhance Background Image ──────────────────────────────────────
+function enhanceBackgroundImage(
+  img: HTMLImageElement,
+  upscaleFactor: number,
+  sharpenLevel: "off" | "medium" | "high"
+): HTMLCanvasElement {
+  const cardW = img.naturalWidth || DEFAULT_CARD_W;
+  const cardH = img.naturalHeight || DEFAULT_CARD_H;
+  const outW = Math.round(cardW * upscaleFactor);
+  const outH = Math.round(cardH * upscaleFactor);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return canvas;
+
+  // Smoothing berkualitas tinggi saat resize / upscale
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, outW, outH);
+
+  // Terapkan filter penajam jika diaktifkan user
+  if (sharpenLevel !== "off") {
+    const strength = sharpenLevel === "high" ? 0.42 : 0.24;
+    applySharpenFilter(ctx, outW, outH, strength);
+  }
+
+  return canvas;
+}
+
 // ─── Smart Box Detection Algorithm ────────────────────────────────────────────
 function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: number; detected: boolean } {
   const cardW = img.naturalWidth || DEFAULT_CARD_W;
@@ -64,61 +133,66 @@ function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: 
     if (!ctx) throw new Error("No 2d context");
     ctx.drawImage(img, 0, 0, cardW, cardH);
 
-    // Ambil sampel warna di bagian tengah kartu
+    // Ambil sampel di beberapa titik vertikal (tengah, bawah-tengah, atas-tengah)
     const midX = Math.floor(cardW / 2);
-    const midY = Math.floor(cardH / 2);
-    const centerPix = ctx.getImageData(midX, midY, 1, 1).data;
-    const tr = centerPix[0];
-    const tg = centerPix[1];
-    const tb = centerPix[2];
+    const candidateYs = [
+      Math.floor(cardH * 0.62), // Posisi paling umum untuk QR pada kartu ulasan
+      Math.floor(cardH / 2),
+      Math.floor(cardH * 0.40),
+    ];
 
-    // Cek apakah warna tengah berbeda dengan warna sudut (menandakan ada kontainer khusus di tengah)
     const cornerPix = ctx.getImageData(Math.floor(cardW * 0.05), Math.floor(cardH * 0.05), 1, 1).data;
-    const cornerDiff = Math.abs(tr - cornerPix[0]) + Math.abs(tg - cornerPix[1]) + Math.abs(tb - cornerPix[2]);
 
-    if (cornerDiff > 35) {
-      // Ada kontainer warna berbeda di tengah! Scan batas bounding box-nya:
-      const step = Math.max(1, Math.floor(Math.min(cardW, cardH) / 400));
-      const startX = Math.floor(cardW * 0.12);
-      const endX = Math.floor(cardW * 0.88);
-      const startY = Math.floor(cardH * 0.12);
-      const endY = Math.floor(cardH * 0.88);
+    for (const testY of candidateYs) {
+      const centerPix = ctx.getImageData(midX, testY, 1, 1).data;
+      const tr = centerPix[0];
+      const tg = centerPix[1];
+      const tb = centerPix[2];
 
-      let minX = cardW, maxX = 0, minY = cardH, maxY = 0, matches = 0;
-      const imgData = ctx.getImageData(0, 0, cardW, cardH).data;
+      const cornerDiff = Math.abs(tr - cornerPix[0]) + Math.abs(tg - cornerPix[1]) + Math.abs(tb - cornerPix[2]);
+      if (cornerDiff > 35) {
+        // Kontainer terdeteksi pada baris ini! Scan batas bounding box-nya:
+        const step = Math.max(1, Math.floor(Math.min(cardW, cardH) / 380));
+        const startX = Math.floor(cardW * 0.08);
+        const endX = Math.floor(cardW * 0.92);
+        const startY = Math.max(0, Math.floor(testY - cardH * 0.3));
+        const endY = Math.min(cardH, Math.floor(testY + cardH * 0.3));
 
-      for (let y = startY; y < endY; y += step) {
-        for (let x = startX; x < endX; x += step) {
-          const idx = (y * cardW + x) * 4;
-          const r = imgData[idx];
-          const g = imgData[idx + 1];
-          const b = imgData[idx + 2];
-          const diff = Math.abs(r - tr) + Math.abs(g - tg) + Math.abs(b - tb);
-          if (diff < 50) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-            matches++;
+        let minX = cardW, maxX = 0, minY = cardH, maxY = 0, matches = 0;
+        const imgData = ctx.getImageData(0, 0, cardW, cardH).data;
+
+        for (let y = startY; y < endY; y += step) {
+          for (let x = startX; x < endX; x += step) {
+            const idx = (y * cardW + x) * 4;
+            const r = imgData[idx];
+            const g = imgData[idx + 1];
+            const b = imgData[idx + 2];
+            const diff = Math.abs(r - tr) + Math.abs(g - tg) + Math.abs(b - tb);
+            if (diff < 50) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+              matches++;
+            }
           }
         }
-      }
 
-      const boxW = maxX - minX;
-      const boxH = maxY - minY;
-      if (matches > 20 && boxW > cardW * 0.18 && boxH > cardH * 0.18) {
-        // Kotak terdeteksi! Buat QR pas di dalam kotak
-        const rawSize = Math.min(boxW, boxH);
-        const safeMargin = Math.round(rawSize * 0.05);
-        const finalSize = Math.round(rawSize - safeMargin * 2);
-        const cX = minX + boxW / 2;
-        const cY = minY + boxH / 2;
-        return {
-          x: Math.round(cX - finalSize / 2),
-          y: Math.round(cY - finalSize / 2),
-          size: finalSize,
-          detected: true,
-        };
+        const boxW = maxX - minX;
+        const boxH = maxY - minY;
+        if (matches > 20 && boxW > cardW * 0.16 && boxH > cardH * 0.16) {
+          const rawSize = Math.min(boxW, boxH);
+          const safeMargin = Math.round(rawSize * 0.04);
+          const finalSize = Math.round(rawSize - safeMargin * 2);
+          const cX = minX + boxW / 2;
+          const cY = minY + boxH / 2;
+          return {
+            x: Math.round(cX - finalSize / 2),
+            y: Math.round(cY - finalSize / 2),
+            size: finalSize,
+            detected: true,
+          };
+        }
       }
     }
   } catch (err) {
@@ -129,26 +203,29 @@ function detectBoxInImage(img: HTMLImageElement): { x: number; y: number; size: 
   const fallbackSize = Math.round(Math.min(cardW, cardH) * 0.42);
   return {
     x: Math.round((cardW - fallbackSize) / 2),
-    y: Math.round((cardH - fallbackSize) / 2),
+    y: Math.round(cardH * 0.48),
     size: fallbackSize,
     detected: false,
   };
 }
 
-// ─── Deteksi QR Code Bawaan Desain Klien (ZXing QR Scanner & Fallback Box) ───
+// ─── Smart QR & Mockup Detection Algorithm (Multi-Tier) ──────────────────────
 async function detectClientQRCode(img: HTMLImageElement): Promise<{
   x: number;
   y: number;
   size: number;
   detected: boolean;
   qrFound: boolean;
+  method: "zxing" | "pattern" | "box" | "fallback";
   text?: string;
 }> {
   const cardW = img.naturalWidth || DEFAULT_CARD_W;
   const cardH = img.naturalHeight || DEFAULT_CARD_H;
-  if (!cardW || !cardH) return { x: 100, y: 100, size: 200, detected: false, qrFound: false };
+  if (!cardW || !cardH) {
+    return { x: 100, y: 100, size: 200, detected: false, qrFound: false, method: "fallback" };
+  }
 
-  // 1. Coba deteksi QR code nyata bawaan klien menggunakan ZXing BrowserQRCodeReader
+  // 1. Tier 1: Decode QR code nyata menggunakan ZXing BrowserQRCodeReader
   try {
     const { BrowserQRCodeReader } = await import("@zxing/library");
     const reader = new BrowserQRCodeReader();
@@ -165,14 +242,15 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
         const maxY = Math.max(...ys);
 
         const distFinder = Math.max(maxX - minX, maxY - minY);
-        // Finder pattern berjarak ~75-80% dari lebar total QR code
-        const rawSize = Math.max(distFinder * 1.34, 70);
+        // Lebar total QR ~1.36-1.40x jarak finder. Gunakan 1.48x agar kotak penutup
+        // 100% menutupi seluruh batas & quiet-zone QR lama klien tanpa ada sisa
+        const coverSize = Math.round(distFinder * 1.48);
         const cX = (minX + maxX) / 2;
         const cY = (minY + maxY) / 2;
 
-        const size = Math.round(Math.min(rawSize, Math.min(cardW, cardH) * 0.95));
-        const x = Math.max(0, Math.round(cX - size / 2));
-        const y = Math.max(0, Math.round(cY - size / 2));
+        const size = Math.round(Math.min(coverSize, Math.min(cardW, cardH) * 0.94));
+        const x = Math.max(0, Math.min(cardW - size, Math.round(cX - size / 2)));
+        const y = Math.max(0, Math.min(cardH - size, Math.round(cY - size / 2)));
 
         return {
           x,
@@ -180,19 +258,117 @@ async function detectClientQRCode(img: HTMLImageElement): Promise<{
           size,
           detected: true,
           qrFound: true,
+          method: "zxing",
           text: result.getText(),
         };
       }
     }
   } catch (err) {
-    console.log("ZXing auto QR detect pass:", err);
+    // ZXing scan pass, lanjutkan ke deteksi pola mockup
   }
 
-  // 2. Fallback: Deteksi kotak warna di tengah kartu
+  // 2. Tier 2: Pattern Transition Scan untuk Graphic Mockup QR
+  // Jika klien menempel mockup QR dummy/ilustrasi yang bukan QR valid,
+  // algoritma ini memindai area dengan transisi hitam-putih frekuensi tinggi khas QR code.
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = cardW;
+    canvas.height = cardH;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (ctx) {
+      ctx.drawImage(img, 0, 0, cardW, cardH);
+      const imgData = ctx.getImageData(0, 0, cardW, cardH).data;
+
+      const step = Math.max(2, Math.floor(Math.min(cardW, cardH) / 160));
+      const gridW = Math.floor(cardW / step);
+      const gridH = Math.floor(cardH / step);
+      const lum = new Uint8Array(gridW * gridH);
+
+      for (let gy = 0; gy < gridH; gy++) {
+        const py = gy * step;
+        for (let gx = 0; gx < gridW; gx++) {
+          const px = gx * step;
+          const idx = (py * cardW + px) * 4;
+          lum[gy * gridW + gx] = Math.round(
+            imgData[idx] * 0.299 + imgData[idx + 1] * 0.587 + imgData[idx + 2] * 0.114
+          );
+        }
+      }
+
+      const testSizes = [0.26, 0.35, 0.44].map((r) => Math.round(Math.min(gridW, gridH) * r));
+      let bestScore = 0;
+      let bestBox = { gx: 0, gy: 0, gSize: testSizes[1] };
+
+      for (const winSize of testSizes) {
+        if (winSize < 12) continue;
+        const scanStep = Math.max(2, Math.floor(winSize / 4));
+
+        for (let gy = 0; gy <= gridH - winSize; gy += scanStep) {
+          for (let gx = 0; gx <= gridW - winSize; gx += scanStep) {
+            let hTransitions = 0;
+            let vTransitions = 0;
+            const threshold = 40;
+
+            for (let y = gy; y < gy + winSize; y += 2) {
+              const rowStart = y * gridW;
+              for (let x = gx + 1; x < gx + winSize; x++) {
+                if (Math.abs(lum[rowStart + x] - lum[rowStart + x - 1]) > threshold) {
+                  hTransitions++;
+                }
+              }
+            }
+
+            for (let x = gx; x < gx + winSize; x += 2) {
+              for (let y = gy + 1; y < gy + winSize; y++) {
+                if (Math.abs(lum[y * gridW + x] - lum[(y - 1) * gridW + x]) > threshold) {
+                  vTransitions++;
+                }
+              }
+            }
+
+            const score = Math.min(hTransitions, vTransitions);
+            if (score > bestScore) {
+              bestScore = score;
+              bestBox = { gx, gy, gSize: winSize };
+            }
+          }
+        }
+      }
+
+      const minExpectedTransitions = bestBox.gSize * bestBox.gSize * 0.035;
+      if (bestScore > minExpectedTransitions && bestScore > 24) {
+        const foundSize = Math.round(bestBox.gSize * step * 1.1);
+        const foundX = Math.max(0, Math.min(cardW - foundSize, Math.round(bestBox.gx * step)));
+        const foundY = Math.max(0, Math.min(cardH - foundSize, Math.round(bestBox.gy * step)));
+        return {
+          x: foundX,
+          y: foundY,
+          size: foundSize,
+          detected: true,
+          qrFound: true,
+          method: "pattern",
+        };
+      }
+    }
+  } catch (err) {
+    // Pattern scan pass
+  }
+
+  // 3. Tier 3: Deteksi Kotak Kontainer Warna di Kartu
   const boxResult = detectBoxInImage(img);
+  if (boxResult.detected) {
+    return {
+      ...boxResult,
+      qrFound: false,
+      method: "box",
+    };
+  }
+
+  // 4. Tier 4: Fallback
   return {
     ...boxResult,
     qrFound: false,
+    method: "fallback",
   };
 }
 
@@ -294,29 +470,31 @@ function drawNfcLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, icon
 }
 
 function compositeCard(
-  bgImg: HTMLImageElement,
+  enhancedBgCanvas: HTMLCanvasElement,
   qrCanvas: HTMLCanvasElement,
   placement: QRPlacementConfig,
+  upscaleFactor: number = 1,
   code?: string
 ): HTMLCanvasElement {
   const out = document.createElement("canvas");
-  const cardW = bgImg.naturalWidth || DEFAULT_CARD_W;
-  const cardH = bgImg.naturalHeight || DEFAULT_CARD_H;
-  out.width = cardW;
-  out.height = cardH;
+  const targetW = enhancedBgCanvas.width;
+  const targetH = enhancedBgCanvas.height;
+  out.width = targetW;
+  out.height = targetH;
   const ctx = out.getContext("2d")!;
 
-  // 1. Gambar latar desain (bisa template bawaan atau custom klien)
-  ctx.drawImage(bgImg, 0, 0, cardW, cardH);
+  // 1. Gambar latar desain (sudah melalui proses upscaling & penajam anti-blur)
+  ctx.drawImage(enhancedBgCanvas, 0, 0, targetW, targetH);
 
-  const boxX = placement.x;
-  const boxY = placement.y;
-  const boxSize = placement.size;
+  const scale = upscaleFactor;
+  const boxX = Math.round(placement.x * scale);
+  const boxY = Math.round(placement.y * scale);
+  const boxSize = Math.round(placement.size * scale);
 
-  // 2. Kotak putih / warna rounded (jika dipilih opsi white_box)
+  // 2. Kotak putih / warna solid penutup (jika dipilih opsi white_box)
   if (placement.style === "white_box") {
-    const pad = Math.min(placement.padding ?? 18, Math.floor(boxSize * 0.3));
-    const rad = placement.radius ?? 18;
+    const pad = Math.min(Math.round((placement.padding ?? 18) * scale), Math.floor(boxSize * 0.3));
+    const rad = Math.round((placement.radius ?? 18) * scale);
 
     ctx.fillStyle = placement.boxColor || "#FFFFFF";
     ctx.beginPath();
@@ -345,15 +523,15 @@ function compositeCard(
   // 3. Optional Call-to-Action (CTA) Text di bawah QR
   if (placement.showCtaText && placement.ctaText && placement.ctaText.trim()) {
     ctx.save();
-    const ctaY = boxY + boxSize + Math.max(16, Math.floor(cardH * 0.024));
+    const ctaY = boxY + boxSize + Math.max(16 * scale, Math.floor(targetH * 0.024));
     const ctaX = boxX + boxSize / 2;
-    const fontSize = Math.max(14, Math.min(26, Math.round(boxSize * 0.075)));
+    const fontSize = Math.max(14 * scale, Math.min(36 * scale, Math.round(boxSize * 0.075)));
     ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 2;
+    ctx.shadowBlur = 8 * scale;
+    ctx.shadowOffsetY = 2 * scale;
     ctx.fillStyle = placement.ctaColor || "#FFFFFF";
     ctx.fillText(placement.ctaText.trim(), ctaX, ctaY);
     ctx.restore();
@@ -539,19 +717,28 @@ function renderStyledQR(
 interface CardItemProps {
   code: string;
   url: string;
-  bgImage: HTMLImageElement | null;
+  enhancedBgCanvas: HTMLCanvasElement | null;
   placement: QRPlacementConfig;
+  upscaleFactor: number;
   onCanvasReady: (code: string, canvas: HTMLCanvasElement) => void;
 }
 
-function CardItem({ code, url, bgImage, placement, onCanvasReady }: CardItemProps) {
+function CardItem({
+  code,
+  url,
+  enhancedBgCanvas,
+  placement,
+  upscaleFactor,
+  onCanvasReady,
+}: CardItemProps) {
   const previewRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!bgImage) return;
+    if (!enhancedBgCanvas) return;
     const qrCanvas = document.createElement("canvas");
-    const qrRes = Math.max(placement.size, 512); // Resolusi tinggi untuk cetak super tajam
+    // Render QR dengan resolusi vektor super tajam sesuai upscale factor
+    const qrRes = Math.max(Math.round(placement.size * upscaleFactor), 512 * upscaleFactor);
     renderStyledQR(
       qrCanvas,
       url,
@@ -562,7 +749,7 @@ function CardItem({ code, url, bgImage, placement, onCanvasReady }: CardItemProp
       placement.logoType || "none"
     );
 
-    const composed = compositeCard(bgImage, qrCanvas, placement, code);
+    const composed = compositeCard(enhancedBgCanvas, qrCanvas, placement, upscaleFactor, code);
     if (previewRef.current) {
       const ctx = previewRef.current.getContext("2d")!;
       ctx.clearRect(0, 0, previewRef.current.width, previewRef.current.height);
@@ -570,12 +757,12 @@ function CardItem({ code, url, bgImage, placement, onCanvasReady }: CardItemProp
     }
     onCanvasReady(code, composed);
     setReady(true);
-  }, [bgImage, code, url, placement, onCanvasReady]);
+  }, [enhancedBgCanvas, code, url, placement, upscaleFactor, onCanvasReady]);
 
-  const cardW = bgImage?.naturalWidth || DEFAULT_CARD_W;
-  const cardH = bgImage?.naturalHeight || DEFAULT_CARD_H;
+  const targetW = enhancedBgCanvas?.width || DEFAULT_CARD_W * upscaleFactor;
+  const targetH = enhancedBgCanvas?.height || DEFAULT_CARD_H * upscaleFactor;
   const previewW = 176;
-  const previewH = Math.round(cardH * (previewW / cardW));
+  const previewH = Math.round(targetH * (previewW / targetW));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, opacity: ready ? 1 : 0.35, transition: "opacity 0.3s" }}>
@@ -621,6 +808,29 @@ export default function PrintQRCodes() {
   const [showPlacementEditor, setShowPlacementEditor] = useState(false);
   const [snapFeedback, setSnapFeedback] = useState<string | null>(null);
 
+  // Resolusi Ekspor & Filter Ketajaman Gambar (Anti-Blur)
+  const [upscaleFactor, setUpscaleFactor] = useState<1 | 2 | 3>(2); // Default 2x HD (300 DPI Cetak PVC)
+  const [sharpenLevel, setSharpenLevel] = useState<"off" | "medium" | "high">("medium"); // Default anti-blur aktif
+  const [previewZoomed, setPreviewZoomed] = useState(false);
+  const [isScanningMock, setIsScanningMock] = useState(false);
+
+  // Background Image yang telah di-upscale dan dipertajam (dicache via useMemo untuk performa super cepat)
+  const enhancedBgCanvas = useMemo(() => {
+    if (!bgImage) return null;
+    return enhanceBackgroundImage(bgImage, upscaleFactor, sharpenLevel);
+  }, [bgImage, upscaleFactor, sharpenLevel]);
+
+  // Simpan preferensi resolusi saat berubah
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "print_upscale_settings",
+        JSON.stringify({ upscaleFactor, sharpenLevel })
+      );
+    } catch {}
+    composedCanvases.current.clear();
+  }, [upscaleFactor, sharpenLevel]);
+
   // Placement aktif sesuai mode yang sedang dipilih
   const placement = templateMode === "default" ? defaultPlacement : customPlacement;
 
@@ -631,7 +841,21 @@ export default function PrintQRCodes() {
         setDefaultPlacement((prev) => {
           const next = typeof updater === "function" ? updater(prev) : updater;
           try {
-            localStorage.setItem("default_qr_placement_v2", JSON.stringify({ placement: next }));
+            // Pada template standar Hantic, simpan hanya preferensi gaya visual (bukan koordinat posisi)
+            localStorage.setItem(
+              "default_qr_style_v3",
+              JSON.stringify({
+                styleConfig: {
+                  dotStyle: next.dotStyle,
+                  logoType: next.logoType,
+                  fgColor: next.fgColor,
+                  boxColor: next.boxColor,
+                  showCtaText: next.showCtaText,
+                  ctaText: next.ctaText,
+                  ctaColor: next.ctaColor,
+                },
+              })
+            );
           } catch {}
           return next;
         });
@@ -660,11 +884,13 @@ export default function PrintQRCodes() {
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const liveQrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<"qr" | "position" | "labels">("qr");
+  const [inspectorTab, setInspectorTab] = useState<"qr" | "position" | "resolution" | "labels">("qr");
 
   // Helper untuk update posisi dari pointer drag / click langsung di kartu
   const updatePlacementFromPointer = useCallback(
     (clientX: number, clientY: number) => {
+      // Pada template Standar Hantic, posisi QR terkunci presisi di kotak tengah kartu
+      if (templateMode === "default") return;
       if (!previewWrapRef.current) return;
       const rect = previewWrapRef.current.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
@@ -684,10 +910,11 @@ export default function PrintQRCodes() {
 
       setPlacement((prev) => ({ ...prev, x: nextX, y: nextY }));
     },
-    [bgImage, placement.size, setPlacement]
+    [bgImage, placement.size, setPlacement, templateMode]
   );
 
   function handleNudge(dx: number, dy: number) {
+    if (templateMode === "default") return;
     const currentCardW = bgImage?.naturalWidth || DEFAULT_CARD_W;
     const currentCardH = bgImage?.naturalHeight || DEFAULT_CARD_H;
     const maxX = Math.max(0, currentCardW - placement.size);
@@ -713,13 +940,33 @@ export default function PrintQRCodes() {
     img.src = "/card-design.png";
 
     try {
-      localStorage.removeItem("default_qr_placement"); // Bersihkan key lama jika ada
-      const savedDefault = localStorage.getItem("default_qr_placement_v2");
-      if (savedDefault) {
-        const parsed = JSON.parse(savedDefault);
-        if (parsed.placement) {
-          setDefaultPlacement({ ...DEFAULT_PLACEMENT, ...parsed.placement });
+      // Bersihkan key lama yang menyimpan koordinat offset yang salah pada template default
+      localStorage.removeItem("default_qr_placement");
+      localStorage.removeItem("default_qr_placement_v2");
+      const savedStyle = localStorage.getItem("default_qr_style_v3");
+      if (savedStyle) {
+        const parsed = JSON.parse(savedStyle);
+        if (parsed.styleConfig) {
+          setDefaultPlacement((prev) => ({
+            ...prev,
+            ...parsed.styleConfig,
+            // Koordinat template default selalu terkunci presisi di tengah kartu
+            x: DEFAULT_BOX_X,
+            y: DEFAULT_BOX_Y,
+            size: DEFAULT_BOX_SIZE,
+            style: "white_box",
+            boxColor: "#FFFFFF",
+          }));
         }
+      }
+    } catch {}
+
+    try {
+      const savedQuality = localStorage.getItem("print_upscale_settings");
+      if (savedQuality) {
+        const q = JSON.parse(savedQuality);
+        if (q.upscaleFactor && [1, 2, 3].includes(q.upscaleFactor)) setUpscaleFactor(q.upscaleFactor);
+        if (q.sharpenLevel && ["off", "medium", "high"].includes(q.sharpenLevel)) setSharpenLevel(q.sharpenLevel);
       }
     } catch {}
 
@@ -747,6 +994,15 @@ export default function PrintQRCodes() {
       if (defaultImg) {
         setBgImage(defaultImg);
       }
+      // Pastikan posisi QR selalu presisi di tengah kartu Standar Hantic
+      setDefaultPlacement((prev) => ({
+        ...prev,
+        x: DEFAULT_BOX_X,
+        y: DEFAULT_BOX_Y,
+        size: DEFAULT_BOX_SIZE,
+        style: "white_box",
+        boxColor: "#FFFFFF",
+      }));
     } else {
       if (customImg) {
         setTemplateMode("custom");
@@ -798,7 +1054,11 @@ export default function PrintQRCodes() {
         setCodes([]); // Reset kartu yang di-generate agar user menekan Generate Kartu ulang untuk desain baru
         setSaveResult(null);
 
+        setIsScanningMock(true);
+        setSnapFeedback("🔍 Memindai QR dummy pada gambar klien...");
         const result = await detectClientQRCode(img);
+        setIsScanningMock(false);
+
         const newPlacement: QRPlacementConfig = {
           x: result.x,
           y: result.y,
@@ -808,7 +1068,7 @@ export default function PrintQRCodes() {
           fgColor: "#000000",
           dotStyle: "squares",
           logoType: "none",
-          padding: 18,
+          padding: 16,
           radius: 14,
           showCtaText: false,
           ctaText: "Tap Kartu NFC / Scan QR",
@@ -823,13 +1083,17 @@ export default function PrintQRCodes() {
         } catch {}
 
         if (result.qrFound) {
-          setSnapFeedback("🎯 Berhasil mendeteksi QR Code bawaan klien! Area QR lama otomatis ditimpa & diganti dengan QR unik baru.");
+          setSnapFeedback(
+            result.method === "zxing"
+              ? "🎯 Berhasil mendeteksi QR mockup klien! Area QR lama otomatis dihapus & diganti QR review aktif."
+              : "🎯 Berhasil mendeteksi pola QR mockup klien! Area QR lama otomatis ditutup bersih & diganti QR baru."
+          );
         } else if (result.detected) {
           setSnapFeedback("✅ Area kotak desain kartu terdeteksi! Ukuran & posisi QR disesuaikan.");
         } else {
-          setSnapFeedback("ℹ️ Tidak ditemukan QR otomatis, posisi QR disesuaikan di tengah kartu. Silakan sesuaikan.");
+          setSnapFeedback("ℹ️ QR bawaan tidak terdeteksi otomatis, posisi QR ditempatkan di tengah. Anda dapat menggeser posisi atau menyesuaikan ukuran.");
         }
-        setTimeout(() => setSnapFeedback(null), 4500);
+        setTimeout(() => setSnapFeedback(null), 5000);
       };
       img.src = dataUrl;
     };
@@ -894,8 +1158,10 @@ export default function PrintQRCodes() {
       setPlacement(DEFAULT_PLACEMENT);
       try {
         localStorage.removeItem("default_qr_placement");
+        localStorage.removeItem("default_qr_placement_v2");
+        localStorage.removeItem("default_qr_style_v3");
       } catch {}
-      setSnapFeedback("↺ Desain & posisi QR dikembalikan ke standar kalibrasi Hantic.");
+      setSnapFeedback("↺ Desain & posisi QR dikembalikan tepat di tengah kartu Standar Hantic.");
     } else {
       if (!bgImage) return;
       const cardW = bgImage.naturalWidth || DEFAULT_CARD_W;
@@ -907,8 +1173,8 @@ export default function PrintQRCodes() {
         y: Math.round((cardH - defaultSz) / 2),
         size: defaultSz,
         style: "white_box",
-        padding: 18,
-        radius: 16,
+        padding: 16,
+        radius: 14,
       }));
       setSnapFeedback("↺ Ukuran dan posisi QR dikembalikan ke standar awal.");
     }
@@ -1185,11 +1451,15 @@ export default function PrintQRCodes() {
               </div>
             </div>
 
-            {/* Template Status Pill */}
+            {/* Template & Export Resolution Status Pill */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>Dimensi Kartu:</span>
+              <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>Dimensi Asli:</span>
               <span style={{ fontSize: "0.74rem", fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#E2E8F0" }}>
                 {cardW} × {cardH} px
+              </span>
+              <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>Ekspor HD:</span>
+              <span style={{ fontSize: "0.74rem", fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: upscaleFactor >= 2 ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.15)", border: upscaleFactor >= 2 ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(99, 102, 241, 0.3)", color: upscaleFactor >= 2 ? "#6EE7B7" : "#C7D2FE" }}>
+                {cardW * upscaleFactor} × {cardH * upscaleFactor} px ({upscaleFactor}x)
               </span>
               {Math.abs(cardW - cardH) < 20 && (
                 <span style={{ fontSize: "0.74rem", fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", color: "#FCD34D" }}>
@@ -1228,15 +1498,70 @@ export default function PrintQRCodes() {
                     : "📁 Upload Desain Klien"}
                 </button>
               </div>
+
+              {/* Tombol Cepat: Auto-Detect & Hapus QR Dummy (Hanya di mode Desain Klien) */}
+              {templateMode === "custom" && (
+                <button
+                  type="button"
+                  onClick={handleDetectAndReplaceQR}
+                  disabled={isScanningMock}
+                  className="print-btn"
+                  style={{
+                    fontSize: "0.74rem",
+                    padding: "6px 14px",
+                    gap: 6,
+                    fontWeight: 700,
+                    background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                    border: "1px solid rgba(99,102,241,0.5)",
+                    color: "#FFF",
+                    boxShadow: "0 2px 8px rgba(99, 102, 241, 0.25)",
+                  }}
+                  title="Pindai gambar desain klien dan otomatis hapus mock QR bawaan dengan kotak solid bersih"
+                >
+                  <span>🎯</span>
+                  <span>{isScanningMock ? "Memindai..." : "Auto-Detect & Hapus QR Dummy"}</span>
+                </button>
+              )}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {/* Quick Resolution Selector */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94A3B8", fontWeight: 600 }}>Kualitas:</span>
+                <div className="template-toggle-group">
+                  <button
+                    type="button"
+                    className={`template-toggle-btn ${upscaleFactor === 1 ? "active" : ""}`}
+                    onClick={() => setUpscaleFactor(1)}
+                    title="1x Resolusi Normal (Ukuran Asli File)"
+                  >
+                    1x Normal
+                  </button>
+                  <button
+                    type="button"
+                    className={`template-toggle-btn ${upscaleFactor === 2 ? "active" : ""}`}
+                    onClick={() => setUpscaleFactor(2)}
+                    title="2x HD (300 DPI) - Standar Cetak Kartu PVC Bebas Blur"
+                  >
+                    ✨ 2x HD (300 DPI)
+                  </button>
+                  <button
+                    type="button"
+                    className={`template-toggle-btn ${upscaleFactor === 3 ? "active" : ""}`}
+                    onClick={() => setUpscaleFactor(3)}
+                    title="3x Ultra HD - Sangat Tajam untuk Percetakan Industri"
+                  >
+                    💎 3x Ultra HD
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="button"
                 className={`print-btn ${showPlacementEditor ? "print-btn-indigo" : "print-btn-ghost"}`}
                 onClick={() => setShowPlacementEditor((prev) => !prev)}
                 style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
-                title="Buka Studio Desain untuk mengatur logo tengah (Google/Bintang/NFC/Polos), gaya titik, warna, dan posisi QR"
+                title="Buka Studio Desain untuk mengatur logo tengah, gaya titik, warna, posisi QR, dan penajam anti-blur"
               >
                 <span>🎨</span>
                 <span>{showPlacementEditor ? "Tutup Studio Desain" : "Kustomisasi Desain QR"}</span>
@@ -1577,6 +1902,13 @@ export default function PrintQRCodes() {
                       className={`studio-tab-btn ${inspectorTab === "position" ? "active" : ""}`}
                     >
                       <span>🎯</span> Posisi &amp; Ukuran
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInspectorTab("resolution")}
+                      className={`studio-tab-btn ${inspectorTab === "resolution" ? "active" : ""}`}
+                    >
+                      <span>🚀</span> Resolusi &amp; Kualitas
                     </button>
                     <button
                       type="button"
@@ -1993,40 +2325,86 @@ export default function PrintQRCodes() {
 
                         <div className="slider-group-grid">
                           {templateMode === "custom" ? (
-                            <button
-                              type="button"
-                              onClick={handleDetectAndReplaceQR}
-                              className="print-btn"
-                              style={{
-                                width: "100%",
-                                padding: "9px 14px",
-                                fontSize: "0.78rem",
-                                background: "linear-gradient(135deg, #4F46E5, #6366F1)",
-                                border: "1px solid rgba(99,102,241,0.4)",
-                                color: "#FFF",
-                                boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
-                                fontWeight: 700,
-                                justifyContent: "center",
-                                gap: 6,
-                              }}
-                              title="Deteksi QR Code dummy klien dan sesuaikan posisi & ukuran secara instan"
-                            >
-                              <span>🎯 Deteksi &amp; Timpa QR Desain Klien</span>
-                            </button>
-                          ) : (
                             <div style={{
-                              padding: "10px 14px",
+                              padding: "12px",
                               borderRadius: 8,
-                              background: "rgba(99, 102, 241, 0.1)",
-                              border: "1px solid rgba(99, 102, 241, 0.25)",
-                              fontSize: "0.73rem",
-                              color: "#C7D2FE",
+                              background: "rgba(99, 102, 241, 0.08)",
+                              border: "1px solid rgba(99, 102, 241, 0.3)",
                               display: "flex",
-                              alignItems: "center",
+                              flexDirection: "column",
                               gap: 8,
                             }}>
-                              <span>📐</span>
-                              <span>Posisi awal telah terkalibrasi presisi di kotak kartu Standar Hantic ({DEFAULT_BOX_SIZE}×{DEFAULT_BOX_SIZE} px). Anda bebas mengatur ulang ukuran atau posisi jika diinginkan.</span>
+                              <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#EDE9FE", display: "flex", alignItems: "center", gap: 6 }}>
+                                <span>🎯</span> Deteksi &amp; Hapus Mockup QR Klien (Auto-Replace)
+                              </div>
+                              <div style={{ fontSize: "0.7rem", color: "#94A3B8", lineHeight: 1.4 }}>
+                                Otomatis mendeteksi lokasi QR mockup lama, menutupnya dengan kotak solid bersih, dan menggantinya dengan QR Google Review yang berfungsi.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleDetectAndReplaceQR}
+                                disabled={isScanningMock}
+                                className="print-btn"
+                                style={{
+                                  width: "100%",
+                                  padding: "9px 14px",
+                                  fontSize: "0.78rem",
+                                  background: "linear-gradient(135deg, #4F46E5, #6366F1)",
+                                  border: "1px solid rgba(99,102,241,0.5)",
+                                  color: "#FFF",
+                                  boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
+                                  fontWeight: 700,
+                                  justifyContent: "center",
+                                  gap: 6,
+                                }}
+                                title="Pindai gambar kartu klien dan hapus QR dummy"
+                              >
+                                <span>🎯</span>
+                                <span>{isScanningMock ? "Memindai QR Dummy..." : "Pindai & Hapus QR Dummy Sekarang"}</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{
+                              padding: "12px",
+                              borderRadius: 8,
+                              background: "rgba(99, 102, 241, 0.08)",
+                              border: "1px solid rgba(99, 102, 241, 0.25)",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 8,
+                            }}>
+                              <div style={{
+                                fontSize: "0.73rem",
+                                color: "#C7D2FE",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                lineHeight: 1.4,
+                              }}>
+                                <span>📐</span>
+                                <span>Posisi QR terkunci tepat di tengah kotak kartu Standar Hantic ({DEFAULT_BOX_SIZE}×{DEFAULT_BOX_SIZE} px) pada koordinat X={DEFAULT_BOX_X}, Y={DEFAULT_BOX_Y}.</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPlacement((prev) => ({
+                                    ...prev,
+                                    x: DEFAULT_BOX_X,
+                                    y: DEFAULT_BOX_Y,
+                                    size: DEFAULT_BOX_SIZE,
+                                    style: "white_box",
+                                    boxColor: "#FFFFFF",
+                                    padding: DEFAULT_QR_PAD,
+                                    radius: 18,
+                                  }));
+                                  setSnapFeedback("🎯 Posisi QR dikembalikan tepat di tengah kartu Standar Hantic.");
+                                  setTimeout(() => setSnapFeedback(null), 3000);
+                                }}
+                                className="print-btn print-btn-indigo"
+                                style={{ width: "100%", justifyContent: "center", padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700 }}
+                              >
+                                🎯 Pusatkan QR di Posisi Default Standar
+                              </button>
                             </div>
                           )}
 
@@ -2452,6 +2830,192 @@ export default function PrintQRCodes() {
                       </div>
                     </>
                   )}
+
+                  {/* ════ TAB 4: RESOLUSI & KUALITAS CETAK (ANTI-BLUR) ════ */}
+                  {inspectorTab === "resolution" && (
+                    <>
+                      {/* Sub-Card 1: Resolusi & Skala Ekspor */}
+                      <div className="inspector-card">
+                        <div className="inspector-card-title">
+                          <span>🚀</span> Resolusi Ekspor Kartu (HD Print Ready)
+                        </div>
+
+                        <div className="slider-group-grid">
+                          <div className="slider-item">
+                            <div className="slider-header">
+                              <span>Skala Resolusi Output:</span>
+                              <strong style={{ color: upscaleFactor >= 2 ? "#34D399" : "#94A3B8" }}>
+                                {upscaleFactor === 1
+                                  ? "1x (Normal)"
+                                  : upscaleFactor === 2
+                                  ? "✨ 2x HD (300 DPI Cetak PVC) ⭐ Rekomendasi"
+                                  : "💎 3x Ultra HD (Cetak Industri)"}
+                              </strong>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                              <button
+                                type="button"
+                                onClick={() => setUpscaleFactor(1)}
+                                className="print-btn"
+                                style={{
+                                  padding: "9px 8px",
+                                  fontSize: "0.75rem",
+                                  justifyContent: "center",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  background: upscaleFactor === 1 ? "rgba(99, 102, 241, 0.25)" : "rgba(255,255,255,0.04)",
+                                  border: upscaleFactor === 1 ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
+                                  color: upscaleFactor === 1 ? "#A5B4FC" : "#94A3B8",
+                                  fontWeight: upscaleFactor === 1 ? 700 : 500,
+                                }}
+                              >
+                                <span>1x Normal</span>
+                                <span style={{ fontSize: "0.65rem", opacity: 0.75 }}>{cardW} × {cardH} px</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setUpscaleFactor(2)}
+                                className="print-btn"
+                                style={{
+                                  padding: "9px 8px",
+                                  fontSize: "0.75rem",
+                                  justifyContent: "center",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  background: upscaleFactor === 2 ? "rgba(16, 185, 129, 0.25)" : "rgba(255,255,255,0.04)",
+                                  border: upscaleFactor === 2 ? "1px solid #10B981" : "1px solid rgba(255,255,255,0.08)",
+                                  color: upscaleFactor === 2 ? "#6EE7B7" : "#94A3B8",
+                                  fontWeight: upscaleFactor === 2 ? 700 : 500,
+                                }}
+                              >
+                                <span>✨ 2x HD</span>
+                                <span style={{ fontSize: "0.65rem", opacity: 0.85 }}>{cardW * 2} × {cardH * 2} px (300 DPI)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setUpscaleFactor(3)}
+                                className="print-btn"
+                                style={{
+                                  padding: "9px 8px",
+                                  fontSize: "0.75rem",
+                                  justifyContent: "center",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  background: upscaleFactor === 3 ? "rgba(245, 158, 11, 0.25)" : "rgba(255,255,255,0.04)",
+                                  border: upscaleFactor === 3 ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
+                                  color: upscaleFactor === 3 ? "#FCD34D" : "#94A3B8",
+                                  fontWeight: upscaleFactor === 3 ? 700 : 500,
+                                }}
+                              >
+                                <span>💎 3x Ultra HD</span>
+                                <span style={{ fontSize: "0.65rem", opacity: 0.85 }}>{cardW * 3} × {cardH * 3} px</span>
+                              </button>
+                            </div>
+                            <p style={{ fontSize: "0.7rem", color: "#64748B", margin: "6px 0 0", lineHeight: 1.45 }}>
+                              {upscaleFactor >= 2
+                                ? "Meningkatkan resolusi hasil ekspor kartu sehingga teks, garis, dan QR code super tajam dan tidak pecah saat dicetak pada kartu fisik atau di-zoom."
+                                : "Menggunakan dimensi asli gambar yang diunggah tanpa upscaling."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sub-Card 2: Filter Anti-Blur (Pertajam Gambar Klien) */}
+                      <div className="inspector-card">
+                        <div className="inspector-card-title">
+                          <span>✨</span> Filter Pertajam Detail (Anti-Blur)
+                        </div>
+
+                        <div className="slider-group-grid">
+                          <div className="slider-item">
+                            <div className="slider-header">
+                              <span>Tingkat Penajaman Teks &amp; Logo:</span>
+                              <strong style={{ color: sharpenLevel === "off" ? "#94A3B8" : sharpenLevel === "medium" ? "#60A5FA" : "#F59E0B" }}>
+                                {sharpenLevel === "off" ? "Mati (Asli)" : sharpenLevel === "medium" ? "✨ Sedang (Anti-Blur Natural)" : "⚡ Tinggi (Ultra Sharp)"}
+                              </strong>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                              <button
+                                type="button"
+                                onClick={() => setSharpenLevel("off")}
+                                className="print-btn"
+                                style={{
+                                  padding: "8px",
+                                  fontSize: "0.75rem",
+                                  justifyContent: "center",
+                                  background: sharpenLevel === "off" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.03)",
+                                  border: sharpenLevel === "off" ? "1px solid rgba(255,255,255,0.3)" : "1px solid rgba(255,255,255,0.07)",
+                                  color: sharpenLevel === "off" ? "#FFF" : "#94A3B8",
+                                  fontWeight: sharpenLevel === "off" ? 700 : 500,
+                                }}
+                              >
+                                Mati
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSharpenLevel("medium")}
+                                className="print-btn"
+                                style={{
+                                  padding: "8px",
+                                  fontSize: "0.75rem",
+                                  justifyContent: "center",
+                                  background: sharpenLevel === "medium" ? "rgba(59, 130, 246, 0.25)" : "rgba(255,255,255,0.03)",
+                                  border: sharpenLevel === "medium" ? "1px solid #3B82F6" : "1px solid rgba(255,255,255,0.07)",
+                                  color: sharpenLevel === "medium" ? "#93C5FD" : "#94A3B8",
+                                  fontWeight: sharpenLevel === "medium" ? 700 : 500,
+                                }}
+                              >
+                                ✨ Sedang
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSharpenLevel("high")}
+                                className="print-btn"
+                                style={{
+                                  padding: "8px",
+                                  fontSize: "0.75rem",
+                                  justifyContent: "center",
+                                  background: sharpenLevel === "high" ? "rgba(245, 158, 11, 0.25)" : "rgba(255,255,255,0.03)",
+                                  border: sharpenLevel === "high" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.07)",
+                                  color: sharpenLevel === "high" ? "#FCD34D" : "#94A3B8",
+                                  fontWeight: sharpenLevel === "high" ? 700 : 500,
+                                }}
+                              >
+                                ⚡ Tinggi
+                              </button>
+                            </div>
+                            <p style={{ fontSize: "0.7rem", color: "#64748B", margin: "6px 0 0", lineHeight: 1.45 }}>
+                              Menerapkan filter unsharp mask pada gambar latar klien untuk memulihkan ketajaman tepi teks, garis, dan logo yang tampak kabur saat di-zoom.
+                            </p>
+                          </div>
+
+                          {/* Info Spek Cetak */}
+                          <div style={{
+                            padding: "12px 14px",
+                            borderRadius: 8,
+                            background: "rgba(16, 185, 129, 0.08)",
+                            border: "1px solid rgba(16, 185, 129, 0.22)",
+                            fontSize: "0.72rem",
+                            color: "#A7F3D0",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 4,
+                          }}>
+                            <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                              <span>📐 Dimensi Cetak Akhir:</span>
+                              <span style={{ color: "#FFF", fontFamily: "monospace" }}>{cardW * upscaleFactor} × {cardH * upscaleFactor} px</span>
+                            </div>
+                            <div style={{ color: "#6EE7B7" }}>
+                              • QR Code digenerate dalam resolusi vektor ultra-tajam ({Math.max(Math.round(placement.size * upscaleFactor), 512 * upscaleFactor)} px)
+                            </div>
+                            <div style={{ color: "#6EE7B7" }}>
+                              • Seluruh file PNG &amp; ZIP yang di-download langsung beresolusi HD tanpa perlu edit manual
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -2719,8 +3283,9 @@ export default function PrintQRCodes() {
                   <CardItem
                     code={code}
                     url={`${baseUrl}/c/${code}`}
-                    bgImage={bgImage}
+                    enhancedBgCanvas={enhancedBgCanvas}
                     placement={effectivePlacement}
+                    upscaleFactor={upscaleFactor}
                     onCanvasReady={handleCanvasReady}
                   />
                   <div className="card-actions-row">
@@ -2758,10 +3323,12 @@ export default function PrintQRCodes() {
                 onClick={() => {
                   setPreviewCode(null);
                   setPreviewDataUrl(null);
+                  setPreviewZoomed(false);
                 }}
               >
                 <div
                   className="card-preview-modal-content"
+                  style={{ maxWidth: previewZoomed ? "95vw" : "700px", maxHeight: "90vh" }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="card-preview-modal-header">
@@ -2772,35 +3339,63 @@ export default function PrintQRCodes() {
                           Close-Up Kartu: <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{previewCode}</span>
                         </div>
                         <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-                          Dimensi Cetak Asli: {cardW} × {cardH} px • Format PNG High-Resolution
+                          Dimensi Ekspor: <strong style={{ color: "#E2E8F0" }}>{cardW * upscaleFactor} × {cardH * upscaleFactor} px</strong> ({upscaleFactor}x HD • Bebas Blur) • Format PNG High-Resolution
                         </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="card-preview-modal-close"
-                      onClick={() => {
-                        setPreviewCode(null);
-                        setPreviewDataUrl(null);
-                      }}
-                      aria-label="Tutup preview"
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button
+                        type="button"
+                        className="print-btn print-btn-ghost"
+                        onClick={() => setPreviewZoomed((prev) => !prev)}
+                        style={{ fontSize: "0.72rem", padding: "5px 12px" }}
+                        title="Perbesar ke resolusi asli 100% untuk memeriksa ketajaman detail"
+                      >
+                        {previewZoomed ? "🔍 Fit Layar" : "🔎 Zoom 100% (Detail Asli)"}
+                      </button>
+                      <button
+                        type="button"
+                        className="card-preview-modal-close"
+                        onClick={() => {
+                          setPreviewCode(null);
+                          setPreviewDataUrl(null);
+                          setPreviewZoomed(false);
+                        }}
+                        aria-label="Tutup preview"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="card-preview-modal-body">
+                  <div
+                    className="card-preview-modal-body"
+                    style={{
+                      maxHeight: "65vh",
+                      overflow: "auto",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: previewZoomed ? "flex-start" : "center",
+                      cursor: previewZoomed ? "zoom-out" : "zoom-in",
+                    }}
+                    onClick={() => setPreviewZoomed((prev) => !prev)}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={previewDataUrl}
                       alt={`Close-up kartu ${previewCode}`}
                       className="card-preview-modal-img"
+                      style={
+                        previewZoomed
+                          ? { maxWidth: "none", maxHeight: "none", width: `${cardW * upscaleFactor}px`, height: "auto" }
+                          : { maxWidth: "100%", maxHeight: "56vh", objectFit: "contain" }
+                      }
                     />
                   </div>
 
                   <div className="card-preview-modal-footer">
                     <div style={{ fontSize: "0.78rem", color: "#94A3B8" }}>
-                      💡 Kartu siap dicetak atau digunakan langsung ke percetakan.
+                      💡 Kartu siap dicetak atau digunakan langsung ke percetakan. Bebas pecah saat di-zoom.
                     </div>
                     <div style={{ display: "flex", gap: 10 }}>
                       <button
@@ -2809,6 +3404,7 @@ export default function PrintQRCodes() {
                         onClick={() => {
                           setPreviewCode(null);
                           setPreviewDataUrl(null);
+                          setPreviewZoomed(false);
                         }}
                       >
                         Tutup
@@ -2819,7 +3415,7 @@ export default function PrintQRCodes() {
                         style={{ fontWeight: 700, padding: "8px 20px", fontSize: "0.85rem" }}
                         onClick={() => handleDownloadSingle(previewCode)}
                       >
-                        ⬇ Download File PNG Ini
+                        ⬇ Download File PNG Ini ({cardW * upscaleFactor}×{cardH * upscaleFactor} px)
                       </button>
                     </div>
                   </div>
