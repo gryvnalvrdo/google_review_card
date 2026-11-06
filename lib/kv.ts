@@ -6,22 +6,26 @@ export type TapLogEntry = {
   tappedAt: string; // ISO timestamp
 };
 
-/** Coba ulang fn maksimal maxAttempts kali. Jika semua gagal, return null (diam-diam). */
-async function retryOrNull<T>(
+/** Coba ulang fn maksimal maxAttempts kali.
+ *  Jika semua retry gagal karena exception (bukan karena data null),
+ *  lempar error agar caller bisa membedakan "tidak ditemukan" vs "gagal koneksi". */
+async function retryOrThrow<T>(
   fn: () => Promise<T>,
   maxAttempts = 3,
   delayMs = 300
-): Promise<T | null> {
+): Promise<T> {
+  let lastErr: unknown;
   for (let i = 0; i < maxAttempts; i++) {
     try {
       return await fn();
-    } catch {
+    } catch (err) {
+      lastErr = err;
       if (i < maxAttempts - 1) {
         await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
       }
     }
   }
-  return null; // semua retry gagal → tampil "kartu belum aktif" seperti biasa
+  throw lastErr; // semua retry gagal → lempar error ke caller
 }
 
 export type CardRecord = {
@@ -109,8 +113,9 @@ if (!hasKv && memoryStore.size === 0) {
 export async function getCard(code: string): Promise<CardRecord | null> {
   if (hasKv && vercelKv) {
     // Retry hingga 3x untuk menangani transient error Vercel KV.
-    // Jika semua gagal, return null → route handler tampil "kartu belum aktif" seperti biasa.
-    const data = await retryOrNull(() =>
+    // Jika semua retry gagal karena exception (bukan karena data null/not found),
+    // akan throw error → route handler bisa tampilkan halaman retry, bukan "kartu belum aktif".
+    const data = await retryOrThrow(() =>
       vercelKv!.get<CardRecord>(KEY_PREFIX + code)
     );
     return data ?? null;
