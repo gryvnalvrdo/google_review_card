@@ -68,7 +68,6 @@ export default function CardsPage() {
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [originalCard, setOriginalCard] = useState<CardData | null>(null);
-  const [resetTapsCheckbox, setResetTapsCheckbox] = useState(false);
   const [resettingCode, setResettingCode] = useState<string | null>(null);
   const [editPlaceId, setEditPlaceId] = useState("");
 
@@ -77,7 +76,6 @@ export default function CardsPage() {
     setOriginalCard(card);
     const match = card.googleReviewUrl?.match(/placeid=([a-zA-Z0-9_\-]+)/i);
     setEditPlaceId(match ? match[1] : "");
-    setResetTapsCheckbox(false);
   }
 
   function handlePlaceIdChange(rawVal: string) {
@@ -181,7 +179,7 @@ export default function CardsPage() {
         storeName: editingCard.storeName,
         googleReviewUrl: editingCard.googleReviewUrl,
         price: editingCard.price ?? 50000,
-        resetTaps: isLocationOrStoreChanged || resetTapsCheckbox,
+        resetTaps: isLocationOrStoreChanged,
       }),
     });
     if (res.ok) {
@@ -870,54 +868,23 @@ export default function CardsPage() {
                 );
                 const currentTaps = originalCard?.tapCount ?? 0;
 
-                return (
-                  <>
-                    {isLocationOrStoreChanged && (
-                      <div style={{
-                        padding: "10px 12px",
-                        background: "rgba(245, 158, 11, 0.12)",
-                        border: "1px solid rgba(245, 158, 11, 0.35)",
-                        borderRadius: 8,
-                        color: "#FDE68A",
-                        fontSize: "0.76rem",
-                        lineHeight: 1.5,
-                        marginBottom: 12,
-                      }}>
-                        <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                          <span>⚡</span> Toko atau Lokasi Diganti
-                        </div>
-                        Nama toko atau Google Review telah diganti. Riwayat tap sebelumnya ({currentTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
-                      </div>
-                    )}
-
-                    {currentTaps > 0 && (
-                      <label style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        fontSize: "0.78rem",
-                        color: isLocationOrStoreChanged ? "#FCD34D" : "#CBD5E1",
-                        cursor: isLocationOrStoreChanged ? "default" : "pointer",
-                        marginBottom: 14,
-                        padding: "8px 10px",
-                        background: "rgba(255, 255, 255, 0.03)",
-                        borderRadius: 8,
-                        border: "1px solid rgba(255, 255, 255, 0.08)",
-                      }}>
-                        <input
-                          type="checkbox"
-                          checked={isLocationOrStoreChanged || resetTapsCheckbox}
-                          onChange={e => setResetTapsCheckbox(e.target.checked)}
-                          disabled={isLocationOrStoreChanged}
-                        />
-                        <span>
-                          Reset hitungan tap ke 0 ({currentTaps} tap saat ini)
-                          {isLocationOrStoreChanged ? " (Otomatis aktif)" : ""}
-                        </span>
-                      </label>
-                    )}
-                  </>
-                );
+                return isLocationOrStoreChanged ? (
+                  <div style={{
+                    padding: "10px 12px",
+                    background: "rgba(245, 158, 11, 0.12)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    borderRadius: 8,
+                    color: "#FDE68A",
+                    fontSize: "0.76rem",
+                    lineHeight: 1.5,
+                    marginBottom: 12,
+                  }}>
+                    <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                      <span>⚡</span> Toko atau Lokasi Diganti
+                    </div>
+                    Nama toko atau Google Review telah diganti. Riwayat tap sebelumnya ({currentTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
+                  </div>
+                ) : null;
               })()}
 
               </div>

@@ -60,7 +60,6 @@ export default function AdminDashboard() {
   const [showSheet, setShowSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingOriginalCard, setEditingOriginalCard] = useState<CardRecord | null>(null);
-  const [resetTapsOnEdit, setResetTapsOnEdit] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
@@ -198,7 +197,7 @@ export default function AdminDashboard() {
     setCode(""); setStoreName(""); setGoogleReviewUrl(""); setPlaceId(""); setPrice(50000);
     setMessage(null); setError(null); setIsEditing(false);
     setSavedCardUrl(null); setCopiedNfc(false);
-    setEditingOriginalCard(null); setResetTapsOnEdit(false);
+    setEditingOriginalCard(null);
   }
 
   function openNewForm(initialCode = "") {
@@ -215,7 +214,6 @@ export default function AdminDashboard() {
     setPlaceId(match ? match[1] : "");
     setPrice(card.price ?? 50000);
     setEditingOriginalCard(card);
-    setResetTapsOnEdit(false);
     setMessage(null); setError(null);
     setIsEditing(true);
     setShowSheet(true);
@@ -245,7 +243,7 @@ export default function AdminDashboard() {
         storeName: storeName.trim(),
         googleReviewUrl: googleReviewUrl.trim(),
         price: price,
-        resetTaps: isLocOrStoreChanged || resetTapsOnEdit,
+        resetTaps: isLocOrStoreChanged,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -253,7 +251,7 @@ export default function AdminDashboard() {
     if (res.ok) {
       const cardUrl = `${window.location.origin}/c/${code.trim()}`;
       setSavedCardUrl(cardUrl);
-      const resetNote = (isLocOrStoreChanged || resetTapsOnEdit) ? " (Riwayat tap lama di-reset ke 0)" : "";
+      const resetNote = isLocOrStoreChanged ? " (Riwayat tap lama di-reset ke 0)" : "";
       setMessage(`✅ "${storeName.trim()}" berhasil ${isEditing ? "diupdate" : "disimpan"}${resetNote}!`);
       await Promise.all([loadCards(), loadTapLogs()]);
     } else {
@@ -499,54 +497,23 @@ export default function AdminDashboard() {
           editingOriginalCard.googleReviewUrl.trim() !== googleReviewUrl.trim();
         const oldTaps = editingOriginalCard.tapCount ?? 0;
 
-        return (
-          <>
-            {isLocOrStoreChanged && (
-              <div style={{
-                padding: "10px 12px",
-                background: "rgba(245, 158, 11, 0.12)",
-                border: "1px solid rgba(245, 158, 11, 0.35)",
-                borderRadius: 8,
-                color: "#FDE68A",
-                fontSize: "0.76rem",
-                lineHeight: 1.5,
-                marginBottom: 12,
-              }}>
-                <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                  <span>⚡</span> Toko atau Lokasi Diganti
-                </div>
-                Nama toko atau Google Review telah diganti. Riwayat tap sebelumnya ({oldTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
-              </div>
-            )}
-
-            {oldTaps > 0 && (
-              <label style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "0.78rem",
-                color: isLocOrStoreChanged ? "#FCD34D" : "#CBD5E1",
-                cursor: isLocOrStoreChanged ? "default" : "pointer",
-                marginBottom: 14,
-                padding: "8px 10px",
-                background: "rgba(255, 255, 255, 0.03)",
-                borderRadius: 8,
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}>
-                <input
-                  type="checkbox"
-                  checked={isLocOrStoreChanged || resetTapsOnEdit}
-                  onChange={e => setResetTapsOnEdit(e.target.checked)}
-                  disabled={isLocOrStoreChanged}
-                />
-                <span>
-                  Reset hitungan tap ke 0 ({oldTaps} tap saat ini)
-                  {isLocOrStoreChanged ? " (Otomatis aktif)" : ""}
-                </span>
-              </label>
-            )}
-          </>
-        );
+        return isLocOrStoreChanged ? (
+          <div style={{
+            padding: "10px 12px",
+            background: "rgba(245, 158, 11, 0.12)",
+            border: "1px solid rgba(245, 158, 11, 0.35)",
+            borderRadius: 8,
+            color: "#FDE68A",
+            fontSize: "0.76rem",
+            lineHeight: 1.5,
+            marginBottom: 12,
+          }}>
+            <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+              <span>⚡</span> Toko atau Lokasi Diganti
+            </div>
+            Nama toko atau Google Review telah diganti. Riwayat tap sebelumnya ({oldTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
+          </div>
+        ) : null;
       })()}
 
       {error && <div className="alert alert-error">{error}</div>}
