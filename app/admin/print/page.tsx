@@ -1012,6 +1012,7 @@ export default function PrintQRCodes() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewWrapRef = useRef<HTMLDivElement>(null);
   const liveQrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const liveCompositeRef = useRef<HTMLCanvasElement>(null); // Canvas overlay untuk tampilkan hasil erase di live preview
   const [isDragging, setIsDragging] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<"qr" | "position" | "resolution">("qr");
 
@@ -1585,6 +1586,85 @@ export default function PrintQRCodes() {
     );
   }, [effectivePlacement.dotStyle, effectivePlacement.fgColor, effectivePlacement.style, effectivePlacement.logoType, qrPrevSize, qrPrevPad]);
 
+  // ── Live composite canvas: tampilkan hasil erase + QR asli di preview Studio ──
+  useEffect(() => {
+    const cvs = liveCompositeRef.current;
+    if (!cvs || !enhancedBgCanvas || !effectivePlacement.eraseBackground) {
+      // Jika tidak ada eraseBackground, sembunyikan canvas overlay ini
+      if (cvs) {
+        const ctx = cvs.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, cvs.width, cvs.height);
+      }
+      return;
+    }
+
+    // Render composite card skala kecil ke canvas overlay preview
+    cvs.width = prevW;
+    cvs.height = prevH;
+    const ctx = cvs.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    // Skala dari canvas enhanced ke preview
+    const scaleX = prevW / enhancedBgCanvas.width;
+    const scaleY = prevH / enhancedBgCanvas.height;
+
+    // 1. Gambar background (sudah enhanced)
+    ctx.drawImage(enhancedBgCanvas, 0, 0, prevW, prevH);
+
+    // 2. Erase area QR dummy: sample warna sekitar di preview scale
+    const eX = Math.round(effectivePlacement.x * scaleX);
+    const eY = Math.round(effectivePlacement.y * scaleY);
+    const eSize = Math.round(effectivePlacement.size * scaleX);
+    const eRad = Math.max(0, Math.round((effectivePlacement.radius ?? 14) * scaleX));
+    const bgColor = sampleSurroundingColor(ctx, eX, eY, eSize, prevW, prevH);
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.moveTo(eX + eRad, eY);
+    ctx.lineTo(eX + eSize - eRad, eY);
+    ctx.arcTo(eX + eSize, eY, eX + eSize, eY + eRad, eRad);
+    ctx.lineTo(eX + eSize, eY + eSize - eRad);
+    ctx.arcTo(eX + eSize, eY + eSize, eX + eSize - eRad, eY + eSize, eRad);
+    ctx.lineTo(eX + eRad, eY + eSize);
+    ctx.arcTo(eX, eY + eSize, eX, eY + eSize - eRad, eRad);
+    ctx.lineTo(eX, eY + eRad);
+    ctx.arcTo(eX, eY, eX + eRad, eY, eRad);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Gambar QR di atas area yang sudah dierase
+    const qrCanvas = document.createElement("canvas");
+    renderStyledQR(
+      qrCanvas,
+      "https://hantic.id/demo",
+      Math.max(32, eSize),
+      effectivePlacement.dotStyle || "squares",
+      effectivePlacement.fgColor || "#000000",
+      "transparent",
+      effectivePlacement.logoType || "none"
+    );
+    if (effectivePlacement.style === "white_box") {
+      const pad = Math.round((effectivePlacement.padding ?? 16) * scaleX);
+      const rad = Math.round((effectivePlacement.radius ?? 14) * scaleX);
+      ctx.fillStyle = effectivePlacement.boxColor || "#FFFFFF";
+      ctx.beginPath();
+      ctx.moveTo(eX + rad, eY);
+      ctx.lineTo(eX + eSize - rad, eY);
+      ctx.arcTo(eX + eSize, eY, eX + eSize, eY + rad, rad);
+      ctx.lineTo(eX + eSize, eY + eSize - rad);
+      ctx.arcTo(eX + eSize, eY + eSize, eX + eSize - rad, eY + eSize, rad);
+      ctx.lineTo(eX + rad, eY + eSize);
+      ctx.arcTo(eX, eY + eSize, eX, eY + eSize - rad, eRad);
+      ctx.lineTo(eX, eY + rad);
+      ctx.arcTo(eX, eY, eX + rad, eY, rad);
+      ctx.closePath();
+      ctx.fill();
+      ctx.drawImage(qrCanvas, eX + pad, eY + pad, eSize - pad * 2, eSize - pad * 2);
+    } else {
+      ctx.drawImage(qrCanvas, eX, eY, eSize, eSize);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enhancedBgCanvas, effectivePlacement, prevW, prevH, upscaleFactor]);
+
   return (
     <>
       <AdminNav active="print" />
@@ -1687,28 +1767,9 @@ export default function PrintQRCodes() {
                 </button>
               )}
 
-              {/* Spacer + tombol Studio di kanan */}
+              {/* Spacer + tombol Pindai QR (hanya custom) + tombol Studio di kanan */}
               <div style={{ flex: 1 }} />
-              <button
-                type="button"
-                className={`print-btn ${showPlacementEditor ? "print-btn-indigo" : "print-btn-ghost"}`}
-                onClick={() => setShowPlacementEditor((prev) => !prev)}
-                style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
-                title="Buka / tutup Studio Desain untuk mengatur gaya QR, warna, logo, dan posisi"
-              >
-                <span>🎨</span>
-                <span>{showPlacementEditor ? "Tutup Studio" : "Buka Studio Desain"}</span>
-              </button>
-            </div>
-
-            {/* Row 2: Aksi Desain Klien — hanya muncul saat mode custom */}
-            {templateMode === "custom" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 16px", background: "rgba(99,102,241,0.04)" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#818CF8", letterSpacing: "0.04em", textTransform: "uppercase", minWidth: 110 }}>
-                  ⚡ Aksi Klien:
-                </span>
-
-                {/* Pindai & Hapus QR Dummy */}
+              {templateMode === "custom" && (
                 <button
                   type="button"
                   onClick={handleDetectAndReplaceQR}
@@ -1729,27 +1790,18 @@ export default function PrintQRCodes() {
                   <span>🎯</span>
                   <span>{isScanningMock ? "⏳ Memindai..." : "Pindai & Hapus QR Dummy"}</span>
                 </button>
-
-                {/* Ganti Gambar Klien */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="print-btn print-btn-ghost"
-                  style={{ fontSize: "0.74rem", padding: "5px 12px", gap: 5 }}
-                  title="Ganti dengan file gambar kartu lain"
-                >
-                  🔄 Ganti Gambar
-                </button>
-
-                {/* Info: nama file aktif */}
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.72rem", color: "#FCD34D", background: "rgba(245,158,11,0.08)", padding: "3px 10px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.2)" }}>
-                  <span>🖼️</span>
-                  <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {customImageName || "Desain Klien"}
-                  </span>
-                </div>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                className={`print-btn ${showPlacementEditor ? "print-btn-indigo" : "print-btn-ghost"}`}
+                onClick={() => setShowPlacementEditor((prev) => !prev)}
+                style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
+                title="Buka / tutup Studio Desain untuk mengatur gaya QR, warna, logo, dan posisi"
+              >
+                <span>🎨</span>
+                <span>{showPlacementEditor ? "Tutup Studio" : "Buka Studio Desain"}</span>
+              </button>
+            </div>
           </div>
 
           {/* ── QR Placement & Position Adjuster Panel (BISA DIAKSES BAIK STANDAR MAUPUN CUSTOM) ── */}
@@ -1844,6 +1896,24 @@ export default function PrintQRCodes() {
                       <div style={{ color: "#666", fontSize: "0.8rem" }}>Loading desain...</div>
                     )}
 
+                    {/* Composite erase + QR canvas overlay (hanya saat eraseBackground aktif) */}
+                    {placement.eraseBackground && (
+                      <canvas
+                        ref={liveCompositeRef}
+                        width={prevW}
+                        height={prevH}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: prevW,
+                          height: prevH,
+                          pointerEvents: "none",
+                          display: "block",
+                        }}
+                      />
+                    )}
+
                     {/* QR Code Overlay Box (Interactive Target Dragging) */}
                     <div
                       className="qr-target-overlay"
@@ -1852,10 +1922,13 @@ export default function PrintQRCodes() {
                         top: qrPrevTop,
                         width: qrPrevSize,
                         height: qrPrevSize,
-                        borderRadius: placement.style === "white_box" ? qrPrevRad : 4,
-                        background: placement.style === "white_box" ? (placement.boxColor || "#FFFFFF") : "transparent",
-                        padding: placement.style === "white_box" ? qrPrevPad : 0,
+                        // Saat eraseBackground aktif, visual sudah dihandle canvas overlay — ini hanya drag handle transparan
+                        borderRadius: placement.eraseBackground ? 4 : (placement.style === "white_box" ? qrPrevRad : 4),
+                        background: placement.eraseBackground ? "transparent" : (placement.style === "white_box" ? (placement.boxColor || "#FFFFFF") : "transparent"),
+                        padding: (!placement.eraseBackground && placement.style === "white_box") ? qrPrevPad : 0,
                         boxSizing: "border-box",
+                        // Tampilkan border dashed samar sebagai penanda drag area saat eraseBackground aktif
+                        outline: placement.eraseBackground ? "1.5px dashed rgba(99,102,241,0.6)" : "none",
                       }}
                       onPointerDown={(e) => {
                         e.stopPropagation();
@@ -1885,7 +1958,7 @@ export default function PrintQRCodes() {
                         ref={liveQrCanvasRef}
                         width={placement.style === "white_box" ? Math.max(16, qrPrevSize - qrPrevPad * 2) : qrPrevSize}
                         height={placement.style === "white_box" ? Math.max(16, qrPrevSize - qrPrevPad * 2) : qrPrevSize}
-                        style={{ width: "100%", height: "100%", display: "block", pointerEvents: "none" }}
+                        style={{ width: "100%", height: "100%", display: placement.eraseBackground ? "none" : "block", pointerEvents: "none" }}
                       />
 
                       {/* Small Indicator Tag */}
