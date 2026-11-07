@@ -518,8 +518,39 @@ export default function AdminDashboard() {
             autoCorrect="off"
           />
           {googleReviewUrl && (
-            <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-              <span>✅</span> URL Review Google siap digunakan
+            <div style={{
+              marginTop: 6,
+              padding: "7px 11px",
+              background: "rgba(52, 211, 153, 0.08)",
+              border: "1px solid rgba(52, 211, 153, 0.25)",
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              flexWrap: "wrap",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", color: "#34D399", fontWeight: 600, whiteSpace: "nowrap" }}>
+                <span>✅</span>
+                <span>Review Google Siap</span>
+              </div>
+              {placeId && (
+                <span style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.7rem",
+                  color: "#A7F3D0",
+                  background: "rgba(52, 211, 153, 0.15)",
+                  padding: "2px 8px",
+                  borderRadius: 5,
+                  border: "1px solid rgba(52, 211, 153, 0.3)",
+                  whiteSpace: "nowrap",
+                  maxWidth: 160,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}>
+                  {placeId}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -561,11 +592,43 @@ export default function AdminDashboard() {
           <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
             💡 Cukup masukkan username (dengan atau tanpa @) atau paste link Instagram toko.
           </p>
-          {googleReviewUrl && (
-            <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-              <span>✅</span> Link Instagram: <strong style={{ color: "#FBCFE8", marginLeft: 4 }}>{googleReviewUrl}</strong>
-            </div>
-          )}
+          {googleReviewUrl && targetType === "instagram" && (() => {
+            const username = extractInstagramUsername(googleReviewUrl);
+            return (
+              <div style={{
+                marginTop: 6,
+                padding: "7px 11px",
+                background: "rgba(236, 72, 153, 0.08)",
+                border: "1px solid rgba(236, 72, 153, 0.25)",
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                flexWrap: "wrap",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", color: "#34D399", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  <span>✅</span>
+                  <span style={{ color: "#FBCFE8" }}>Target Instagram Siap</span>
+                </div>
+                {username && (
+                  <span style={{
+                    fontFamily: "monospace",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "#F472B6",
+                    background: "rgba(236, 72, 153, 0.15)",
+                    padding: "2px 8px",
+                    borderRadius: 5,
+                    border: "1px solid rgba(236, 72, 153, 0.3)",
+                    whiteSpace: "nowrap",
+                  }}>
+                    @{username}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

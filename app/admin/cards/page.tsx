@@ -581,6 +581,7 @@ export default function CardsPage() {
                               borderRadius: 10,
                               fontSize: "0.78rem",
                               border: "1px solid rgba(255,255,255,0.04)",
+                              flexWrap: "wrap",
                             }}>
                               <div>
                                 <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
@@ -990,8 +991,39 @@ export default function CardsPage() {
                     💡 <strong>Pindah Lokasi?</strong> Cukup ganti <strong>Place ID</strong> baru di sini. URL Review Google akan otomatis diperbarui dan langsung aktif saat kartu di-tap / di-scan pelanggan.
                   </p>
                   {editingCard.googleReviewUrl && (
-                    <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-                      <span>✅</span> URL Review Google aktif
+                    <div style={{
+                      marginTop: 6,
+                      padding: "7px 11px",
+                      background: "rgba(52, 211, 153, 0.08)",
+                      border: "1px solid rgba(52, 211, 153, 0.25)",
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", color: "#34D399", fontWeight: 600, whiteSpace: "nowrap" }}>
+                        <span>✅</span>
+                        <span>Review Google Siap</span>
+                      </div>
+                      {editPlaceId && (
+                        <span style={{
+                          fontFamily: "monospace",
+                          fontSize: "0.7rem",
+                          color: "#A7F3D0",
+                          background: "rgba(52, 211, 153, 0.15)",
+                          padding: "2px 8px",
+                          borderRadius: 5,
+                          border: "1px solid rgba(52, 211, 153, 0.3)",
+                          whiteSpace: "nowrap",
+                          maxWidth: 160,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}>
+                          {editPlaceId}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1031,11 +1063,43 @@ export default function CardsPage() {
                   <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
                     💡 <strong>Ganti Akun IG?</strong> Masukkan username (dengan atau tanpa @) atau link Instagram toko yang baru.
                   </p>
-                  {editingCard.googleReviewUrl && (
-                    <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-                      <span>✅</span> Link Instagram aktif: <strong style={{ color: "#FBCFE8", marginLeft: 4 }}>{editingCard.googleReviewUrl}</strong>
-                    </div>
-                  )}
+                  {editingCard.googleReviewUrl && (() => {
+                    const username = extractInstagramUsername(editingCard.googleReviewUrl);
+                    return (
+                      <div style={{
+                        marginTop: 6,
+                        padding: "7px 11px",
+                        background: "rgba(236, 72, 153, 0.08)",
+                        border: "1px solid rgba(236, 72, 153, 0.25)",
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        flexWrap: "wrap",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", color: "#34D399", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          <span>✅</span>
+                          <span style={{ color: "#FBCFE8" }}>Target Instagram Siap</span>
+                        </div>
+                        {username && (
+                          <span style={{
+                            fontFamily: "monospace",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            color: "#F472B6",
+                            background: "rgba(236, 72, 153, 0.15)",
+                            padding: "2px 8px",
+                            borderRadius: 5,
+                            border: "1px solid rgba(236, 72, 153, 0.3)",
+                            whiteSpace: "nowrap",
+                          }}>
+                            @{username}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
