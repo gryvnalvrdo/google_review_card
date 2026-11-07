@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   if (!isAllowedReviewUrl(googleReviewUrl)) {
     return NextResponse.json(
-      { error: "Link harus berupa link Google Review resmi (search.google.com atau google.com). Link lain ditolak demi keamanan." },
+      { error: "Link harus berupa link Google Review resmi atau link/profil Instagram resmi. Link lain ditolak demi keamanan." },
       { status: 400 }
     );
   }

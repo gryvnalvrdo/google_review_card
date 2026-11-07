@@ -145,7 +145,7 @@ function retryHtml(code: string) {
     <div class="card">
       <div class="spinner"></div>
       <h1>Menghubungkan...</h1>
-      <p>Sedang menghubungkan ke server ulasan.<br>Halaman akan otomatis dialihkan dalam 2 detik.</p>
+      <p>Sedang menghubungkan ke server toko.<br>Halaman akan otomatis dialihkan dalam 2 detik.</p>
       <div class="badge">⏳ Mengalihkan otomatis...</div>
     </div>
   </body>

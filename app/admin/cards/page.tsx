@@ -6,7 +6,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import AdminNav from "../components/AdminNav";
 import QRScanner from "../components/QRScanner";
 import { PriceStepperInput } from "../components/PriceStepperInput";
-import { getPublicGoogleReviewUrl } from "../../../lib/redirect";
+import { getPublicGoogleReviewUrl, isInstagramUrl, formatInstagramUrl, extractInstagramUsername } from "../../../lib/redirect";
 
 const QR_EXPORT_SIZE = 1000; // ukuran QR PNG yang di-download (px)
 
@@ -69,13 +69,24 @@ export default function CardsPage() {
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [originalCard, setOriginalCard] = useState<CardData | null>(null);
   const [resettingCode, setResettingCode] = useState<string | null>(null);
+  const [editTargetType, setEditTargetType] = useState<"google" | "instagram">("google");
   const [editPlaceId, setEditPlaceId] = useState("");
+  const [editInstagramUsername, setEditInstagramUsername] = useState("");
 
   function startEdit(card: CardData) {
     setEditingCard({ ...card });
     setOriginalCard(card);
-    const match = card.googleReviewUrl?.match(/placeid=([a-zA-Z0-9_\-]+)/i);
-    setEditPlaceId(match ? match[1] : "");
+    const rawUrl = card.googleReviewUrl || "";
+    if (isInstagramUrl(rawUrl)) {
+      setEditTargetType("instagram");
+      setEditInstagramUsername(extractInstagramUsername(rawUrl));
+      setEditPlaceId("");
+    } else {
+      setEditTargetType("google");
+      setEditInstagramUsername("");
+      const match = rawUrl.match(/placeid=([a-zA-Z0-9_\-]+)/i);
+      setEditPlaceId(match ? match[1] : "");
+    }
   }
 
   function handlePlaceIdChange(rawVal: string) {
@@ -162,15 +173,25 @@ export default function CardsPage() {
     e.preventDefault();
     if (!editingCard) return;
 
-    const pid = editPlaceId.trim();
-    const finalGoogleReviewUrl = pid
-      ? `https://search.google.com/local/writereview?placeid=${pid}`
-      : (editingCard.googleReviewUrl?.trim() || "");
+    let finalTargetUrl = "";
+    if (editTargetType === "instagram") {
+      finalTargetUrl = formatInstagramUrl(editInstagramUsername);
+    } else {
+      const pid = editPlaceId.trim();
+      finalTargetUrl = pid
+        ? `https://search.google.com/local/writereview?placeid=${pid}`
+        : (editingCard.googleReviewUrl?.trim() || "");
+    }
+
+    if (!finalTargetUrl) {
+      alert(editTargetType === "instagram" ? "Username atau link Instagram wajib diisi." : "Google Place ID wajib diisi.");
+      return;
+    }
 
     const isLocationOrStoreChanged = Boolean(
       originalCard && (
         originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase() ||
-        originalCard.googleReviewUrl.trim() !== finalGoogleReviewUrl
+        originalCard.googleReviewUrl.trim() !== finalTargetUrl
       )
     );
 
@@ -180,7 +201,7 @@ export default function CardsPage() {
       body: JSON.stringify({
         code: editingCard.code,
         storeName: editingCard.storeName.trim(),
-        googleReviewUrl: finalGoogleReviewUrl,
+        googleReviewUrl: finalTargetUrl,
         price: editingCard.price ?? 50000,
         resetTaps: isLocationOrStoreChanged,
       }),
@@ -545,53 +566,61 @@ export default function CardsPage() {
                           </div>
                         </div>
 
-                        {/* Row 2: Details Summary (Harga Jual & Target Ulasan) */}
-                        <div style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: "10px 14px",
-                          background: "rgba(0,0,0,0.25)",
-                          borderRadius: 10,
-                          fontSize: "0.78rem",
-                          border: "1px solid rgba(255,255,255,0.04)",
-                        }}>
-                          <div>
-                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
-                            <strong style={{ color: "#34D399", fontSize: "0.95rem", fontWeight: 700 }}>
-                              Rp {(card.price ?? 50000).toLocaleString("id-ID")}
-                            </strong>
-                          </div>
-                          <div style={{ textAlign: "right" }}>
-                            <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>Target Google Review</span>
-                            <a
-                              href={getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName)}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                color: "#FCD34D",
-                                background: "rgba(245, 158, 11, 0.12)",
-                                border: "1px solid rgba(245, 158, 11, 0.25)",
-                                borderRadius: 7,
-                                padding: "4px 10px",
-                                textDecoration: "none",
-                                fontWeight: 600,
-                                fontSize: "0.78rem",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                whiteSpace: "nowrap",
-                                transition: "all 0.15s ease",
-                              }}
-                              title="Buka ulasan toko di Google Search"
-                            >
-                              <span>⭐</span>
-                              <span>Buka Menu Ulasan</span>
-                              <span style={{ fontSize: "0.72rem", opacity: 0.8 }}>↗</span>
-                            </a>
-                          </div>
-                        </div>
+                        {/* Row 2: Details Summary (Harga Jual & Target Ulasan/Instagram) */}
+                        {(() => {
+                          const isIg = isInstagramUrl(card.googleReviewUrl);
+                          const targetUrl = getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName);
+                          return (
+                            <div style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: 12,
+                              padding: "10px 14px",
+                              background: "rgba(0,0,0,0.25)",
+                              borderRadius: 10,
+                              fontSize: "0.78rem",
+                              border: "1px solid rgba(255,255,255,0.04)",
+                            }}>
+                              <div>
+                                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
+                                <strong style={{ color: "#34D399", fontSize: "0.95rem", fontWeight: 700 }}>
+                                  Rp {(card.price ?? 50000).toLocaleString("id-ID")}
+                                </strong>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>
+                                  {isIg ? "Target Instagram" : "Target Google Review"}
+                                </span>
+                                <a
+                                  href={targetUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    color: isIg ? "#F472B6" : "#FCD34D",
+                                    background: isIg ? "rgba(236, 72, 153, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                                    border: `1px solid ${isIg ? "rgba(236, 72, 153, 0.28)" : "rgba(245, 158, 11, 0.25)"}`,
+                                    borderRadius: 7,
+                                    padding: "4px 10px",
+                                    textDecoration: "none",
+                                    fontWeight: 600,
+                                    fontSize: "0.78rem",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 5,
+                                    whiteSpace: "nowrap",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  title={isIg ? "Buka profil Instagram" : "Buka ulasan toko di Google Search"}
+                                >
+                                  <span>{isIg ? "📸" : "⭐"}</span>
+                                  <span>{isIg ? "Buka Instagram" : "Buka Menu Ulasan"}</span>
+                                  <span style={{ fontSize: "0.72rem", opacity: 0.8 }}>↗</span>
+                                </a>
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Row 2.5: Link NFC & Tombol Salin Cepat (Desktop & Mobile Optimized) */}
                         <div style={{
@@ -857,39 +886,158 @@ export default function CardsPage() {
                   />
                 </div>
 
-              {/* Google Place ID: Cukup edit ini jika toko pindah lokasi */}
+              {/* Tipe Tujuan Kartu */}
               <div className="form-group">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <label className="label" style={{ marginBottom: 0 }}>
-                    Google Place ID (Lokasi Toko)
-                  </label>
-                  <a
-                    href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: "0.7rem", color: "#A5B4FC", textDecoration: "none", fontWeight: 600 }}
+                <label className="label">Tipe Tujuan Kartu</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditTargetType("google");
+                      if (editPlaceId) {
+                        setEditingCard({
+                          ...editingCard,
+                          googleReviewUrl: `https://search.google.com/local/writereview?placeid=${editPlaceId}`,
+                        });
+                      }
+                    }}
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: 9,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      background: editTargetType === "google"
+                        ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))"
+                        : "rgba(255, 255, 255, 0.04)",
+                      border: editTargetType === "google"
+                        ? "1px solid rgba(245, 158, 11, 0.6)"
+                        : "1px solid rgba(255, 255, 255, 0.08)",
+                      color: editTargetType === "google" ? "#FDE68A" : "var(--text-muted)",
+                      boxShadow: editTargetType === "google" ? "0 2px 10px rgba(245, 158, 11, 0.2)" : "none",
+                    }}
                   >
-                    🔍 Cari Place ID Baru ↗
-                  </a>
+                    <span>⭐</span> Google Review
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditTargetType("instagram");
+                      if (editInstagramUsername) {
+                        setEditingCard({
+                          ...editingCard,
+                          googleReviewUrl: formatInstagramUrl(editInstagramUsername),
+                        });
+                      }
+                    }}
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: 9,
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      background: editTargetType === "instagram"
+                        ? "linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(219, 39, 119, 0.35))"
+                        : "rgba(255, 255, 255, 0.04)",
+                      border: editTargetType === "instagram"
+                        ? "1px solid rgba(236, 72, 153, 0.6)"
+                        : "1px solid rgba(255, 255, 255, 0.08)",
+                      color: editTargetType === "instagram" ? "#FBCFE8" : "var(--text-muted)",
+                      boxShadow: editTargetType === "instagram" ? "0 2px 10px rgba(236, 72, 153, 0.2)" : "none",
+                    }}
+                  >
+                    <span>📸</span> Instagram
+                  </button>
                 </div>
-                <input
-                  className="input"
-                  value={editPlaceId}
-                  onChange={e => handlePlaceIdChange(e.target.value)}
-                  placeholder="cth: ChIJxxxxxxxxxxxxxxxxx"
-                  maxLength={120}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                />
-                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
-                  💡 <strong>Pindah Lokasi?</strong> Cukup ganti <strong>Place ID</strong> baru di sini. URL Review Google akan otomatis diperbarui dan langsung aktif saat kartu di-tap / di-scan pelanggan.
-                </p>
-                {editingCard.googleReviewUrl && (
-                  <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-                    <span>✅</span> URL Review Google aktif
-                  </div>
-                )}
               </div>
+
+              {editTargetType === "google" ? (
+                <div className="form-group">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <label className="label" style={{ marginBottom: 0 }}>
+                      Google Place ID (Lokasi Toko)
+                    </label>
+                    <a
+                      href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: "0.7rem", color: "#A5B4FC", textDecoration: "none", fontWeight: 600 }}
+                    >
+                      🔍 Cari Place ID Baru ↗
+                    </a>
+                  </div>
+                  <input
+                    className="input"
+                    value={editPlaceId}
+                    onChange={e => handlePlaceIdChange(e.target.value)}
+                    placeholder="cth: ChIJxxxxxxxxxxxxxxxxx"
+                    maxLength={120}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                  <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
+                    💡 <strong>Pindah Lokasi?</strong> Cukup ganti <strong>Place ID</strong> baru di sini. URL Review Google akan otomatis diperbarui dan langsung aktif saat kartu di-tap / di-scan pelanggan.
+                  </p>
+                  {editingCard.googleReviewUrl && (
+                    <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                      <span>✅</span> URL Review Google aktif
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="form-group">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <label className="label" style={{ marginBottom: 0 }}>
+                      Username atau Link Instagram
+                    </label>
+                    {editInstagramUsername && (
+                      <a
+                        href={formatInstagramUrl(editInstagramUsername)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: "0.7rem", color: "#F472B6", textDecoration: "none", fontWeight: 600 }}
+                      >
+                        Tes Buka Profil ↗
+                      </a>
+                    )}
+                  </div>
+                  <input
+                    className="input"
+                    value={editInstagramUsername}
+                    onChange={e => {
+                      const val = e.target.value.trim();
+                      setEditInstagramUsername(val);
+                      setEditingCard(prev => prev ? {
+                        ...prev,
+                        googleReviewUrl: val ? formatInstagramUrl(val) : "",
+                      } : null);
+                    }}
+                    placeholder="cth: @twlve.bakehouse atau https://instagram.com/..."
+                    maxLength={150}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                  <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
+                    💡 <strong>Ganti Akun IG?</strong> Masukkan username (dengan atau tanpa @) atau link Instagram toko yang baru.
+                  </p>
+                  {editingCard.googleReviewUrl && (
+                    <div style={{ fontSize: "0.72rem", color: "#34D399", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                      <span>✅</span> Link Instagram aktif: <strong style={{ color: "#FBCFE8", marginLeft: 4 }}>{editingCard.googleReviewUrl}</strong>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="label">Harga Jual (Rp)</label>
@@ -902,12 +1050,15 @@ export default function CardsPage() {
                 />
               </div>
 
-              {/* Deteksi jika nama toko atau URL Google Review berubah */}
+              {/* Deteksi jika nama toko atau tujuan redirect berubah */}
               {(() => {
+                const currentTarget = editTargetType === "instagram"
+                  ? formatInstagramUrl(editInstagramUsername)
+                  : (editPlaceId ? `https://search.google.com/local/writereview?placeid=${editPlaceId}` : (editingCard.googleReviewUrl?.trim() || ""));
                 const isLocationOrStoreChanged = Boolean(
                   originalCard && (
                     originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase() ||
-                    originalCard.googleReviewUrl.trim() !== editingCard.googleReviewUrl.trim()
+                    originalCard.googleReviewUrl.trim() !== currentTarget
                   )
                 );
                 const currentTaps = originalCard?.tapCount ?? 0;
@@ -924,9 +1075,9 @@ export default function CardsPage() {
                     marginBottom: 12,
                   }}>
                     <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                      <span>⚡</span> Toko atau Lokasi Diganti
+                      <span>⚡</span> Toko atau Target Pengalihan Diganti
                     </div>
-                    Nama toko atau Google Review telah diganti. Riwayat tap sebelumnya ({currentTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
+                    Nama toko atau target pengalihan telah diganti. Riwayat tap sebelumnya ({currentTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
                   </div>
                 ) : null;
               })()}

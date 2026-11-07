@@ -10,7 +10,69 @@ const ALLOWED_HOSTS = [
   "google.co.id",
   "www.google.co.id",
   "maps.google.co.id",
+  "instagram.com",
+  "www.instagram.com",
+  "instagr.am",
 ];
+
+export function isInstagramUrl(url?: string): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url.trim());
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host === "instagram.com" ||
+      host.endsWith(".instagram.com") ||
+      host === "instagr.am" ||
+      host.endsWith(".instagr.am")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function extractInstagramUsername(urlOrUsername?: string): string {
+  if (!urlOrUsername) return "";
+  let clean = urlOrUsername.trim().replace(/^@+/, "");
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    try {
+      const parsed = new URL(clean);
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      if (segments.length > 0 && !["p", "reel", "stories", "tv", "explore"].includes(segments[0].toLowerCase())) {
+        return segments[0];
+      }
+    } catch {}
+  }
+  // Bare username handling: bersihkan nama domain jika ada
+  clean = clean.replace(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\//i, "");
+  clean = clean.split("/")[0].split("?")[0].trim();
+  return clean;
+}
+
+export function formatInstagramUrl(input: string): string {
+  const raw = input.trim();
+  if (!raw) return "";
+
+  // Jika sudah URL Instagram lengkap untuk post/reel spesifik
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    try {
+      const parsed = new URL(raw);
+      if (isInstagramUrl(raw)) {
+        const pathname = parsed.pathname.replace(/\/+$/, "");
+        return `https://www.instagram.com${pathname}/`;
+      }
+    } catch {}
+  }
+
+  const username = extractInstagramUsername(raw);
+  if (!username) return "";
+  return `https://www.instagram.com/${username}/`;
+}
+
+export function getTargetType(url?: string): "google" | "instagram" {
+  return isInstagramUrl(url) ? "instagram" : "google";
+}
 
 export function isAllowedReviewUrl(url: string): boolean {
   try {
@@ -28,7 +90,11 @@ export function isAllowedReviewUrl(url: string): boolean {
       host === "g.page" ||
       host.endsWith(".g.page") ||
       host === "g.co" ||
-      host.endsWith(".g.co")
+      host.endsWith(".g.co") ||
+      host === "instagram.com" ||
+      host.endsWith(".instagram.com") ||
+      host === "instagr.am" ||
+      host.endsWith(".instagr.am")
     ) {
       return true;
     }
@@ -39,6 +105,10 @@ export function isAllowedReviewUrl(url: string): boolean {
 }
 
 export function getPublicGoogleReviewUrl(url?: string, storeName?: string): string {
+  if (url && isInstagramUrl(url)) {
+    return formatInstagramUrl(url);
+  }
+
   if (!url && storeName && storeName.trim()) {
     return `https://www.google.com/search?q=${encodeURIComponent(storeName.trim())}`;
   }

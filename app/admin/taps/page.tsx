@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import AdminNav from "../components/AdminNav";
-import { getPublicGoogleReviewUrl } from "../../../lib/redirect";
+import { getPublicGoogleReviewUrl, isInstagramUrl } from "../../../lib/redirect";
 
 type TapLogEntry = {
   code: string;
@@ -3259,17 +3259,25 @@ export default function TapsPage() {
                                   <span className="tap-time-exact">{timeStr}</span>
                                 </div>
 
-                                {showReviewBtn && reviewUrl && (
-                                  <a
-                                    href={reviewUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="tap-review-btn"
-                                    title={`Buka menu ulasan Google publik ${resolvedStoreName}`}
-                                  >
-                                    <span className="tap-review-text">Ulasan ↗</span>
-                                  </a>
-                                )}
+                                {showReviewBtn && reviewUrl && (() => {
+                                  const isIg = isInstagramUrl(reviewUrl);
+                                  return (
+                                    <a
+                                      href={reviewUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="tap-review-btn"
+                                      style={isIg ? {
+                                        borderColor: "rgba(236, 72, 153, 0.35)",
+                                        background: "rgba(236, 72, 153, 0.1)",
+                                        color: "#F472B6",
+                                      } : {}}
+                                      title={`${isIg ? "Buka profil Instagram" : "Buka menu ulasan Google publik"} ${resolvedStoreName}`}
+                                    >
+                                      <span className="tap-review-text">{isIg ? "Instagram ↗" : "Ulasan ↗"}</span>
+                                    </a>
+                                  );
+                                })()}
                               </div>
                             </div>
                           );
