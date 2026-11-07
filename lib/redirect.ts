@@ -74,6 +74,41 @@ export function getTargetType(url?: string): "google" | "instagram" {
   return isInstagramUrl(url) ? "instagram" : "google";
 }
 
+export function getInstagramDeepLinks(urlOrUsername: string): {
+  username: string;
+  webUrl: string;
+  iosUrl: string;
+  androidIntent: string;
+} {
+  const clean = (urlOrUsername || "").trim();
+  const username = extractInstagramUsername(clean);
+  const webUrl = formatInstagramUrl(clean);
+
+  // Jika URL mengarah ke post atau reel spesifik
+  const isPostOrReel = clean.includes("/p/") || clean.includes("/reel/");
+  if (isPostOrReel) {
+    try {
+      const parsed = new URL(clean);
+      const pathname = parsed.pathname.replace(/^\/|\/$/g, ""); // cth: "p/Cxyz123" atau "reel/Cxyz123"
+      return {
+        username: "",
+        webUrl,
+        iosUrl: `instagram://${pathname}`,
+        androidIntent: `intent://instagram.com/${pathname}/#Intent;package=com.instagram.android;scheme=https;end;`,
+      };
+    } catch {}
+  }
+
+  return {
+    username,
+    webUrl,
+    iosUrl: username ? `instagram://user?username=${encodeURIComponent(username)}` : "instagram://app",
+    androidIntent: username
+      ? `intent://instagram.com/_u/${encodeURIComponent(username)}/#Intent;package=com.instagram.android;scheme=https;end;`
+      : "intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end;",
+  };
+}
+
 export function isAllowedReviewUrl(url: string): boolean {
   try {
     const parsed = new URL(url.trim());
