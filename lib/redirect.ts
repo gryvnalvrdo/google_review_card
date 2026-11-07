@@ -94,7 +94,7 @@ export function getInstagramDeepLinks(urlOrUsername: string): {
         username: "",
         webUrl,
         iosUrl: `instagram://${pathname}`,
-        androidIntent: `intent://instagram.com/${pathname}/#Intent;package=com.instagram.android;scheme=https;end;`,
+        androidIntent: `intent://www.instagram.com/${pathname}/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(webUrl)};end;`,
       };
     } catch {}
   }
@@ -104,8 +104,8 @@ export function getInstagramDeepLinks(urlOrUsername: string): {
     webUrl,
     iosUrl: username ? `instagram://user?username=${encodeURIComponent(username)}` : "instagram://app",
     androidIntent: username
-      ? `intent://instagram.com/_u/${encodeURIComponent(username)}/#Intent;package=com.instagram.android;scheme=https;end;`
-      : "intent://instagram.com/#Intent;package=com.instagram.android;scheme=https;end;",
+      ? `intent://www.instagram.com/${encodeURIComponent(username)}/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(webUrl)};end;`
+      : `intent://www.instagram.com/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(webUrl)};end;`,
   };
 }
 
