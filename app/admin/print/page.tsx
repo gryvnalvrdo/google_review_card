@@ -45,6 +45,16 @@ const DEFAULT_PLACEMENT: QRPlacementConfig = {
   logoType: "none",
 };
 
+// Ukuran pixel QR final di kanvas ekspor (identik dengan area yang dipakai compositeCard)
+function getQrRenderSize(p: QRPlacementConfig, scale: number): number {
+  const boxSize = Math.round(p.size * scale);
+  if (p.style === "white_box") {
+    const pad = Math.min(Math.round((p.padding ?? 18) * scale), Math.floor(boxSize * 0.3));
+    return Math.max(16, boxSize - pad * 2);
+  }
+  return Math.max(16, boxSize);
+}
+
 // ─── Filter Pertajam Gambar (Anti-Blur Unsharp Mask Filter) ───────────────────
 function applySharpenFilter(
   ctx: CanvasRenderingContext2D,
@@ -292,6 +302,8 @@ function findInnerQROrDarkContent(
 }
 
 // ─── Hapus Pixel QR Dummy Langsung dari Data Gambar (True Pixel Erase) ────────
+// Versi cepat: membaca seluruh pixel sekali (bukan getImageData per-pixel) dan
+// mengisi area dengan interpolasi bilinear 4 sudut sehingga mulus di background gradient.
 function eraseDummyQRCodeFromImage(
   img: HTMLImageElement,
   qrBox: { x: number; y: number; size: number },
@@ -310,18 +322,20 @@ function eraseDummyQRCodeFromImage(
         return;
       }
       ctx.drawImage(img, 0, 0, cardW, cardH);
+      const frame = ctx.getImageData(0, 0, cardW, cardH);
+      const d = frame.data;
 
       // ── Langkah 1: Cari modul gelap QR di dalam qrBox untuk batas presisi ──
-      // Mencegah penghapusan area di luar QR (seperti border toast, ilustrasi, dsb.)
-      const step = Math.max(1, Math.floor(qrBox.size / 280));
-      let minX = cardW, maxX = 0, minY = cardH, maxY = 0;
-      let darkCount = 0;
-
-      for (let y = qrBox.y; y < Math.min(cardH, qrBox.y + qrBox.size); y += step) {
-        for (let x = qrBox.x; x < Math.min(cardW, qrBox.x + qrBox.size); x += step) {
-          const p = ctx.getImageData(x, y, 1, 1).data;
-          const lum = p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114;
-          if (lum < 115 && p[3] > 100) {
+      const x0 = Math.max(0, qrBox.x);
+      const y0 = Math.max(0, qrBox.y);
+      const x1 = Math.min(cardW, qrBox.x + qrBox.size);
+      const y1 = Math.min(cardH, qrBox.y + qrBox.size);
+      let minX = cardW, maxX = 0, minY = cardH, maxY = 0, darkCount = 0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          const i = (y * cardW + x) * 4;
+          const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+          if (lum < 115 && d[i + 3] > 100) {
             if (x < minX) minX = x;
             if (x > maxX) maxX = x;
             if (y < minY) minY = y;
@@ -331,17 +345,14 @@ function eraseDummyQRCodeFromImage(
         }
       }
 
-      let eraseX = qrBox.x;
-      let eraseY = qrBox.y;
-      let eraseSize = qrBox.size;
-
+      let eraseX = qrBox.x, eraseY = qrBox.y, eraseSize = qrBox.size;
       if (darkCount > 25 && maxX > minX && maxY > minY) {
         const rawW = maxX - minX;
         const rawH = maxY - minY;
         const ratio = rawW / (rawH || 1);
-        if (ratio >= 0.70 && ratio <= 1.40) {
-          // Tambahkan quiet zone secukupnya (maks 6%) agar modul QR tercover bersih
-          const qz = Math.max(3, Math.round(Math.max(rawW, rawH) * 0.05));
+        if (ratio >= 0.7 && ratio <= 1.4) {
+          // Quiet zone ekstra agar sisa anti-alias tepi modul ikut terhapus bersih
+          const qz = Math.max(4, Math.round(Math.max(rawW, rawH) * 0.06));
           const cX = (minX + maxX) / 2;
           const cY = (minY + maxY) / 2;
           const targetSize = Math.max(rawW, rawH) + qz * 2;
@@ -351,28 +362,57 @@ function eraseDummyQRCodeFromImage(
         }
       }
 
-      // ── Langkah 2: Sampling warna background quiet zone tepat di sebelah modul QR ──
-      let bg = fillColor;
-      if (!bg) {
-        const samplePts = [
-          [Math.max(0, eraseX - 4), Math.max(0, eraseY - 4)],
-          [Math.min(cardW - 1, eraseX + eraseSize + 4), Math.max(0, eraseY - 4)],
-          [Math.max(0, eraseX - 4), Math.min(cardH - 1, eraseY + eraseSize + 4)],
-          [Math.min(cardW - 1, eraseX + eraseSize + 4), Math.min(cardH - 1, eraseY + eraseSize + 4)],
-        ];
-        let sr = 0, sg = 0, sb = 0, sc = 0;
-        for (const [sx, sy] of samplePts) {
-          const d = ctx.getImageData(sx, sy, 1, 1).data;
-          if (d[3] > 100) {
-            sr += d[0]; sg += d[1]; sb += d[2]; sc++;
+      // ── Langkah 2: Isi area (solid jika background seragam, bilinear jika gradient) ──
+      const corner = (cx: number, cy: number) => {
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let oy = -1; oy <= 1; oy++) {
+          for (let ox = -1; ox <= 1; ox++) {
+            const px = Math.max(0, Math.min(cardW - 1, cx + ox));
+            const py = Math.max(0, Math.min(cardH - 1, cy + oy));
+            const i = (py * cardW + px) * 4;
+            r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
           }
         }
-        bg = sc > 0 ? `rgb(${Math.round(sr / sc)},${Math.round(sg / sc)},${Math.round(sb / sc)})` : "#FFFFFF";
-      }
+        return [r / n, g / n, b / n];
+      };
+      const ex1 = Math.min(cardW, eraseX + eraseSize);
+      const ey1 = Math.min(cardH, eraseY + eraseSize);
+      const gap = 5;
+      const tl = corner(eraseX - gap, eraseY - gap);
+      const tr = corner(ex1 + gap, eraseY - gap);
+      const bl = corner(eraseX - gap, ey1 + gap);
+      const br = corner(ex1 + gap, ey1 + gap);
+      const spread = Math.max(
+        ...[tr, bl, br].map((c) => Math.abs(c[0] - tl[0]) + Math.abs(c[1] - tl[1]) + Math.abs(c[2] - tl[2]))
+      );
 
-      // ── Langkah 3: Hapus HANYA area QR yang presisi ──
-      ctx.fillStyle = bg;
-      ctx.fillRect(eraseX, eraseY, eraseSize, eraseSize);
+      if (fillColor || spread < 24) {
+        // Solid
+        let fill = fillColor;
+        if (!fill) {
+          fill = `rgb(${Math.round((tl[0] + tr[0] + bl[0] + br[0]) / 4)},${Math.round((tl[1] + tr[1] + bl[1] + br[1]) / 4)},${Math.round((tl[2] + tr[2] + bl[2] + br[2]) / 4)})`;
+        }
+        ctx.fillStyle = fill;
+        ctx.fillRect(eraseX, eraseY, eraseSize, eraseSize);
+      } else {
+        // Bilinear gradient
+        const w = Math.max(1, ex1 - eraseX - 1);
+        const h = Math.max(1, ey1 - eraseY - 1);
+        for (let y = eraseY; y < ey1; y++) {
+          const v = (y - eraseY) / h;
+          for (let x = eraseX; x < ex1; x++) {
+            const u = (x - eraseX) / w;
+            const i = (y * cardW + x) * 4;
+            for (let c = 0; c < 3; c++) {
+              const top = tl[c] + (tr[c] - tl[c]) * u;
+              const bot = bl[c] + (br[c] - bl[c]) * u;
+              d[i + c] = top + (bot - top) * v;
+            }
+            d[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(frame, 0, 0);
+      }
 
       const cleanImg = new Image();
       cleanImg.onload = () => resolve({ image: cleanImg, erasedBox: { x: eraseX, y: eraseY, size: eraseSize } });
@@ -383,6 +423,111 @@ function eraseDummyQRCodeFromImage(
       resolve({ image: img, erasedBox: qrBox });
     }
   });
+}
+
+// ─── Pusatkan QR di Tengah "Slot" QR pada Desain ──────────────────────────────
+// Slot = area kosong/kotak yang disediakan desain untuk QR (bukan tengah kartu).
+// Dijalankan pada gambar yang SUDAH bersih dari dummy QR: dari titik pusat dummy,
+// telusuri ke kiri/kanan/atas/bawah sampai bertemu tepi kotak (warna berbeda).
+function centerQRInSlot(
+  img: HTMLImageElement,
+  box: { x: number; y: number; size: number }
+): { x: number; y: number; size: number; centered: boolean } {
+  const fallback = { ...box, centered: false };
+  try {
+    const cardW = img.naturalWidth || DEFAULT_CARD_W;
+    const cardH = img.naturalHeight || DEFAULT_CARD_H;
+    const canvas = document.createElement("canvas");
+    canvas.width = cardW;
+    canvas.height = cardH;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return fallback;
+    ctx.drawImage(img, 0, 0, cardW, cardH);
+    const d = ctx.getImageData(0, 0, cardW, cardH).data;
+
+    const cx = Math.round(box.x + box.size / 2);
+    const cy = Math.round(box.y + box.size / 2);
+    const ci = (cy * cardW + cx) * 4;
+    const bgR = d[ci], bgG = d[ci + 1], bgB = d[ci + 2];
+    const same = (x: number, y: number) => {
+      const i = (y * cardW + x) * 4;
+      return Math.abs(d[i] - bgR) + Math.abs(d[i + 1] - bgG) + Math.abs(d[i + 2] - bgB) < 48;
+    };
+    const maxSteps = Math.round(box.size * 1.6);
+    const march = (sx: number, sy: number, dx: number, dy: number) => {
+      let n = 0;
+      while (n < maxSteps) {
+        const nx = sx + dx * (n + 1);
+        const ny = sy + dy * (n + 1);
+        if (nx < 0 || ny < 0 || nx >= cardW || ny >= cardH) return maxSteps; // tak ada tepi
+        if (!same(nx, ny)) break;
+        n++;
+      }
+      return n;
+    };
+
+    // Horizontal (baris tengah QR selalu bersih setelah erase)
+    const left = march(cx, cy, -1, 0);
+    const right = march(cx, cy, 1, 0);
+    if (left >= maxSteps || right >= maxSteps) return fallback; // tidak ada kotak slot
+    const slotL = cx - left, slotR = cx + right;
+    const slotW = slotR - slotL;
+    if (slotW < box.size * 0.9 || slotW > box.size * 2.4) return fallback;
+
+    // Vertikal: telusuri di dekat sisi kiri & kanan slot (menghindari teks "Scan QR" di tengah)
+    const xa = Math.round(slotL + slotW * 0.1);
+    const xb = Math.round(slotR - slotW * 0.1);
+    const up = Math.min(march(xa, cy, 0, -1), march(xb, cy, 0, -1));
+    const down = Math.min(march(xa, cy, 0, 1), march(xb, cy, 0, 1));
+    const slotT = cy - up, slotB = cy + down;
+    const slotH = slotB - slotT;
+
+    // Slot vertikal valid hanya jika tinggi wajar & tidak ada konten (teks/ikon) di atas/bawah QR
+    let yValid = up < maxSteps && down < maxSteps && slotH >= box.size * 0.9 && slotH <= box.size * 2.4;
+    if (yValid) {
+      const sx0 = Math.round(slotL + slotW * 0.1), sx1 = Math.round(slotR - slotW * 0.1);
+      const bandClean = (ya: number, yb: number) => {
+        for (let y = Math.max(0, ya); y < Math.min(cardH, yb); y += 2)
+          for (let x = sx0; x < sx1; x += 2) if (!same(x, y)) return false;
+        return true;
+      };
+      yValid = bandClean(slotT, box.y) && bandClean(box.y + box.size, slotB);
+    }
+
+    const newCx = (slotL + slotR) / 2;
+    const newCy = yValid ? (slotT + slotB) / 2 : cy;
+    const limit = Math.min(slotW, yValid ? slotH : Infinity) * 0.96;
+    const size = Math.round(Math.min(box.size, limit));
+    return {
+      x: Math.max(0, Math.min(cardW - size, Math.round(newCx - size / 2))),
+      y: Math.max(0, Math.min(cardH - size, Math.round(newCy - size / 2))),
+      size,
+      centered: true,
+    };
+  } catch (err) {
+    console.warn("centerQRInSlot error:", err);
+    return fallback;
+  }
+}
+
+// Deteksi + hapus dummy + pusatkan di slot (dipakai oleh upload & tombol pindai ulang)
+async function processCustomDesign(sourceImg: HTMLImageElement) {
+  const result = await detectClientQRCode(sourceImg);
+  let activeImg = sourceImg;
+  let placement = { x: result.x, y: result.y, size: result.size };
+  let centered = false;
+  if (result.qrFound) {
+    const eraseRes = await eraseDummyQRCodeFromImage(
+      sourceImg,
+      { x: result.x, y: result.y, size: result.size },
+      result.bgColor
+    );
+    activeImg = eraseRes.image;
+    const slot = centerQRInSlot(activeImg, eraseRes.erasedBox);
+    placement = { x: slot.x, y: slot.y, size: slot.size };
+    centered = slot.centered;
+  }
+  return { result, activeImg, placement, centered };
 }
 
 // ─── Smart QR & Mockup Detection Algorithm (Multi-Tier) ──────────────────────
@@ -775,9 +920,11 @@ function compositeCard(
     const innerQrX = boxX + pad;
     const innerQrY = boxY + pad;
     const innerQrSize = Math.max(16, boxSize - pad * 2);
+    ctx.imageSmoothingEnabled = innerQrSize !== qrCanvas.width;
     ctx.drawImage(qrCanvas, innerQrX, innerQrY, innerQrSize, innerQrSize);
   } else {
     // 3. Gambar QR code langsung di atas kanvas (tanpa latar kotak)
+    ctx.imageSmoothingEnabled = boxSize !== qrCanvas.width;
     ctx.drawImage(qrCanvas, boxX, boxY, boxSize, boxSize);
   }
 
@@ -809,7 +956,11 @@ function renderStyledQR(
 
   const qr = QRCode.create(text, { errorCorrectionLevel: "H" });
   const count = qr.modules.size;
-  const cellSize = size / count;
+  // Ukuran modul dibulatkan ke pixel utuh agar tepi QR tajam (tidak blur/anti-alias) saat dicetak
+  const cellSize = Math.max(1, Math.floor(size / count));
+  const qrOffset = Math.floor((size - cellSize * count) / 2);
+  ctx.save();
+  ctx.translate(qrOffset, qrOffset);
 
   ctx.fillStyle = fgColor;
   ctx.strokeStyle = fgColor;
@@ -924,6 +1075,8 @@ function renderStyledQR(
     }
   });
 
+  ctx.restore();
+
   // 3. Center Logo Badge (jika logoType !== "none")
   if (logoType !== "none") {
     const centerPx = size / 2;
@@ -986,7 +1139,7 @@ function CardItem({
     if (!enhancedBgCanvas) return;
     const qrCanvas = document.createElement("canvas");
     // Render QR dengan resolusi vektor super tajam sesuai upscale factor
-    const qrRes = Math.max(Math.round(placement.size * upscaleFactor), 512 * upscaleFactor);
+    const qrRes = getQrRenderSize(placement, upscaleFactor);
     renderStyledQR(
       qrCanvas,
       url,
@@ -1077,7 +1230,7 @@ export default function PrintQRCodes() {
   const [snapFeedback, setSnapFeedback] = useState<string | null>(null);
 
   // Resolusi Ekspor & Filter Ketajaman Gambar (Anti-Blur)
-  const [upscaleFactor, setUpscaleFactor] = useState<1 | 2 | 3>(2); // Default 2x HD (300 DPI Cetak PVC)
+  const [upscaleFactor, setUpscaleFactor] = useState<1 | 2 | 3 | 4>(2); // Default 2x HD (300 DPI Cetak PVC)
   const [sharpenLevel, setSharpenLevel] = useState<"off" | "medium" | "high">("medium"); // Default anti-blur aktif
   const [previewZoomed, setPreviewZoomed] = useState(false);
   const [isScanningMock, setIsScanningMock] = useState(false);
@@ -1230,7 +1383,7 @@ export default function PrintQRCodes() {
       const savedQuality = localStorage.getItem("print_upscale_settings");
       if (savedQuality) {
         const q = JSON.parse(savedQuality);
-        if (q.upscaleFactor && [1, 2, 3].includes(q.upscaleFactor)) setUpscaleFactor(q.upscaleFactor);
+        if (q.upscaleFactor && [1, 2, 3, 4].includes(q.upscaleFactor)) setUpscaleFactor(q.upscaleFactor);
         if (q.sharpenLevel && ["off", "medium", "high"].includes(q.sharpenLevel)) setSharpenLevel(q.sharpenLevel);
       }
     } catch {}
@@ -1332,21 +1485,8 @@ export default function PrintQRCodes() {
 
         setIsScanningMock(true);
         setSnapFeedback("🔍 Memindai & menghapus mockup QR pada kartu...");
-        const result = await detectClientQRCode(img);
-
-        // HANYA hapus pixel jika dummy QR BENAR-BENAR TERDETEKSI (qrFound === true)!
-        // JANGAN pernah menghapus kotak kontainer jika tidak ada dummy QR di dalamnya!
-        let activeImg = img;
-        let finalPlacement = { x: result.x, y: result.y, size: result.size };
-        if (result.qrFound) {
-          const eraseRes = await eraseDummyQRCodeFromImage(
-            img,
-            { x: result.x, y: result.y, size: result.size },
-            result.bgColor
-          );
-          activeImg = eraseRes.image;
-          finalPlacement = eraseRes.erasedBox;
-        }
+        // HANYA hapus pixel jika dummy QR BENAR-BENAR TERDETEKSI; lalu QR baru dipusatkan di slot desain
+        const { result, activeImg, placement: finalPlacement } = await processCustomDesign(img);
         setCustomImg(activeImg);
         setBgImage(activeImg);
         setIsScanningMock(false);
@@ -1516,7 +1656,7 @@ export default function PrintQRCodes() {
         if (!bg) return null;
 
         const qrCanvas = document.createElement("canvas");
-        const qrRes = Math.max(Math.round(placement.size * upscaleFactor), 512 * upscaleFactor);
+        const qrRes = getQrRenderSize(placement, upscaleFactor);
         renderStyledQR(
           qrCanvas,
           `${baseUrl}/c/${code}`,
@@ -1612,21 +1752,7 @@ export default function PrintQRCodes() {
     if (!sourceImg) return;
     setIsScanningMock(true);
     setSnapFeedback("🔍 Sedang memindai & menghapus mockup QR pada kartu...");
-    const result = await detectClientQRCode(sourceImg);
-
-    // HANYA hapus pixel jika dummy QR BENAR-BENAR TERDETEKSI (qrFound === true)!
-    // JANGAN pernah menghapus kotak kontainer jika tidak ada dummy QR di dalamnya!
-    let activeImg = sourceImg;
-    let finalPlacement = { x: result.x, y: result.y, size: result.size };
-    if (result.qrFound) {
-      const eraseRes = await eraseDummyQRCodeFromImage(
-        sourceImg,
-        { x: result.x, y: result.y, size: result.size },
-        result.bgColor
-      );
-      activeImg = eraseRes.image;
-      finalPlacement = eraseRes.erasedBox;
-    }
+    const { result, activeImg, placement: finalPlacement } = await processCustomDesign(sourceImg);
 
     setCustomImg(activeImg);
     setBgImage(activeImg);
@@ -2923,10 +3049,10 @@ export default function PrintQRCodes() {
                                   ? "1x (Normal)"
                                   : upscaleFactor === 2
                                   ? "✨ 2x HD (300 DPI Cetak PVC) ⭐ Rekomendasi"
-                                  : "💎 3x Ultra HD (Cetak Industri)"}
+                                  : upscaleFactor === 3 ? "💎 3x Ultra HD (Cetak Industri)" : "🔥 4x Max (Poster / Cetak Besar)"}
                               </strong>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
                               <button
                                 type="button"
                                 onClick={() => setUpscaleFactor(1)}
@@ -2983,6 +3109,25 @@ export default function PrintQRCodes() {
                               >
                                 <span>💎 3x Ultra HD</span>
                                 <span style={{ fontSize: "0.65rem", opacity: 0.85 }}>{cardW * 3} × {cardH * 3} px</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setUpscaleFactor(4)}
+                                className="print-btn"
+                                style={{
+                                  padding: "9px 8px",
+                                  fontSize: "0.75rem",
+                                  justifyContent: "center",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  background: upscaleFactor === 4 ? "rgba(239, 68, 68, 0.25)" : "rgba(255,255,255,0.04)",
+                                  border: upscaleFactor === 4 ? "1px solid #EF4444" : "1px solid rgba(255,255,255,0.08)",
+                                  color: upscaleFactor === 4 ? "#FCA5A5" : "#94A3B8",
+                                  fontWeight: upscaleFactor === 4 ? 700 : 500,
+                                }}
+                              >
+                                <span>🔥 4x Max</span>
+                                <span style={{ fontSize: "0.65rem", opacity: 0.85 }}>{cardW * 4} × {cardH * 4} px</span>
                               </button>
                             </div>
                             <p style={{ fontSize: "0.7rem", color: "#64748B", margin: "6px 0 0", lineHeight: 1.45 }}>
@@ -3080,7 +3225,7 @@ export default function PrintQRCodes() {
                               <span style={{ color: "#FFF", fontFamily: "monospace" }}>{cardW * upscaleFactor} × {cardH * upscaleFactor} px</span>
                             </div>
                             <div style={{ color: "#6EE7B7" }}>
-                              • QR Code digenerate dalam resolusi vektor ultra-tajam ({Math.max(Math.round(placement.size * upscaleFactor), 512 * upscaleFactor)} px)
+                              • QR Code digenerate dalam resolusi vektor ultra-tajam ({getQrRenderSize(placement, upscaleFactor)} px, modul dipaskan ke pixel utuh)
                             </div>
                             <div style={{ color: "#6EE7B7" }}>
                               • Seluruh file PNG &amp; ZIP yang di-download langsung beresolusi HD tanpa perlu edit manual
