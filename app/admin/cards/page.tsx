@@ -627,99 +627,25 @@ export default function CardsPage() {
                       >
                         {/* Row 1: Header (Store Name & Code) + Edit/Delete Buttons (Anchored) */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF", wordBreak: "break-word" }}>
-                                {card.storeName}
-                              </h3>
-                              <button
-                                type="button"
-                                onClick={() => copyCodeText(card.code)}
-                                title="Klik untuk salin kode"
-                                style={{
-                                  display: "inline-flex", alignItems: "center", gap: 4,
-                                  background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)",
-                                  color: "#A5B4FC", fontFamily: "monospace", fontSize: "0.75rem",
-                                  fontWeight: 700, padding: "2px 8px", borderRadius: 6, cursor: "pointer",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {card.code}
-                                <span style={{ fontSize: "0.65rem" }}>{copiedCode === card.code ? "✅" : "📋"}</span>
-                              </button>
-                            </div>
-
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
-                              <span className="badge badge-green">● Aktif</span>
-                              {!hasCost && (
-                                <button
-                                  type="button"
-                                  onClick={() => startEdit(card)}
-                                  className="badge"
-                                  style={{
-                                    background: "rgba(245, 158, 11, 0.16)",
-                                    border: "1px solid rgba(245, 158, 11, 0.45)",
-                                    color: "#FCD34D",
-                                    fontSize: "0.68rem",
-                                    fontWeight: 700,
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 3,
-                                    cursor: "pointer",
-                                  }}
-                                  title="Klik untuk mengisi modal awal kartu ini"
-                                >
-                                  ⚠️ Modal Belum Diisi ✏️
-                                </button>
-                              )}
-                              {/* Cluster: Jumlah Tap & Reset Tap selalu sejajar (side-by-side) */}
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                                <Link
-                                  href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
-                                  className="badge badge-orange"
-                                  style={{
-                                    textDecoration: "none",
-                                    cursor: "pointer",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 4,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  title={`Klik untuk buka seluruh riwayat tap ${card.storeName}`}
-                                >
-                                  👆 {card.tapCount ?? 0} Tap ↗
-                                </Link>
-                                {(card.tapCount ?? 0) > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleResetTaps(card)}
-                                    disabled={resettingCode === card.code}
-                                    style={{
-                                      fontSize: "0.68rem",
-                                      fontWeight: 700,
-                                      color: "#FCA5A5",
-                                      background: "rgba(239, 68, 68, 0.12)",
-                                      border: "1px solid rgba(239, 68, 68, 0.25)",
-                                      borderRadius: 6,
-                                      padding: "2px 7px",
-                                      cursor: "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 3,
-                                      whiteSpace: "nowrap",
-                                      lineHeight: 1.4,
-                                      transition: "all 0.15s ease",
-                                    }}
-                                    title={`Reset ${card.tapCount} tap kartu ini kembali ke 0`}
-                                  >
-                                    {resettingCode === card.code ? "⏳..." : "🔄 Reset Tap ke 0"}
-                                  </button>
-                                )}
-                              </div>
-                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                                Ditambahkan: {formatDate(card.createdAt)}
-                              </span>
-                            </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
+                            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF", wordBreak: "break-word" }}>
+                              {card.storeName}
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={() => copyCodeText(card.code)}
+                              title="Klik untuk salin kode"
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                                background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)",
+                                color: "#A5B4FC", fontFamily: "monospace", fontSize: "0.75rem",
+                                fontWeight: 700, padding: "2px 8px", borderRadius: 6, cursor: "pointer",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {card.code}
+                              <span style={{ fontSize: "0.65rem" }}>{copiedCode === card.code ? "✅" : "📋"}</span>
+                            </button>
                           </div>
 
                           {/* Action Buttons: Anchored top-right with clean standard app icons */}
@@ -744,6 +670,82 @@ export default function CardsPage() {
                               <TrashIcon size={14} color="#F87171" />
                             </button>
                           </div>
+                        </div>
+
+                        {/* Row 1.5: Badges Row — Full Width (Aktif, Jumlah Tap, dan Reset Tap SEJAJAR SEMUA!) */}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                          {/* Main Status & Tap Cluster — dipastikan sejajar satu baris */}
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
+                            <span className="badge badge-green" style={{ whiteSpace: "nowrap" }}>● Aktif</span>
+                            <Link
+                              href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
+                              className="badge badge-orange"
+                              style={{
+                                textDecoration: "none",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                whiteSpace: "nowrap",
+                              }}
+                              title={`Klik untuk buka seluruh riwayat tap ${card.storeName}`}
+                            >
+                              👆 {card.tapCount ?? 0} Tap ↗
+                            </Link>
+                            {(card.tapCount ?? 0) > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleResetTaps(card)}
+                                disabled={resettingCode === card.code}
+                                style={{
+                                  fontSize: "0.68rem",
+                                  fontWeight: 700,
+                                  color: "#FCA5A5",
+                                  background: "rgba(239, 68, 68, 0.12)",
+                                  border: "1px solid rgba(239, 68, 68, 0.25)",
+                                  borderRadius: 6,
+                                  padding: "2px 7px",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  whiteSpace: "nowrap",
+                                  lineHeight: 1.4,
+                                  transition: "all 0.15s ease",
+                                }}
+                                title={`Reset ${card.tapCount} tap kartu ini kembali ke 0`}
+                              >
+                                {resettingCode === card.code ? "⏳..." : "🔄 Reset Tap ke 0"}
+                              </button>
+                            )}
+                          </div>
+
+                          {!hasCost && (
+                            <button
+                              type="button"
+                              onClick={() => startEdit(card)}
+                              className="badge"
+                              style={{
+                                background: "rgba(245, 158, 11, 0.16)",
+                                border: "1px solid rgba(245, 158, 11, 0.45)",
+                                color: "#FCD34D",
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                              title="Klik untuk mengisi modal awal kartu ini"
+                            >
+                              ⚠️ Modal Belum Diisi ✏️
+                            </button>
+                          )}
+
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                            Ditambahkan: {formatDate(card.createdAt)}
+                          </span>
                         </div>
 
                         {/* Row 2: Details Summary (Keuntungan, Harga Jual, Modal & Target Ulasan/Instagram) */}
