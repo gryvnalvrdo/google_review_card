@@ -372,43 +372,27 @@ export default function CardsPage() {
               </p>
             </div>
 
-            {/* Metrics: Kartu Aktif & Keuntungan Bersih */}
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-              <div style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 16px",
-                background: "linear-gradient(180deg, rgba(99,102,241,0.12), rgba(99,102,241,0.04))",
-                border: "1px solid rgba(99,102,241,0.3)",
-                borderRadius: 12,
-              }}>
-                <span style={{ fontSize: "1.2rem" }}>💳</span>
-                <div>
-                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    Kartu Toko Aktif
+            {/* Metrics: Kartu Aktif & Keuntungan Bersih (Side by Side di Mobile & Desktop) */}
+            <div className="cards-header-pills">
+              <div className="cards-header-pill cards-pill-cards">
+                <span className="cards-pill-icon">💳</span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="cards-pill-label">
+                    Kartu Aktif
                   </div>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                    {cards.length} <span style={{ fontSize: "0.78rem", color: "#94A3B8", fontWeight: 600 }}>kartu</span>
+                  <div className="cards-pill-val">
+                    {cards.length} <span style={{ fontSize: "0.72rem", color: "#94A3B8", fontWeight: 600 }}>kartu</span>
                   </div>
                 </div>
               </div>
 
-              <div style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 16px",
-                background: "linear-gradient(180deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04))",
-                border: "1px solid rgba(16,185,129,0.3)",
-                borderRadius: 12,
-              }}>
-                <span style={{ fontSize: "1.2rem" }}>💰</span>
-                <div>
-                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#6EE7B7", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              <div className="cards-header-pill cards-pill-profit">
+                <span className="cards-pill-icon">💰</span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="cards-pill-label" style={{ color: "#6EE7B7" }}>
                     Keuntungan Bersih
                   </div>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#34D399", lineHeight: 1.1 }}>
+                  <div className="cards-pill-val" style={{ color: "#34D399" }}>
                     Rp {totalProfit.toLocaleString("id-ID")}
                   </div>
                 </div>
@@ -605,10 +589,10 @@ export default function CardsPage() {
                             <div className="card-details-summary">
                               <div className="card-finance-grid">
                                 <div className="card-finance-item">
-                                  <span className="card-finance-label">Untung Bersih</span>
-                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171" }} className="card-finance-val-hero">
-                                    Rp {cardProfit.toLocaleString("id-ID")}
-                                  </strong>
+                                  <span className="card-finance-label">Modal Awal</span>
+                                  <span className="card-finance-val" style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)" }}>
+                                    Rp {cardCost.toLocaleString("id-ID")}
+                                  </span>
                                 </div>
                                 <div className="card-finance-item card-finance-divider">
                                   <span className="card-finance-label">Harga Jual</span>
@@ -617,10 +601,10 @@ export default function CardsPage() {
                                   </span>
                                 </div>
                                 <div className="card-finance-item card-finance-divider">
-                                  <span className="card-finance-label">Modal Awal</span>
-                                  <span className="card-finance-val" style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)" }}>
-                                    Rp {cardCost.toLocaleString("id-ID")}
-                                  </span>
+                                  <span className="card-finance-label" style={{ color: "#6EE7B7" }}>Untung Bersih</span>
+                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171" }} className="card-finance-val-hero">
+                                    Rp {cardProfit.toLocaleString("id-ID")}
+                                  </strong>
                                 </div>
                               </div>
 
@@ -1128,17 +1112,6 @@ export default function CardsPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 10 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="label">Harga Jual (Rp)</label>
-                  <PriceStepperInput
-                    value={editingCard.price ?? 50000}
-                    onChange={p => setEditingCard({ ...editingCard, price: p })}
-                    placeholder="50.000"
-                    step={5000}
-                    min={0}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="label">Modal Awal (Rp)</label>
                   <PriceStepperInput
                     value={editingCard.cost ?? 0}
@@ -1147,6 +1120,17 @@ export default function CardsPage() {
                     step={5000}
                     min={0}
                     required={false}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="label">Harga Jual (Rp)</label>
+                  <PriceStepperInput
+                    value={editingCard.price ?? 50000}
+                    onChange={p => setEditingCard({ ...editingCard, price: p })}
+                    placeholder="50.000"
+                    step={5000}
+                    min={0}
                   />
                 </div>
               </div>

@@ -5155,4 +5155,77 @@ input[type="number"] {
   }
 }
 
+/* === Cards Header Metric Pills (Side by Side on Mobile & Desktop) === */
+.cards-header-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.cards-header-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  min-width: 0;
+}
+
+.cards-pill-cards {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.12), rgba(99, 102, 241, 0.04));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.cards-pill-profit {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.cards-pill-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.cards-pill-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #A5B4FC;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cards-pill-val {
+  font-size: clamp(0.85rem, 3.6vw, 1.15rem);
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .cards-header-pills {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: auto;
+  }
+  .cards-header-pill {
+    padding: 8px 16px;
+    gap: 10px;
+  }
+  .cards-pill-icon {
+    font-size: 1.2rem;
+  }
+  .cards-pill-val {
+    font-size: 1.2rem;
+  }
+}
+
+
 

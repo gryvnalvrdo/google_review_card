@@ -643,18 +643,6 @@ export default function AdminDashboard() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 10 }}>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="label" htmlFor="price">Harga Jual (Rp)</label>
-          <PriceStepperInput
-            id="price"
-            value={price}
-            onChange={setPrice}
-            placeholder="50.000"
-            step={5000}
-            min={0}
-          />
-        </div>
-
-        <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="label" htmlFor="cost">Modal Awal (Rp)</label>
           <PriceStepperInput
             id="cost"
@@ -664,6 +652,18 @@ export default function AdminDashboard() {
             step={5000}
             min={0}
             required={false}
+          />
+        </div>
+
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="label" htmlFor="price">Harga Jual (Rp)</label>
+          <PriceStepperInput
+            id="price"
+            value={price}
+            onChange={setPrice}
+            placeholder="50.000"
+            step={5000}
+            min={0}
           />
         </div>
       </div>
