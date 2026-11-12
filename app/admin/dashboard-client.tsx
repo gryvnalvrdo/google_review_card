@@ -15,6 +15,7 @@ type CardRecord = {
   updatedAt?: string;
   tapCount?: number;
   price?: number;
+  cost?: number;
 };
 
 type TapLogEntry = {
@@ -54,6 +55,7 @@ export default function AdminDashboard() {
   const [placeId, setPlaceId] = useState("");
   const [instagramUsername, setInstagramUsername] = useState("");
   const [price, setPrice] = useState<number>(50000);
+  const [cost, setCost] = useState<number>(0);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -198,7 +200,7 @@ export default function AdminDashboard() {
 
   function resetForm() {
     setCode(""); setStoreName(""); setGoogleReviewUrl(""); setPlaceId(""); setInstagramUsername("");
-    setTargetType("google"); setPrice(50000);
+    setTargetType("google"); setPrice(50000); setCost(0);
     setMessage(null); setError(null); setIsEditing(false);
     setSavedCardUrl(null); setCopiedNfc(false);
     setEditingOriginalCard(null);
@@ -217,6 +219,7 @@ export default function AdminDashboard() {
     const rawUrl = card.googleReviewUrl || "";
     setGoogleReviewUrl(rawUrl);
     setPrice(card.price ?? 50000);
+    setCost(card.cost ?? 0);
     setEditingOriginalCard(card);
     setConfirmResetTaps(false);
     setMessage(null); setError(null);
@@ -276,6 +279,7 @@ export default function AdminDashboard() {
         storeName: storeName.trim(),
         googleReviewUrl: finalTargetUrl,
         price: price,
+        cost: cost,
         resetTaps: shouldResetTaps,
       }),
     });
@@ -348,6 +352,8 @@ export default function AdminDashboard() {
   // Active cards and calculations
   const totalTaps = useMemo(() => cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0), [cards]);
   const totalRevenue = useMemo(() => cards.reduce((sum, c) => sum + (c.price ?? 50000), 0), [cards]);
+  const totalCost = useMemo(() => cards.reduce((sum, c) => sum + (c.cost ?? 0), 0), [cards]);
+  const totalProfit = useMemo(() => totalRevenue - totalCost, [totalRevenue, totalCost]);
 
 
   // ── Form content (shared between desktop sidebar & mobile sheet) ──
@@ -635,16 +641,55 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="form-group">
-        <label className="label" htmlFor="price">Harga Jual (Rp)</label>
-        <PriceStepperInput
-          id="price"
-          value={price}
-          onChange={setPrice}
-          placeholder="50000"
-          step={5000}
-          min={0}
-        />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 10 }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="label" htmlFor="price">Harga Jual (Rp)</label>
+          <PriceStepperInput
+            id="price"
+            value={price}
+            onChange={setPrice}
+            placeholder="50000"
+            step={5000}
+            min={0}
+          />
+        </div>
+
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="label" htmlFor="cost">Modal Awal (Rp)</label>
+          <PriceStepperInput
+            id="cost"
+            value={cost}
+            onChange={setCost}
+            placeholder="0"
+            step={5000}
+            min={0}
+            required={false}
+          />
+        </div>
+      </div>
+
+      {/* Estimasi Keuntungan Bersih per kartu */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "8px 12px",
+        background: (price - cost) >= 0 ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 68, 68, 0.08)",
+        border: `1px solid ${(price - cost) >= 0 ? "rgba(16, 185, 129, 0.22)" : "rgba(239, 68, 68, 0.25)"}`,
+        borderRadius: 8,
+        marginBottom: 16,
+      }}>
+        <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5 }}>
+          <span>💵</span>
+          <span>Untung Bersih / Kartu:</span>
+        </span>
+        <span style={{
+          fontSize: "0.85rem",
+          fontWeight: 800,
+          color: (price - cost) >= 0 ? "#34D399" : "#F87171",
+        }}>
+          Rp {(price - cost).toLocaleString("id-ID")}
+        </span>
       </div>
 
       {/* Deteksi jika target pengalihan atau nama toko berubah saat edit */}
@@ -872,11 +917,18 @@ export default function AdminDashboard() {
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "calc(110px + env(safe-area-inset-bottom, 24px))" }}>
         <main style={{ maxWidth: 1080, margin: "0 auto", padding: "24px 20px" }}>
 
-          {/* Quick Stats Grid (Hero Revenue Card on mobile, 3-col on desktop) */}
+          {/* Quick Stats Grid (Hero Profit Card on mobile, 3-col on desktop) */}
           <div className="stats-grid-3" style={{ marginBottom: 22 }}>
             {[
               { id: "cards", label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#6366F1", sub: "Terhubung Google Review" },
-              { id: "revenue", label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString("id-ID")}`, icon: "💰", color: "#10B981", sub: "Penjualan fisik kartu" },
+              {
+                id: "revenue",
+                label: "Keuntungan Bersih",
+                value: `Rp ${totalProfit.toLocaleString("id-ID")}`,
+                icon: "💰",
+                color: "#10B981",
+                sub: `Omzet: Rp ${totalRevenue.toLocaleString("id-ID")} • Modal: Rp ${totalCost.toLocaleString("id-ID")}`,
+              },
               { id: "taps", label: "Total Tap Pelanggan", value: totalTaps, icon: "👆", color: "#F59E0B", sub: "Scan QR & tap NFC aktif" },
             ].map((s) => (
               <div

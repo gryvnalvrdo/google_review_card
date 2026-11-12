@@ -36,7 +36,10 @@ export async function POST(req: NextRequest) {
   const code = body?.code?.trim();
   const storeName = body?.storeName?.trim();
   const googleReviewUrl = body?.googleReviewUrl?.trim();
-  const price = typeof body?.price === "number" ? body.price : 50000;
+  const price = typeof body?.price === "number" ? Math.max(0, body.price) : 50000;
+  const cost = typeof body?.cost === "number"
+    ? Math.max(0, body.cost)
+    : (typeof body?.modal === "number" ? Math.max(0, body.modal) : 0);
   const explicitResetTap = Boolean(body?.resetTaps || body?.resetTap);
 
   if (!code || !storeName || !googleReviewUrl) {
@@ -80,6 +83,7 @@ export async function POST(req: NextRequest) {
     storeName,
     googleReviewUrl,
     price,
+    cost,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   });

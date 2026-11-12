@@ -58,13 +58,14 @@ interface CardData {
   tapCount: number;
   createdAt: string;
   price?: number;
+  cost?: number;
 }
 
 export default function CardsPage() {
   const [cards, setCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price">("date");
+  const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price" | "profit">("date");
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [originalCard, setOriginalCard] = useState<CardData | null>(null);
@@ -203,6 +204,7 @@ export default function CardsPage() {
         storeName: editingCard.storeName.trim(),
         googleReviewUrl: finalTargetUrl,
         price: editingCard.price ?? 50000,
+        cost: editingCard.cost ?? 0,
         resetTaps: shouldResetTaps,
       }),
     });
@@ -275,6 +277,7 @@ export default function CardsPage() {
       .sort((a, b) => {
         if (sortBy === "tap") return (b.tapCount || 0) - (a.tapCount || 0);
         if (sortBy === "name") return a.storeName.localeCompare(b.storeName);
+        if (sortBy === "profit") return ((b.price ?? 50000) - (b.cost ?? 0)) - ((a.price ?? 50000) - (a.cost ?? 0));
         if (sortBy === "price") return (b.price ?? 50000) - (a.price ?? 50000);
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -283,6 +286,8 @@ export default function CardsPage() {
   }, [cards, searchTerm, sortBy]);
 
   const totalRevenue = useMemo(() => cards.reduce((s, c) => s + (c.price ?? 50000), 0), [cards]);
+  const totalCost = useMemo(() => cards.reduce((s, c) => s + (c.cost ?? 0), 0), [cards]);
+  const totalProfit = useMemo(() => totalRevenue - totalCost, [totalRevenue, totalCost]);
   const totalTaps = useMemo(() => cards.reduce((s, c) => s + (c.tapCount ?? 0), 0), [cards]);
 
   return (
@@ -367,23 +372,45 @@ export default function CardsPage() {
               </p>
             </div>
 
-            {/* Single Metric: Kartu Aktif Saja */}
-            <div style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "8px 16px",
-              background: "linear-gradient(180deg, rgba(99,102,241,0.12), rgba(99,102,241,0.04))",
-              border: "1px solid rgba(99,102,241,0.3)",
-              borderRadius: 12,
-            }}>
-              <span style={{ fontSize: "1.2rem" }}>💳</span>
-              <div>
-                <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Kartu Toko Aktif
+            {/* Metrics: Kartu Aktif & Keuntungan Bersih */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 16px",
+                background: "linear-gradient(180deg, rgba(99,102,241,0.12), rgba(99,102,241,0.04))",
+                border: "1px solid rgba(99,102,241,0.3)",
+                borderRadius: 12,
+              }}>
+                <span style={{ fontSize: "1.2rem" }}>💳</span>
+                <div>
+                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#A5B4FC", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Kartu Toko Aktif
+                  </div>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
+                    {cards.length} <span style={{ fontSize: "0.78rem", color: "#94A3B8", fontWeight: 600 }}>kartu</span>
+                  </div>
                 </div>
-                <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
-                  {cards.length} <span style={{ fontSize: "0.78rem", color: "#94A3B8", fontWeight: 600 }}>kartu</span>
+              </div>
+
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 16px",
+                background: "linear-gradient(180deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04))",
+                border: "1px solid rgba(16,185,129,0.3)",
+                borderRadius: 12,
+              }}>
+                <span style={{ fontSize: "1.2rem" }}>💰</span>
+                <div>
+                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#6EE7B7", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Keuntungan Bersih
+                  </div>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#34D399", lineHeight: 1.1 }}>
+                    Rp {totalProfit.toLocaleString("id-ID")}
+                  </div>
                 </div>
               </div>
             </div>
@@ -417,7 +444,7 @@ export default function CardsPage() {
 
                 <select
                   value={sortBy}
-                  onChange={e => setSortBy(e.target.value as "date" | "tap" | "name" | "price")}
+                  onChange={e => setSortBy(e.target.value as "date" | "tap" | "name" | "price" | "profit")}
                   style={{
                     flex: "0 0 auto",
                     maxWidth: "46%",
@@ -434,9 +461,10 @@ export default function CardsPage() {
                   }}
                 >
                   <option value="date" style={{ background: "#111118" }}>Terbaru Ditambahkan</option>
+                  <option value="profit" style={{ background: "#111118" }}>Keuntungan Tertinggi</option>
+                  <option value="price" style={{ background: "#111118" }}>Harga Jual Tertinggi</option>
                   <option value="tap" style={{ background: "#111118" }}>Tap Terbanyak</option>
                   <option value="name" style={{ background: "#111118" }}>Nama Toko (A–Z)</option>
-                  <option value="price" style={{ background: "#111118" }}>Harga Jual Tertinggi</option>
                 </select>
               </div>
 
@@ -566,10 +594,13 @@ export default function CardsPage() {
                           </div>
                         </div>
 
-                        {/* Row 2: Details Summary (Harga Jual & Target Ulasan/Instagram) */}
+                        {/* Row 2: Details Summary (Keuntungan, Harga Jual, Modal & Target Ulasan/Instagram) */}
                         {(() => {
                           const isIg = isInstagramUrl(card.googleReviewUrl);
                           const targetUrl = getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName);
+                          const cardPrice = card.price ?? 50000;
+                          const cardCost = card.cost ?? 0;
+                          const cardProfit = cardPrice - cardCost;
                           return (
                             <div style={{
                               display: "flex",
@@ -583,13 +614,27 @@ export default function CardsPage() {
                               border: "1px solid rgba(255,255,255,0.04)",
                               flexWrap: "wrap",
                             }}>
-                              <div>
-                                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
-                                <strong style={{ color: "#34D399", fontSize: "0.95rem", fontWeight: 700 }}>
-                                  Rp {(card.price ?? 50000).toLocaleString("id-ID")}
-                                </strong>
+                              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                                <div>
+                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Untung Bersih</span>
+                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171", fontSize: "0.95rem", fontWeight: 700 }}>
+                                    Rp {cardProfit.toLocaleString("id-ID")}
+                                  </strong>
+                                </div>
+                                <div style={{ borderLeft: "1px solid rgba(255,255,255,0.08)", paddingLeft: 12 }}>
+                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
+                                  <span style={{ color: "#E2E8F0", fontSize: "0.82rem", fontWeight: 600 }}>
+                                    Rp {cardPrice.toLocaleString("id-ID")}
+                                  </span>
+                                </div>
+                                <div style={{ borderLeft: "1px solid rgba(255,255,255,0.08)", paddingLeft: 12 }}>
+                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Modal Awal</span>
+                                  <span style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600 }}>
+                                    Rp {cardCost.toLocaleString("id-ID")}
+                                  </span>
+                                </div>
                               </div>
-                              <div style={{ textAlign: "right" }}>
+                              <div style={{ textAlign: "right", marginLeft: "auto" }}>
                                 <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>
                                   {isIg ? "Target Instagram" : "Target Google Review"}
                                 </span>
@@ -1103,16 +1148,61 @@ export default function CardsPage() {
                 </div>
               )}
 
-              <div className="form-group">
-                <label className="label">Harga Jual (Rp)</label>
-                <PriceStepperInput
-                  value={editingCard.price ?? 50000}
-                  onChange={p => setEditingCard({ ...editingCard, price: p })}
-                  placeholder="50000"
-                  step={5000}
-                  min={0}
-                />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 10 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="label">Harga Jual (Rp)</label>
+                  <PriceStepperInput
+                    value={editingCard.price ?? 50000}
+                    onChange={p => setEditingCard({ ...editingCard, price: p })}
+                    placeholder="50000"
+                    step={5000}
+                    min={0}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="label">Modal Awal (Rp)</label>
+                  <PriceStepperInput
+                    value={editingCard.cost ?? 0}
+                    onChange={c => setEditingCard({ ...editingCard, cost: c })}
+                    placeholder="0"
+                    step={5000}
+                    min={0}
+                    required={false}
+                  />
+                </div>
               </div>
+
+              {/* Estimasi Keuntungan Bersih per kartu */}
+              {(() => {
+                const p = editingCard.price ?? 50000;
+                const c = editingCard.cost ?? 0;
+                const profit = p - c;
+                return (
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 12px",
+                    background: profit >= 0 ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 68, 68, 0.08)",
+                    border: `1px solid ${profit >= 0 ? "rgba(16, 185, 129, 0.22)" : "rgba(239, 68, 68, 0.25)"}`,
+                    borderRadius: 8,
+                    marginBottom: 16,
+                  }}>
+                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5 }}>
+                      <span>💵</span>
+                      <span>Untung Bersih / Kartu:</span>
+                    </span>
+                    <span style={{
+                      fontSize: "0.85rem",
+                      fontWeight: 800,
+                      color: profit >= 0 ? "#34D399" : "#F87171",
+                    }}>
+                      Rp {profit.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Deteksi jika target pengalihan atau nama toko berubah saat edit */}
               {(() => {

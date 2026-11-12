@@ -35,6 +35,7 @@ export type CardRecord = {
   createdAt: string;
   updatedAt: string;
   price?: number;
+  cost?: number; // Modal awal pembuatan kartu (HPP)
 };
 
 const KEY_PREFIX   = "card:";
@@ -77,6 +78,7 @@ if (!hasKv && memoryStore.size === 0) {
       createdAt: new Date(Date.now() - 60 * 86400000).toISOString(),
       updatedAt: new Date().toISOString(),
       price: 150000,
+      cost: 25000,
     });
   }
 
