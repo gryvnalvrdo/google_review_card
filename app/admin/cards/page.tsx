@@ -74,12 +74,10 @@ export default function CardsPage() {
   const [editTargetType, setEditTargetType] = useState<"google" | "instagram">("google");
   const [editPlaceId, setEditPlaceId] = useState("");
   const [editInstagramUsername, setEditInstagramUsername] = useState("");
-  const [editConfirmResetTaps, setEditConfirmResetTaps] = useState(false);
 
   function startEdit(card: CardData) {
     setEditingCard({ ...card });
     setOriginalCard(card);
-    setEditConfirmResetTaps(false);
     const rawUrl = card.googleReviewUrl || "";
     if (isInstagramUrl(rawUrl)) {
       setEditTargetType("instagram");
@@ -192,7 +190,6 @@ export default function CardsPage() {
     const isTargetChanged = Boolean(
       originalCard && originalCard.googleReviewUrl.trim() !== finalTargetUrl
     );
-    const shouldResetTaps = Boolean(isTargetChanged && editConfirmResetTaps);
 
     const res = await fetch("/api/admin/codes", {
       method: "POST",
@@ -203,7 +200,7 @@ export default function CardsPage() {
         googleReviewUrl: finalTargetUrl,
         price: editingCard.price ?? 50000,
         cost: editingCard.cost ?? 0,
-        resetTaps: shouldResetTaps,
+        resetTaps: isTargetChanged,
       }),
     });
     if (res.ok) {
@@ -331,82 +328,98 @@ export default function CardsPage() {
         return (
           <>
             <div
-              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 300, backdropFilter: "blur(8px)" }}
+              style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.82)", zIndex: 300, backdropFilter: "blur(10px)" }}
               onClick={() => setDeleteConfirmCode(null)}
             />
             <div style={{
               position: "fixed", top: "50%", left: "50%",
               transform: "translate(-50%, -50%)", zIndex: 301,
-              background: "linear-gradient(180deg, #181522 0%, #0F0E17 100%)",
-              border: "1px solid rgba(239, 68, 68, 0.4)",
-              borderRadius: 20, padding: "26px 22px",
-              width: "min(92vw, 400px)", textAlign: "center",
-              boxShadow: "0 25px 60px -10px rgba(0,0,0,0.85), 0 0 35px rgba(239, 68, 68, 0.16)",
+              background: "linear-gradient(180deg, #191624 0%, #100E17 100%)",
+              border: "1px solid rgba(239, 68, 68, 0.38)",
+              borderRadius: 22, padding: "26px 22px 22px",
+              width: "min(92vw, 390px)", textAlign: "center",
+              boxShadow: "0 28px 65px -12px rgba(0,0,0,0.9), 0 0 40px rgba(239, 68, 68, 0.14)",
+              overflow: "hidden",
             }}>
+              {/* Top Accent Line */}
+              <div style={{
+                position: "absolute", top: 0, left: 0, right: 0, height: 3,
+                background: "linear-gradient(90deg, transparent, #EF4444, transparent)",
+              }} />
+
               {/* Glowing Danger Icon */}
               <div style={{
-                width: 58, height: 58, borderRadius: "50%",
-                background: "linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.1) 100%)",
-                border: "1.5px solid rgba(239, 68, 68, 0.45)",
+                width: 54, height: 54, borderRadius: 16,
+                background: "linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(220, 38, 38, 0.08) 100%)",
+                border: "1px solid rgba(239, 68, 68, 0.4)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 16px", color: "#F87171",
-                boxShadow: "0 0 20px rgba(239, 68, 68, 0.25)",
+                margin: "0 auto 14px", color: "#F87171",
+                boxShadow: "0 8px 24px rgba(239, 68, 68, 0.22)",
               }}>
-                <TrashIcon size={26} color="#F87171" />
+                <TrashIcon size={24} color="#F87171" />
               </div>
 
-              <h3 style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 6, color: "#F0F0FF" }}>
+              <h3 style={{ fontWeight: 800, fontSize: "1.15rem", margin: "0 0 4px", color: "#F8FAFC", letterSpacing: "-0.01em" }}>
                 Hapus Kartu Toko?
               </h3>
+              <p style={{ fontSize: "0.75rem", color: "#94A3B8", margin: "0 0 16px" }}>
+                Tautan fisik & data toko akan dinonaktifkan
+              </p>
 
               {/* Preview Toko Yang Akan Dihapus */}
               <div style={{
-                margin: "14px 0 16px",
-                padding: "12px 14px",
-                background: "rgba(0, 0, 0, 0.4)",
+                margin: "0 0 14px",
+                padding: "13px 14px",
+                background: "rgba(0, 0, 0, 0.42)",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 12,
+                borderRadius: 14,
                 textAlign: "left",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
               }}>
-                <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.95rem", marginBottom: 6, wordBreak: "break-word" }}>
-                  {cardToDelete?.storeName || `Kartu ${deleteConfirmCode}`}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.92rem", marginBottom: 4, wordBreak: "break-word" }}>
+                    {cardToDelete?.storeName || `Kartu ${deleteConfirmCode}`}
+                  </div>
                   <span style={{
                     fontFamily: "monospace",
-                    fontSize: "0.72rem",
+                    fontSize: "0.7rem",
                     fontWeight: 700,
                     color: "#A5B4FC",
                     background: "rgba(99, 102, 241, 0.15)",
                     border: "1px solid rgba(99, 102, 241, 0.3)",
-                    padding: "1px 7px",
-                    borderRadius: 5,
+                    padding: "2px 7px",
+                    borderRadius: 6,
                   }}>
-                    {deleteConfirmCode}
-                  </span>
-                  <span style={{
-                    fontSize: "0.7rem",
-                    fontWeight: 700,
-                    color: "#FBBF24",
-                    background: "rgba(245, 158, 11, 0.12)",
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
-                    padding: "1px 7px",
-                    borderRadius: 5,
-                  }}>
-                    👆 {cardToDelete?.tapCount ?? 0} Tap
+                    #{deleteConfirmCode}
                   </span>
                 </div>
+                <span style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 800,
+                  color: "#FBBF24",
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1px solid rgba(245, 158, 11, 0.25)",
+                  padding: "4px 9px",
+                  borderRadius: 8,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}>
+                  👆 {cardToDelete?.tapCount ?? 0} Tap
+                </span>
               </div>
 
-              <p style={{ color: "#94A3B8", fontSize: "0.8rem", marginBottom: 20, lineHeight: 1.5 }}>
-                Tindakan ini permanen. Kartu fisik tidak akan dapat diakses lagi oleh pelanggan dan datanya dihapus dari sistem.
+              <p style={{ color: "#94A3B8", fontSize: "0.78rem", marginBottom: 18, lineHeight: 1.45 }}>
+                Kartu ini tidak akan bisa diakses lagi oleh pelanggan dan dihapus permanen dari daftar.
               </p>
 
               <div style={{ display: "flex", gap: 10 }}>
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  style={{ flex: 1, justifyContent: "center", borderRadius: 10, padding: "10px", fontSize: "0.85rem" }}
+                  style={{ flex: 1, justifyContent: "center", borderRadius: 11, padding: "11px", fontSize: "0.85rem", fontWeight: 700 }}
                   onClick={() => setDeleteConfirmCode(null)}
                 >
                   Batal
@@ -415,20 +428,20 @@ export default function CardsPage() {
                   type="button"
                   className="btn btn-danger"
                   style={{
-                    flex: 1.2,
+                    flex: 1.3,
                     justifyContent: "center",
-                    borderRadius: 10,
-                    padding: "10px",
+                    borderRadius: 11,
+                    padding: "11px",
                     fontSize: "0.85rem",
-                    fontWeight: 700,
+                    fontWeight: 800,
                     gap: 6,
                     background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
-                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)",
+                    boxShadow: "0 6px 18px rgba(239, 68, 68, 0.35)",
                   }}
                   onClick={() => handleDelete(deleteConfirmCode)}
                 >
                   <TrashIcon size={15} color="#FFFFFF" />
-                  <span>Ya, Hapus</span>
+                  <span>Hapus Permanen</span>
                 </button>
               </div>
             </div>
@@ -440,7 +453,7 @@ export default function CardsPage() {
       {resetConfirmCard && (
         <>
           <div
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 300, backdropFilter: "blur(8px)" }}
+            style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.82)", zIndex: 300, backdropFilter: "blur(10px)" }}
             onClick={() => {
               if (resettingCode !== resetConfirmCard.code) setResetConfirmCard(null);
             }}
@@ -448,94 +461,116 @@ export default function CardsPage() {
           <div style={{
             position: "fixed", top: "50%", left: "50%",
             transform: "translate(-50%, -50%)", zIndex: 301,
-            background: "linear-gradient(180deg, #181522 0%, #0F0E17 100%)",
+            background: "linear-gradient(180deg, #191624 0%, #100E17 100%)",
             border: "1px solid rgba(245, 158, 11, 0.4)",
-            borderRadius: 20, padding: "26px 22px",
-            width: "min(92vw, 400px)", textAlign: "center",
-            boxShadow: "0 25px 60px -10px rgba(0,0,0,0.85), 0 0 35px rgba(245, 158, 11, 0.16)",
+            borderRadius: 22, padding: "26px 22px 22px",
+            width: "min(92vw, 390px)", textAlign: "center",
+            boxShadow: "0 28px 65px -12px rgba(0,0,0,0.9), 0 0 40px rgba(245, 158, 11, 0.14)",
+            overflow: "hidden",
           }}>
-            {/* Glowing Orange/Amber Refresh Icon */}
+            {/* Top Accent Line */}
             <div style={{
-              width: 58, height: 58, borderRadius: "50%",
-              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%)",
-              border: "1.5px solid rgba(245, 158, 11, 0.45)",
+              position: "absolute", top: 0, left: 0, right: 0, height: 3,
+              background: "linear-gradient(90deg, transparent, #F59E0B, transparent)",
+            }} />
+
+            {/* Glowing Amber Icon */}
+            <div style={{
+              width: 54, height: 54, borderRadius: 16,
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.08) 100%)",
+              border: "1px solid rgba(245, 158, 11, 0.42)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 16px", color: "#FCD34D",
-              boxShadow: "0 0 24px rgba(245, 158, 11, 0.22)",
+              margin: "0 auto 14px", color: "#FCD34D",
+              boxShadow: "0 8px 24px rgba(245, 158, 11, 0.22)",
             }}>
-              <span style={{ fontSize: "1.5rem" }}>🔄</span>
+              <span style={{ fontSize: "1.45rem", lineHeight: 1 }}>🔄</span>
             </div>
 
-            <h3 style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 6, color: "#F0F0FF" }}>
+            <h3 style={{ fontWeight: 800, fontSize: "1.15rem", margin: "0 0 4px", color: "#F8FAFC", letterSpacing: "-0.01em" }}>
               Reset Hitungan Tap?
             </h3>
+            <p style={{ fontSize: "0.75rem", color: "#94A3B8", margin: "0 0 16px" }}>
+              Mulai ulang statistik kunjungan dari awal
+            </p>
 
-            {/* Preview Toko & Counter: X -> 0 */}
+            {/* Preview Toko & Counter Transition */}
             <div style={{
-              margin: "16px 0 14px",
-              padding: "14px 16px",
-              background: "rgba(0, 0, 0, 0.45)",
+              margin: "0 0 14px",
+              padding: "13px 14px",
+              background: "rgba(0, 0, 0, 0.42)",
               border: "1px solid rgba(255, 255, 255, 0.08)",
               borderRadius: 14,
               textAlign: "left",
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.98rem", wordBreak: "break-word" }}>
-                    {resetConfirmCard.storeName}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
+                <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.94rem", wordBreak: "break-word", minWidth: 0 }}>
+                  {resetConfirmCard.storeName}
+                </div>
+                <span style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  color: "#A5B4FC",
+                  background: "rgba(99, 102, 241, 0.15)",
+                  border: "1px solid rgba(99, 102, 241, 0.3)",
+                  padding: "2px 7px",
+                  borderRadius: 6,
+                  flexShrink: 0,
+                }}>
+                  #{resetConfirmCard.code}
+                </span>
+              </div>
+
+              {/* Visual Counter Transition Bar */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto 1fr",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.06)",
+                borderRadius: 10,
+              }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "0.6rem", color: "#94A3B8", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>
+                    Saat Ini
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                    <span style={{
-                      fontFamily: "monospace",
-                      fontSize: "0.72rem",
-                      fontWeight: 700,
-                      color: "#A5B4FC",
-                      background: "rgba(99, 102, 241, 0.15)",
-                      border: "1px solid rgba(99, 102, 241, 0.3)",
-                      padding: "1px 7px",
-                      borderRadius: 5,
-                    }}>
-                      {resetConfirmCard.code}
-                    </span>
-                    <span style={{ fontSize: "0.7rem", color: "#34D399", fontWeight: 600 }}>
-                      ● Kartu Aktif
-                    </span>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#FBBF24", marginTop: 1 }}>
+                    {resetConfirmCard.tapCount ?? 0} Tap
                   </div>
                 </div>
 
-                {/* Animated / Visual Counter Change Badge */}
                 <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "rgba(245, 158, 11, 0.12)",
+                  width: 26, height: 26, borderRadius: "50%",
+                  background: "rgba(245, 158, 11, 0.15)",
                   border: "1px solid rgba(245, 158, 11, 0.3)",
-                  padding: "6px 10px",
-                  borderRadius: 10,
-                  flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#FCD34D", fontSize: "0.75rem", fontWeight: 800,
                 }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "0.58rem", color: "#FDE68A", textTransform: "uppercase", fontWeight: 700 }}>Kini</div>
-                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#FCD34D" }}>{resetConfirmCard.tapCount ?? 0}</div>
+                  ➔
+                </div>
+
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "0.6rem", color: "#6EE7B7", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>
+                    Setelah Reset
                   </div>
-                  <span style={{ color: "#FDE68A", opacity: 0.7, fontSize: "0.82rem" }}>➔</span>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "0.58rem", color: "#A7F3D0", textTransform: "uppercase", fontWeight: 700 }}>Baru</div>
-                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#34D399" }}>0</div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#34D399", marginTop: 1 }}>
+                    0 Tap
                   </div>
                 </div>
               </div>
             </div>
 
-            <p style={{ color: "#94A3B8", fontSize: "0.82rem", lineHeight: 1.55, margin: "0 0 20px" }}>
-              Hitungan tap toko ini akan dikembalikan ke <strong>0</strong>. Cocok saat kartu dipindahkan ke klien baru atau memulai periode pelacakan baru. Tautan ulasan Google tetap aktif dan tidak berubah.
+            <p style={{ color: "#94A3B8", fontSize: "0.78rem", lineHeight: 1.45, margin: "0 0 18px" }}>
+              Riwayat kunjungan pada kartu ini akan dibersihkan dan hitungan dimulai kembali dari <strong>0</strong>.
             </p>
 
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 type="button"
                 className="btn btn-ghost"
-                style={{ flex: 1, justifyContent: "center", borderRadius: 10, padding: "11px", fontSize: "0.86rem" }}
+                style={{ flex: 1, justifyContent: "center", borderRadius: 11, padding: "11px", fontSize: "0.85rem", fontWeight: 700 }}
                 onClick={() => setResetConfirmCard(null)}
                 disabled={resettingCode === resetConfirmCard.code}
               >
@@ -551,14 +586,14 @@ export default function CardsPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 6,
-                  borderRadius: 10,
+                  borderRadius: 11,
                   padding: "11px",
-                  fontSize: "0.86rem",
+                  fontSize: "0.85rem",
                   fontWeight: 800,
                   color: "#FFFFFF",
                   background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
                   border: "none",
-                  boxShadow: "0 4px 16px rgba(245, 158, 11, 0.35)",
+                  boxShadow: "0 6px 18px rgba(245, 158, 11, 0.35)",
                   cursor: resettingCode === resetConfirmCard.code ? "wait" : "pointer",
                   transition: "all 0.15s ease",
                 }}
@@ -566,7 +601,7 @@ export default function CardsPage() {
                 {resettingCode === resetConfirmCard.code ? (
                   <><div className="spinner" style={{ width: 14, height: 14 }} /> Mereset...</>
                 ) : (
-                  <><span>🔄</span> Ya, Reset ke 0</>
+                  <><span>🔄</span> Reset Sekarang</>
                 )}
               </button>
             </div>
@@ -1344,7 +1379,7 @@ export default function CardsPage() {
                     autoCorrect="off"
                   />
                   <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>
-                    💡 <strong>Pindah Lokasi?</strong> Cukup ganti <strong>Place ID</strong> baru di sini. URL Review Google akan otomatis diperbarui dan langsung aktif saat kartu di-tap / di-scan pelanggan.
+                    💡 <strong>Pindah Lokasi?</strong> Ganti <strong>Place ID</strong> baru di sini — link review otomatis diperbarui &amp; hitungan tap di-reset ke 0.
                   </p>
                   {editingCard.googleReviewUrl && (
                     <div style={{
@@ -1528,28 +1563,35 @@ export default function CardsPage() {
                   return (
                     <div style={{
                       padding: "12px 14px",
-                      background: "rgba(99, 102, 241, 0.08)",
-                      border: "1px solid rgba(99, 102, 241, 0.28)",
-                      borderRadius: 10,
+                      background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)",
+                      border: "1px solid rgba(245, 158, 11, 0.35)",
+                      borderRadius: 12,
                       marginBottom: 14,
                     }}>
-                      <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#C7D2FE", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                        <span>🎯 Target Pengalihan Berubah</span>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                        <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#FCD34D", display: "flex", alignItems: "center", gap: 6 }}>
+                          <span>🔄</span>
+                          <span>Lokasi Baru — Auto Reset Tap</span>
+                        </div>
+                        <div style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          background: "rgba(0, 0, 0, 0.38)",
+                          border: "1px solid rgba(245, 158, 11, 0.3)",
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          fontSize: "0.69rem",
+                          fontWeight: 800,
+                        }}>
+                          <span style={{ color: "#FBBF24" }}>{currentTaps} Tap</span>
+                          <span style={{ color: "#94A3B8" }}>➔</span>
+                          <span style={{ color: "#34D399" }}>0 Tap</span>
+                        </div>
                       </div>
-                      <p style={{ fontSize: "0.73rem", color: "#94A3B8", margin: "0 0 10px", lineHeight: 1.45 }}>
-                        Tujuan ulasan/Instagram kartu ini diubah. Secara bawaan, riwayat <strong>{currentTaps} tap</strong> tetap aman dan dipertahankan.
+                      <p style={{ fontSize: "0.73rem", color: "#CBD5E1", margin: 0, lineHeight: 1.45 }}>
+                        Tujuan kartu diubah ke lokasi baru. Riwayat <strong>{currentTaps} tap</strong> sebelumnya akan otomatis di-reset ke <strong>0</strong> saat disimpan.
                       </p>
-                      <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontSize: "0.76rem", color: editConfirmResetTaps ? "#FCA5A5" : "#E2E8F0" }}>
-                        <input
-                          type="checkbox"
-                          checked={editConfirmResetTaps}
-                          onChange={(e) => setEditConfirmResetTaps(e.target.checked)}
-                          style={{ marginTop: 2, accentColor: "#EF4444", cursor: "pointer" }}
-                        />
-                        <span>
-                          <strong>Reset hitungan tap ke 0</strong> (Centang hanya jika kartu ini dipindahkan ke toko/klien baru)
-                        </span>
-                      </label>
                     </div>
                   );
                 }

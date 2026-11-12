@@ -72,7 +72,6 @@ export default function AdminDashboard() {
   const [lastVisitedAt, setLastVisitedAt] = useState<string | null>(null);
   const [newTapCount, setNewTapCount] = useState(0);
   const [showScanner, setShowScanner] = useState(false);
-  const [confirmResetTaps, setConfirmResetTaps] = useState(false);
 
   const activeCardMap = useMemo(() => new Map(cards.map(c => [c.code, c.storeName])), [cards]);
   const activeCodesSet = useMemo(() => new Set(cards.map(c => c.code)), [cards]);
@@ -204,7 +203,6 @@ export default function AdminDashboard() {
     setMessage(null); setError(null); setIsEditing(false);
     setSavedCardUrl(null); setCopiedNfc(false);
     setEditingOriginalCard(null);
-    setConfirmResetTaps(false);
   }
 
   function openNewForm(initialCode = "") {
@@ -221,7 +219,6 @@ export default function AdminDashboard() {
     setPrice(card.price ?? 50000);
     setCost(card.cost ?? 0);
     setEditingOriginalCard(card);
-    setConfirmResetTaps(false);
     setMessage(null); setError(null);
     setIsEditing(true);
 
@@ -269,7 +266,6 @@ export default function AdminDashboard() {
         editingOriginalCard.googleReviewUrl.trim() !== finalTargetUrl
       )
     );
-    const shouldResetTaps = Boolean(isTargetChanged && confirmResetTaps);
 
     const res = await fetch("/api/admin/codes", {
       method: "POST",
@@ -280,7 +276,7 @@ export default function AdminDashboard() {
         googleReviewUrl: finalTargetUrl,
         price: price,
         cost: cost,
-        resetTaps: shouldResetTaps,
+        resetTaps: isTargetChanged,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -288,7 +284,7 @@ export default function AdminDashboard() {
     if (res.ok) {
       const cardUrl = `${window.location.origin}/c/${code.trim()}`;
       setSavedCardUrl(cardUrl);
-      const resetNote = shouldResetTaps ? " (Riwayat tap lama di-reset ke 0)" : "";
+      const resetNote = isTargetChanged ? " (Riwayat tap lama di-reset ke 0)" : "";
       setMessage(`✅ "${storeName.trim()}" berhasil ${isEditing ? "diupdate" : "disimpan"}${resetNote}!`);
       await Promise.all([loadCards(), loadTapLogs()]);
     } else {
@@ -708,28 +704,35 @@ export default function AdminDashboard() {
           return (
             <div style={{
               padding: "12px 14px",
-              background: "rgba(99, 102, 241, 0.08)",
-              border: "1px solid rgba(99, 102, 241, 0.28)",
-              borderRadius: 10,
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)",
+              border: "1px solid rgba(245, 158, 11, 0.35)",
+              borderRadius: 12,
               marginBottom: 14,
             }}>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#C7D2FE", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                <span>🎯 Target Pengalihan Berubah</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#FCD34D", display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>🔄</span>
+                  <span>Lokasi Baru — Auto Reset Tap</span>
+                </div>
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  background: "rgba(0, 0, 0, 0.38)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  fontSize: "0.69rem",
+                  fontWeight: 800,
+                }}>
+                  <span style={{ color: "#FBBF24" }}>{oldTaps} Tap</span>
+                  <span style={{ color: "#94A3B8" }}>➔</span>
+                  <span style={{ color: "#34D399" }}>0 Tap</span>
+                </div>
               </div>
-              <p style={{ fontSize: "0.73rem", color: "#94A3B8", margin: "0 0 10px", lineHeight: 1.45 }}>
-                Tujuan ulasan/profil kartu ini diubah. Secara bawaan, riwayat <strong>{oldTaps} tap</strong> tetap aman dan dipertahankan.
+              <p style={{ fontSize: "0.73rem", color: "#CBD5E1", margin: 0, lineHeight: 1.45 }}>
+                Tujuan kartu diubah ke lokasi baru. Riwayat <strong>{oldTaps} tap</strong> sebelumnya akan otomatis di-reset ke <strong>0</strong> saat disimpan.
               </p>
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontSize: "0.76rem", color: confirmResetTaps ? "#FCA5A5" : "#E2E8F0" }}>
-                <input
-                  type="checkbox"
-                  checked={confirmResetTaps}
-                  onChange={(e) => setConfirmResetTaps(e.target.checked)}
-                  style={{ marginTop: 2, accentColor: "#EF4444", cursor: "pointer" }}
-                />
-                <span>
-                  <strong>Reset hitungan tap ke 0</strong> (Centang hanya jika kartu ini dipindahkan ke toko/klien baru)
-                </span>
-              </label>
             </div>
           );
         }
@@ -874,82 +877,98 @@ export default function AdminDashboard() {
         return (
           <>
             <div
-              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 300, backdropFilter: "blur(8px)" }}
+              style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.82)", zIndex: 300, backdropFilter: "blur(10px)" }}
               onClick={() => setDeleteConfirm(null)}
             />
             <div style={{
               position: "fixed", top: "50%", left: "50%",
               transform: "translate(-50%, -50%)", zIndex: 301,
-              background: "linear-gradient(180deg, #181522 0%, #0F0E17 100%)",
-              border: "1px solid rgba(239, 68, 68, 0.4)",
-              borderRadius: 20, padding: "26px 22px",
-              width: "min(92vw, 400px)", textAlign: "center",
-              boxShadow: "0 25px 60px -10px rgba(0,0,0,0.85), 0 0 35px rgba(239, 68, 68, 0.16)",
+              background: "linear-gradient(180deg, #191624 0%, #100E17 100%)",
+              border: "1px solid rgba(239, 68, 68, 0.38)",
+              borderRadius: 22, padding: "26px 22px 22px",
+              width: "min(92vw, 390px)", textAlign: "center",
+              boxShadow: "0 28px 65px -12px rgba(0,0,0,0.9), 0 0 40px rgba(239, 68, 68, 0.14)",
+              overflow: "hidden",
             }}>
+              {/* Top Accent Line */}
+              <div style={{
+                position: "absolute", top: 0, left: 0, right: 0, height: 3,
+                background: "linear-gradient(90deg, transparent, #EF4444, transparent)",
+              }} />
+
               {/* Glowing Danger Icon */}
               <div style={{
-                width: 58, height: 58, borderRadius: "50%",
-                background: "linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.1) 100%)",
-                border: "1.5px solid rgba(239, 68, 68, 0.45)",
+                width: 54, height: 54, borderRadius: 16,
+                background: "linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(220, 38, 38, 0.08) 100%)",
+                border: "1px solid rgba(239, 68, 68, 0.4)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 16px", color: "#F87171",
-                boxShadow: "0 0 20px rgba(239, 68, 68, 0.25)",
+                margin: "0 auto 14px", color: "#F87171",
+                boxShadow: "0 8px 24px rgba(239, 68, 68, 0.22)",
               }}>
-                <TrashIcon size={26} color="#F87171" />
+                <TrashIcon size={24} color="#F87171" />
               </div>
 
-              <h3 style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 6, color: "#F0F0FF" }}>
+              <h3 style={{ fontWeight: 800, fontSize: "1.15rem", margin: "0 0 4px", color: "#F8FAFC", letterSpacing: "-0.01em" }}>
                 Hapus Kartu Toko?
               </h3>
+              <p style={{ fontSize: "0.75rem", color: "#94A3B8", margin: "0 0 16px" }}>
+                Tautan fisik &amp; data toko akan dinonaktifkan
+              </p>
 
               {/* Preview Toko Yang Akan Dihapus */}
               <div style={{
-                margin: "14px 0 16px",
-                padding: "12px 14px",
-                background: "rgba(0, 0, 0, 0.4)",
+                margin: "0 0 14px",
+                padding: "13px 14px",
+                background: "rgba(0, 0, 0, 0.42)",
                 border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: 12,
+                borderRadius: 14,
                 textAlign: "left",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
               }}>
-                <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.95rem", marginBottom: 6, wordBreak: "break-word" }}>
-                  {cardToDelete?.storeName || `Kartu ${deleteConfirm}`}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.92rem", marginBottom: 4, wordBreak: "break-word" }}>
+                    {cardToDelete?.storeName || `Kartu ${deleteConfirm}`}
+                  </div>
                   <span style={{
                     fontFamily: "monospace",
-                    fontSize: "0.72rem",
+                    fontSize: "0.7rem",
                     fontWeight: 700,
                     color: "#A5B4FC",
                     background: "rgba(99, 102, 241, 0.15)",
                     border: "1px solid rgba(99, 102, 241, 0.3)",
-                    padding: "1px 7px",
-                    borderRadius: 5,
+                    padding: "2px 7px",
+                    borderRadius: 6,
                   }}>
-                    {deleteConfirm}
-                  </span>
-                  <span style={{
-                    fontSize: "0.7rem",
-                    fontWeight: 700,
-                    color: "#FBBF24",
-                    background: "rgba(245, 158, 11, 0.12)",
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
-                    padding: "1px 7px",
-                    borderRadius: 5,
-                  }}>
-                    👆 {cardToDelete?.tapCount ?? 0} Tap
+                    #{deleteConfirm}
                   </span>
                 </div>
+                <span style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 800,
+                  color: "#FBBF24",
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1px solid rgba(245, 158, 11, 0.25)",
+                  padding: "4px 9px",
+                  borderRadius: 8,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}>
+                  👆 {cardToDelete?.tapCount ?? 0} Tap
+                </span>
               </div>
 
-              <p style={{ color: "#94A3B8", fontSize: "0.8rem", marginBottom: 20, lineHeight: 1.5 }}>
-                Tindakan ini permanen. Kartu fisik tidak akan dapat diakses lagi oleh pelanggan dan datanya dihapus dari sistem.
+              <p style={{ color: "#94A3B8", fontSize: "0.78rem", marginBottom: 18, lineHeight: 1.45 }}>
+                Kartu ini tidak akan bisa diakses lagi oleh pelanggan dan dihapus permanen dari daftar.
               </p>
 
               <div style={{ display: "flex", gap: 10 }}>
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  style={{ flex: 1, justifyContent: "center", borderRadius: 10, padding: "10px", fontSize: "0.85rem" }}
+                  style={{ flex: 1, justifyContent: "center", borderRadius: 11, padding: "11px", fontSize: "0.85rem", fontWeight: 700 }}
                   onClick={() => setDeleteConfirm(null)}
                 >
                   Batal
@@ -958,20 +977,20 @@ export default function AdminDashboard() {
                   type="button"
                   className="btn btn-danger"
                   style={{
-                    flex: 1.2,
+                    flex: 1.3,
                     justifyContent: "center",
-                    borderRadius: 10,
-                    padding: "10px",
+                    borderRadius: 11,
+                    padding: "11px",
                     fontSize: "0.85rem",
-                    fontWeight: 700,
+                    fontWeight: 800,
                     gap: 6,
                     background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
-                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)",
+                    boxShadow: "0 6px 18px rgba(239, 68, 68, 0.35)",
                   }}
                   onClick={() => handleDelete(deleteConfirm)}
                 >
                   <TrashIcon size={15} color="#FFFFFF" />
-                  <span>Ya, Hapus</span>
+                  <span>Hapus Permanen</span>
                 </button>
               </div>
             </div>

@@ -70,11 +70,14 @@ export async function POST(req: NextRequest) {
   const existing = await getCard(code);
   const now = new Date().toISOString();
 
-  // Riwayat tap HANYA di-reset jika admin secara eksplisit meminta reset
-  // (misalnya saat memindahkan kartu ke toko/klien baru).
-  // Perubahan nama toko atau target ulasan tidak lagi mereset tap secara otomatis
-  // agar riwayat tap pelanggan yang sudah terkumpul tidak terhapus tanpa sengaja.
-  if (explicitResetTap) {
+  // Jika lokasi tujuan (Google Place ID / URL Review / Instagram) berubah,
+  // atau admin secara eksplisit meminta reset tap, otomatis kembalikan hitungan tap ke 0.
+  const isTargetChanged = Boolean(
+    existing && existing.googleReviewUrl.trim() !== googleReviewUrl.trim()
+  );
+  const shouldReset = Boolean(explicitResetTap || isTargetChanged);
+
+  if (shouldReset) {
     await resetCardTaps(code);
   }
 
@@ -93,6 +96,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    tapsReset: explicitResetTap,
+    tapsReset: shouldReset,
   });
 }
