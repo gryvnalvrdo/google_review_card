@@ -67,17 +67,11 @@ export async function POST(req: NextRequest) {
   const existing = await getCard(code);
   const now = new Date().toISOString();
 
-  // Deteksi jika toko atau lokasi review diganti:
-  // Jika nama toko atau Google Review URL berubah, riwayat tap toko lama wajib di-reset
-  // agar tidak tercampur dan tidak memunculkan tap lama pada toko baru.
-  const isStoreOrLocationChanged = Boolean(
-    existing && (
-      existing.storeName.trim().toLowerCase() !== storeName.toLowerCase() ||
-      existing.googleReviewUrl.trim() !== googleReviewUrl
-    )
-  );
-
-  if (isStoreOrLocationChanged || explicitResetTap) {
+  // Riwayat tap HANYA di-reset jika admin secara eksplisit meminta reset
+  // (misalnya saat memindahkan kartu ke toko/klien baru).
+  // Perubahan nama toko atau target ulasan tidak lagi mereset tap secara otomatis
+  // agar riwayat tap pelanggan yang sudah terkumpul tidak terhapus tanpa sengaja.
+  if (explicitResetTap) {
     await resetCardTaps(code);
   }
 
@@ -95,6 +89,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    tapsReset: Boolean(isStoreOrLocationChanged || explicitResetTap),
+    tapsReset: explicitResetTap,
   });
 }

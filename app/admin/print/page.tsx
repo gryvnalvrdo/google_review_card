@@ -1112,6 +1112,125 @@ function renderStyledQR(
   }
 }
 
+// ─── Komponen UI Studio (dipakai ulang agar tidak ada blok duplikat) ──────────
+function ChoiceChips<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <>
+      <div className="slider-header">
+        <span>{label}:</span>
+      </div>
+      <div className="studio-chip-group">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`studio-chip ${value === o.value ? "active" : ""}`}
+            style={{ flex: 1, justifyContent: "center" }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  fallback,
+  presets,
+  onChange,
+  divider,
+}: {
+  label: string;
+  value: string;
+  fallback: string;
+  presets: { name: string; hex: string }[];
+  onChange: (hex: string) => void;
+  divider?: boolean;
+}) {
+  return (
+    <div
+      className="slider-item"
+      style={divider ? { borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 } : undefined}
+    >
+      <div className="slider-header">
+        <span>{label}:</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 12, height: 12, borderRadius: "50%", background: value || fallback, border: "1px solid rgba(255,255,255,0.3)" }} />
+          <strong style={{ color: "#E2E8F0" }}>{value || fallback}</strong>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        {presets.map((c) => (
+          <button
+            key={c.hex}
+            type="button"
+            onClick={() => onChange(c.hex)}
+            className={`color-swatch-btn ${(value || fallback).toLowerCase() === c.hex.toLowerCase() ? "active" : ""}`}
+            style={{ background: c.hex, border: c.hex === "#FFFFFF" ? "1px solid rgba(255,255,255,0.3)" : undefined }}
+            title={`${c.name} (${c.hex})`}
+          />
+        ))}
+        <label
+          title="Pilih warna bebas"
+          style={{
+            position: "relative",
+            width: 28,
+            height: 28,
+            borderRadius: 7,
+            background: "conic-gradient(#f43f5e, #f59e0b, #10b981, #3b82f6, #a855f7, #f43f5e)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            cursor: "pointer",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          <input
+            type="color"
+            value={value || fallback}
+            onChange={(e) => onChange(e.target.value)}
+            style={{ position: "absolute", top: -6, left: -6, width: 40, height: 40, opacity: 0, cursor: "pointer" }}
+          />
+        </label>
+        <input
+          type="text"
+          value={value || fallback}
+          onChange={(e) => onChange(e.target.value)}
+          maxLength={7}
+          placeholder={fallback}
+          style={{
+            width: 70,
+            padding: "3px 6px",
+            fontSize: "0.72rem",
+            fontFamily: "monospace",
+            fontWeight: 600,
+            background: "rgba(0,0,0,0.3)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 4,
+            color: "#93C5FD",
+            outline: "none",
+            textAlign: "center",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+
 // ─── CardItem ────────────────────────────────────────────────────────────────
 interface CardItemProps {
   code: string;
@@ -1998,38 +2117,18 @@ export default function PrintQRCodes() {
 
               {/* Spacer + tombol Pindai QR (hanya custom) + tombol Studio di kanan */}
               <div style={{ flex: 1 }} />
-              {templateMode === "custom" && (
+              {!showPlacementEditor && (
                 <button
                   type="button"
-                  onClick={handleDetectAndReplaceQR}
-                  disabled={isScanningMock}
-                  className="print-btn"
-                  style={{
-                    fontSize: "0.74rem",
-                    padding: "5px 14px",
-                    gap: 6,
-                    fontWeight: 700,
-                    background: isScanningMock ? "rgba(99,102,241,0.2)" : "linear-gradient(135deg, #4F46E5, #7C3AED)",
-                    border: "1px solid rgba(99,102,241,0.5)",
-                    color: "#FFF",
-                    boxShadow: "0 2px 8px rgba(99, 102, 241, 0.25)",
-                  }}
-                  title="Pindai QR mockup bawaan klien, hapus pixel-nya, dan ganti dengan QR unik Google Review"
+                  className="print-btn print-btn-indigo"
+                  onClick={() => setShowPlacementEditor(true)}
+                  style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
+                  title="Buka Studio Desain untuk mengatur gaya QR, warna, logo, dan posisi"
                 >
-                  <span>🎯</span>
-                  <span>{isScanningMock ? "⏳ Memindai..." : "Pindai & Hapus QR Dummy"}</span>
+                  <span>🎨</span>
+                  <span>Buka Studio Desain</span>
                 </button>
               )}
-              <button
-                type="button"
-                className={`print-btn ${showPlacementEditor ? "print-btn-indigo" : "print-btn-ghost"}`}
-                onClick={() => setShowPlacementEditor((prev) => !prev)}
-                style={{ fontSize: "0.74rem", padding: "6px 14px", gap: 6, fontWeight: 700 }}
-                title="Buka / tutup Studio Desain untuk mengatur gaya QR, warna, logo, dan posisi"
-              >
-                <span>🎨</span>
-                <span>{showPlacementEditor ? "Tutup Studio" : "Buka Studio Desain"}</span>
-              </button>
             </div>
           </div>
 
@@ -2083,7 +2182,7 @@ export default function PrintQRCodes() {
                     style={{ fontSize: "0.72rem", padding: "5px 12px" }}
                     title={templateMode === "default" ? "Kembalikan ke setelan standar Hantic asli" : "Kembalikan posisi & ukuran ke setelan bawaan"}
                   >
-                    ↺ Reset ke Standar
+                    ↺ Reset
                   </button>
                   <button
                     type="button"
@@ -2105,9 +2204,7 @@ export default function PrintQRCodes() {
                       <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 8px #10B981" }} />
                       Live Preview Kartu
                     </div>
-                    <span style={{ fontSize: "0.68rem", color: "#94A3B8", background: "rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4 }}>
-                      {cardW} × {cardH} px
-                    </span>
+
                   </div>
 
                   {/* Canvas Wrap / Interactive Box */}
@@ -2228,10 +2325,11 @@ export default function PrintQRCodes() {
 
                   {/* Quick Action Buttons Directly Under Card */}
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                    {templateMode === "custom" ? (
+                    {templateMode === "custom" && (
                       <button
                         type="button"
                         onClick={handleDetectAndReplaceQR}
+                        disabled={isScanningMock}
                         className="print-btn"
                         style={{
                           width: "100%",
@@ -2245,29 +2343,9 @@ export default function PrintQRCodes() {
                           justifyContent: "center",
                           gap: 6,
                         }}
-                        title="Deteksi QR Code bawaan pada desain kartu klien, lalu hapus/timpa bersih dengan QR code dinamis unik baru"
+                        title="Pindai ulang desain: deteksi QR dummy, hapus, lalu pasang QR baru tepat di tengah slotnya"
                       >
-                        <span>🎯 Deteksi &amp; Timpa QR Desain Klien</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleResetPlacement}
-                        className="print-btn"
-                        style={{
-                          width: "100%",
-                          padding: "9px 14px",
-                          fontSize: "0.78rem",
-                          background: "rgba(99, 102, 241, 0.15)",
-                          border: "1px solid rgba(99, 102, 241, 0.35)",
-                          color: "#C7D2FE",
-                          fontWeight: 700,
-                          justifyContent: "center",
-                          gap: 6,
-                        }}
-                        title="Kembalikan posisi dan ukuran QR code tepat di tengah kotak putih kartu Standar Hantic"
-                      >
-                        <span>🎯 Paskan ke Kotak Standar Hantic ({DEFAULT_BOX_SIZE}×{DEFAULT_BOX_SIZE} px)</span>
+                        <span>{isScanningMock ? "⏳ Memindai..." : "🎯 Pindai Ulang & Pusatkan QR"}</span>
                       </button>
                     )}
 
@@ -2286,7 +2364,7 @@ export default function PrintQRCodes() {
                       </div>
                     )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 5 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
                       <button
                         type="button"
                         onClick={handleCenterFull}
@@ -2314,20 +2392,10 @@ export default function PrintQRCodes() {
                       >
                         ↕️ Tengah Y
                       </button>
-                      <button
-                        type="button"
-                        onClick={handleResetPlacement}
-                        className="print-btn print-btn-ghost"
-                        style={{ padding: "6px 6px", fontSize: "0.7rem", justifyContent: "center", color: "#F87171", borderColor: "rgba(239,68,68,0.25)" }}
-                        title="Kembalikan ukuran dan posisi ke standar awal"
-                      >
-                        ↺ Reset
-                      </button>
-                    </div>
+                      </div>
                   </div>
                 </div>
 
-                {/* ── Studio Right: CONTROLS & INSPECTOR PANEL ── */}
                 {/* ── Studio Right: TABBED CONTROLS & INSPECTOR PANEL ── */}
                 <div className="placement-controls-panel">
                   {/* Studio Navigation Tabs */}
@@ -2414,156 +2482,33 @@ export default function PrintQRCodes() {
                             </p>
                           </div>
 
-                          {/* Gaya Titik QR */}
                           <div className="slider-item" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
-                            <div className="slider-header">
-                              <span>Gaya Pola Titik QR:</span>
-                              <strong style={{ color: (!placement.dotStyle || placement.dotStyle === "squares") ? "#FFF" : placement.dotStyle === "rounded" ? "#A5B4FC" : "#34D399" }}>
-                                {placement.dotStyle === "dots"
-                                  ? "🔵 Titik Bulat (Modern)"
-                                  : placement.dotStyle === "rounded"
-                                  ? "✨ Halus (Rounded)"
-                                  : "⬛ Standar (Kotak)"}
-                              </strong>
-                            </div>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              <button
-                                type="button"
-                                onClick={() => setPlacement((p) => ({ ...p, dotStyle: "squares" }))}
-                                className="print-btn"
-                                style={{
-                                  flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
-                                  background: (!placement.dotStyle || placement.dotStyle === "squares") ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.04)",
-                                  border: (!placement.dotStyle || placement.dotStyle === "squares") ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.08)",
-                                  color: (!placement.dotStyle || placement.dotStyle === "squares") ? "#FFF" : "#94A3B8",
-                                  fontWeight: (!placement.dotStyle || placement.dotStyle === "squares") ? 700 : 500,
-                                }}
-                              >
-                                ⬛ Kotak (Standar)
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPlacement((p) => ({ ...p, dotStyle: "dots" }))}
-                                className="print-btn"
-                                style={{
-                                  flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
-                                  background: placement.dotStyle === "dots" ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.04)",
-                                  border: placement.dotStyle === "dots" ? "1px solid #10B981" : "1px solid rgba(255,255,255,0.08)",
-                                  color: placement.dotStyle === "dots" ? "#34D399" : "#94A3B8",
-                                  fontWeight: placement.dotStyle === "dots" ? 700 : 500,
-                                }}
-                              >
-                                🔵 Titik Bulat
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPlacement((p) => ({ ...p, dotStyle: "rounded" }))}
-                                className="print-btn"
-                                style={{
-                                  flex: 1, padding: "7px 6px", fontSize: "0.72rem", justifyContent: "center",
-                                  background: placement.dotStyle === "rounded" ? "rgba(99, 102, 241, 0.25)" : "rgba(255,255,255,0.04)",
-                                  border: placement.dotStyle === "rounded" ? "1px solid #6366F1" : "1px solid rgba(255,255,255,0.08)",
-                                  color: placement.dotStyle === "rounded" ? "#C7D2FE" : "#94A3B8",
-                                  fontWeight: placement.dotStyle === "rounded" ? 700 : 500,
-                                }}
-                              >
-                                ✨ Halus
-                              </button>
-                            </div>
+                            <ChoiceChips
+                              label="Gaya Pola Titik QR"
+                              value={placement.dotStyle || "squares"}
+                              onChange={(v) => setPlacement((p) => ({ ...p, dotStyle: v }))}
+                              options={[
+                                { value: "squares", label: "⬛ Kotak" },
+                                { value: "dots", label: "🔵 Bulat" },
+                                { value: "rounded", label: "✨ Halus" },
+                              ]}
+                            />
                           </div>
 
-                          {/* Warna QR Code Foreground */}
-                          <div className="slider-item" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
-                            <div className="slider-header">
-                              <span>Warna QR Code:</span>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ width: 12, height: 12, borderRadius: "50%", background: placement.fgColor || "#000000", border: "1px solid rgba(255,255,255,0.3)" }} />
-                                <strong style={{ color: "#E2E8F0" }}>{placement.fgColor || "#000000"}</strong>
-                              </div>
-                            </div>
-                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                              {[
-                                { name: "Hitam", hex: "#000000" },
-                                { name: "Navy", hex: "#1E3A8A" },
-                                { name: "Emerald", hex: "#065F46" },
-                                { name: "Indigo", hex: "#4338CA" },
-                                { name: "Bronze", hex: "#78350F" },
-                              ].map((c) => (
-                                <button
-                                  key={c.hex}
-                                  type="button"
-                                  onClick={() => setPlacement((p) => ({ ...p, fgColor: c.hex }))}
-                                  className={`color-swatch-btn ${placement.fgColor === c.hex ? "active" : ""}`}
-                                  style={{ background: c.hex }}
-                                  title={`${c.name} (${c.hex})`}
-                                />
-                              ))}
-                              <div
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 6,
-                                  padding: "4px 8px",
-                                  borderRadius: 8,
-                                  background: "rgba(255, 255, 255, 0.05)",
-                                  border: "1px solid rgba(255, 255, 255, 0.12)",
-                                }}
-                              >
-                                <span style={{ fontSize: "0.72rem", color: "#CBD5E1", fontWeight: 600 }}>🎨 Kustom:</span>
-                                <label
-                                  style={{
-                                    position: "relative",
-                                    width: 22,
-                                    height: 22,
-                                    borderRadius: 6,
-                                    background: placement.fgColor || "#000000",
-                                    border: "1px solid rgba(255, 255, 255, 0.3)",
-                                    cursor: "pointer",
-                                    display: "inline-block",
-                                    overflow: "hidden",
-                                    boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
-                                    flexShrink: 0,
-                                  }}
-                                  title="Klik untuk memilih warna QR bebas"
-                                >
-                                  <input
-                                    type="color"
-                                    value={placement.fgColor || "#000000"}
-                                    onChange={(e) => setPlacement((p) => ({ ...p, fgColor: e.target.value }))}
-                                    style={{
-                                      position: "absolute",
-                                      top: -6,
-                                      left: -6,
-                                      width: 36,
-                                      height: 36,
-                                      opacity: 0,
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </label>
-                                <input
-                                  type="text"
-                                  value={placement.fgColor || "#000000"}
-                                  onChange={(e) => setPlacement((p) => ({ ...p, fgColor: e.target.value }))}
-                                  maxLength={7}
-                                  placeholder="#000000"
-                                  style={{
-                                    width: 66,
-                                    padding: "2px 4px",
-                                    fontSize: "0.72rem",
-                                    fontFamily: "monospace",
-                                    fontWeight: 600,
-                                    background: "rgba(0,0,0,0.3)",
-                                    border: "1px solid rgba(255,255,255,0.1)",
-                                    borderRadius: 4,
-                                    color: "#93C5FD",
-                                    outline: "none",
-                                    textAlign: "center",
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
+                          <ColorField
+                            label="Warna QR Code"
+                            value={placement.fgColor || "#000000"}
+                            fallback="#000000"
+                            divider
+                            presets={[
+                              { name: "Hitam", hex: "#000000" },
+                              { name: "Navy", hex: "#1E3A8A" },
+                              { name: "Emerald", hex: "#065F46" },
+                              { name: "Indigo", hex: "#4338CA" },
+                              { name: "Bronze", hex: "#78350F" },
+                            ]}
+                            onChange={(hex) => setPlacement((p) => ({ ...p, fgColor: hex }))}
+                          />
                         </div>
                       </div>
 
@@ -2574,44 +2519,16 @@ export default function PrintQRCodes() {
                         </div>
 
                         <div className="slider-group-grid">
-                          {/* Tipe Latar Belakang */}
                           <div className="slider-item">
-                            <div className="slider-header">
-                              <span>Tipe Latar Belakang:</span>
-                              <strong style={{ color: placement.style === "white_box" ? "#60A5FA" : "#FBBF24" }}>
-                                {placement.style === "white_box" ? "⬜ Kotak Penutup (Solid)" : "🔲 Transparan (Tanpa Kotak)"}
-                              </strong>
-                            </div>
-                            <div style={{ display: "flex", gap: 8 }}>
-                              <button
-                                type="button"
-                                onClick={() => setPlacement((p) => ({ ...p, style: "white_box" }))}
-                                className="print-btn"
-                                style={{
-                                  flex: 1, padding: "8px 10px", fontSize: "0.75rem", justifyContent: "center",
-                                  background: placement.style === "white_box" ? "rgba(59, 130, 246, 0.2)" : "rgba(255,255,255,0.04)",
-                                  border: placement.style === "white_box" ? "1px solid #3B82F6" : "1px solid rgba(255,255,255,0.08)",
-                                  color: placement.style === "white_box" ? "#93C5FD" : "#94A3B8",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                ⬜ Kotak Penutup
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPlacement((p) => ({ ...p, style: "transparent" }))}
-                                className="print-btn"
-                                style={{
-                                  flex: 1, padding: "8px 10px", fontSize: "0.75rem", justifyContent: "center",
-                                  background: placement.style === "transparent" ? "rgba(245, 158, 11, 0.2)" : "rgba(255,255,255,0.04)",
-                                  border: placement.style === "transparent" ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.08)",
-                                  color: placement.style === "transparent" ? "#FCD34D" : "#94A3B8",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                🔲 Transparan
-                              </button>
-                            </div>
+                            <ChoiceChips
+                              label="Tipe Latar Belakang"
+                              value={placement.style}
+                              onChange={(v) => setPlacement((p) => ({ ...p, style: v }))}
+                              options={[
+                                { value: "white_box", label: "⬜ Kotak Penutup" },
+                                { value: "transparent", label: "🔲 Transparan" },
+                              ]}
+                            />
                             <p style={{ fontSize: "0.7rem", color: "#64748B", margin: "4px 0 0", lineHeight: 1.4 }}>
                               {placement.style === "white_box"
                                 ? "Menutup & menimpa bersih area QR dummy pada kartu klien agar QR baru terlihat kontras & jelas."
@@ -2622,96 +2539,19 @@ export default function PrintQRCodes() {
                           {/* Pengaturan Kotak Penutup (Warna, Padding, Radius) */}
                           {placement.style === "white_box" && (
                             <>
-                              <div className="slider-item" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
-                                <div className="slider-header">
-                                  <span>Warna Kotak Penutup:</span>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={{ width: 12, height: 12, borderRadius: "50%", background: placement.boxColor || "#FFFFFF", border: "1px solid rgba(255,255,255,0.3)" }} />
-                                    <strong style={{ color: "#E2E8F0" }}>{placement.boxColor || "#FFFFFF"}</strong>
-                                  </div>
-                                </div>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                  {[
-                                    { name: "Putih", hex: "#FFFFFF" },
-                                    { name: "Krem", hex: "#F8FAFC" },
-                                    { name: "Dark Slate", hex: "#0F172A" },
-                                    { name: "Hitam", hex: "#000000" },
-                                  ].map((c) => (
-                                    <button
-                                      key={c.hex}
-                                      type="button"
-                                      onClick={() => setPlacement((p) => ({ ...p, boxColor: c.hex }))}
-                                      className={`color-swatch-btn ${(placement.boxColor || "#FFFFFF") === c.hex ? "active" : ""}`}
-                                      style={{ background: c.hex, border: c.hex === "#FFFFFF" ? "1px solid rgba(255,255,255,0.3)" : undefined }}
-                                      title={`${c.name} (${c.hex})`}
-                                    />
-                                  ))}
-                                  <div
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 6,
-                                      padding: "4px 8px",
-                                      borderRadius: 8,
-                                      background: "rgba(255, 255, 255, 0.05)",
-                                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                                    }}
-                                  >
-                                    <span style={{ fontSize: "0.72rem", color: "#CBD5E1", fontWeight: 600 }}>🎨 Kustom:</span>
-                                    <label
-                                      style={{
-                                        position: "relative",
-                                        width: 22,
-                                        height: 22,
-                                        borderRadius: 6,
-                                        background: placement.boxColor || "#FFFFFF",
-                                        border: "1px solid rgba(255, 255, 255, 0.3)",
-                                        cursor: "pointer",
-                                        display: "inline-block",
-                                        overflow: "hidden",
-                                        boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
-                                        flexShrink: 0,
-                                      }}
-                                      title="Pilih warna latar kotak bebas"
-                                    >
-                                      <input
-                                        type="color"
-                                        value={placement.boxColor || "#FFFFFF"}
-                                        onChange={(e) => setPlacement((p) => ({ ...p, boxColor: e.target.value }))}
-                                        style={{
-                                          position: "absolute",
-                                          top: -6,
-                                          left: -6,
-                                          width: 36,
-                                          height: 36,
-                                          opacity: 0,
-                                          cursor: "pointer",
-                                        }}
-                                      />
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={placement.boxColor || "#FFFFFF"}
-                                      onChange={(e) => setPlacement((p) => ({ ...p, boxColor: e.target.value }))}
-                                      maxLength={7}
-                                      placeholder="#FFFFFF"
-                                      style={{
-                                        width: 66,
-                                        padding: "2px 4px",
-                                        fontSize: "0.72rem",
-                                        fontFamily: "monospace",
-                                        fontWeight: 600,
-                                        background: "rgba(0,0,0,0.3)",
-                                        border: "1px solid rgba(255,255,255,0.1)",
-                                        borderRadius: 4,
-                                        color: "#93C5FD",
-                                        outline: "none",
-                                        textAlign: "center",
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
+                              <ColorField
+                                label="Warna Kotak Penutup"
+                                value={placement.boxColor || "#FFFFFF"}
+                                fallback="#FFFFFF"
+                                divider
+                                presets={[
+                                  { name: "Putih", hex: "#FFFFFF" },
+                                  { name: "Krem", hex: "#F8FAFC" },
+                                  { name: "Dark Slate", hex: "#0F172A" },
+                                  { name: "Hitam", hex: "#000000" },
+                                ]}
+                                onChange={(hex) => setPlacement((p) => ({ ...p, boxColor: hex }))}
+                              />
 
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 4 }}>
                                 <div className="slider-item">
@@ -2760,109 +2600,24 @@ export default function PrintQRCodes() {
                         </div>
 
                         <div className="slider-group-grid">
-                          {templateMode === "custom" ? (
-                            <div style={{
-                              padding: "12px",
-                              borderRadius: 8,
-                              background: "rgba(99, 102, 241, 0.08)",
-                              border: "1px solid rgba(99, 102, 241, 0.3)",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 8,
-                            }}>
-                              <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#EDE9FE", display: "flex", alignItems: "center", gap: 6 }}>
-                                <span>🎯</span> Deteksi &amp; Hapus Mockup QR Klien
-                              </div>
-                              <div style={{ fontSize: "0.7rem", color: "#94A3B8", lineHeight: 1.4 }}>
-                                Otomatis mendeteksi lokasi mockup QR dummy, menghapus pixel QR lama hingga bersih, dan menggantinya dengan QR Google Review yang berfungsi.
-                              </div>
-                              <button
-                                type="button"
-                                onClick={handleDetectAndReplaceQR}
-                                disabled={isScanningMock}
-                                className="print-btn"
-                                style={{
-                                  width: "100%",
-                                  padding: "9px 14px",
-                                  fontSize: "0.78rem",
-                                  background: "linear-gradient(135deg, #4F46E5, #6366F1)",
-                                  border: "1px solid rgba(99,102,241,0.5)",
-                                  color: "#FFF",
-                                  boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
-                                  fontWeight: 700,
-                                  justifyContent: "center",
-                                  gap: 6,
-                                }}
-                                title="Pindai gambar kartu klien dan hapus QR dummy langsung dari gambar"
-                              >
-                                <span>🎯</span>
-                                <span>{isScanningMock ? "Memindai & Menghapus..." : "Pindai & Hapus QR Dummy Sekarang"}</span>
-                              </button>
-                              {rawCustomImg && (
-                                <button
-                                  type="button"
-                                  onClick={handleRestoreOriginalImage}
-                                  className="print-btn print-btn-ghost"
-                                  style={{
-                                    width: "100%",
-                                    padding: "6px 12px",
-                                    fontSize: "0.72rem",
-                                    color: "#FCD34D",
-                                    borderColor: "rgba(245, 158, 11, 0.3)",
-                                    justifyContent: "center",
-                                    gap: 6,
-                                  }}
-                                  title="Kembalikan gambar ke file asli sebelum QR dummy dihapus"
-                                >
-                                  <span>↺</span>
-                                  <span>Kembalikan ke Desain Asli Klien</span>
-                                </button>
-                              )}
-                            </div>
-                          ) : (
-                            <div style={{
-                              padding: "12px",
-                              borderRadius: 8,
-                              background: "rgba(99, 102, 241, 0.08)",
-                              border: "1px solid rgba(99, 102, 241, 0.25)",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 8,
-                            }}>
-                              <div style={{
-                                fontSize: "0.73rem",
-                                color: "#C7D2FE",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                lineHeight: 1.4,
-                              }}>
-                                <span>📐</span>
-                                <span>Posisi QR terkunci tepat di tengah kotak kartu Standar Hantic ({DEFAULT_BOX_SIZE}×{DEFAULT_BOX_SIZE} px) pada koordinat X={DEFAULT_BOX_X}, Y={DEFAULT_BOX_Y}.</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPlacement((prev) => ({
-                                    ...prev,
-                                    x: DEFAULT_BOX_X,
-                                    y: DEFAULT_BOX_Y,
-                                    size: DEFAULT_BOX_SIZE,
-                                    style: "white_box",
-                                    boxColor: "#FFFFFF",
-                                    padding: DEFAULT_QR_PAD,
-                                    radius: 18,
-                                  }));
-                                  setSnapFeedback("🎯 Posisi QR dikembalikan tepat di tengah kartu Standar Hantic.");
-                                  setTimeout(() => setSnapFeedback(null), 3000);
-                                }}
-                                className="print-btn print-btn-indigo"
-                                style={{ width: "100%", justifyContent: "center", padding: "7px 12px", fontSize: "0.74rem", fontWeight: 700 }}
-                              >
-                                🎯 Pusatkan QR di Posisi Default Standar
-                              </button>
-                            </div>
-                          )}
+                          <div style={{
+                            padding: "10px 12px",
+                            borderRadius: 8,
+                            background: "rgba(99, 102, 241, 0.08)",
+                            border: "1px solid rgba(99, 102, 241, 0.25)",
+                            fontSize: "0.72rem",
+                            color: "#C7D2FE",
+                            display: "flex",
+                            gap: 8,
+                            lineHeight: 1.45,
+                          }}>
+                            <span>{templateMode === "custom" ? "🎯" : "📐"}</span>
+                            <span>
+                              {templateMode === "custom"
+                                ? "Posisi QR otomatis dipusatkan di slot QR pada desain. Jika meleset, tarik QR di kartu atau atur manual di bawah. Pindai ulang lewat tombol di bawah preview."
+                                : `Posisi QR terkunci di tengah kotak kartu Standar Hantic (${DEFAULT_BOX_SIZE}×${DEFAULT_BOX_SIZE} px, X=${DEFAULT_BOX_X}, Y=${DEFAULT_BOX_Y}). Gunakan tombol Reset di atas untuk mengembalikan.`}
+                            </span>
+                          </div>
 
                           {/* Ukuran QR */}
                           <div className="slider-item">
@@ -3298,40 +3053,6 @@ export default function PrintQRCodes() {
                 </button>
               )}
 
-              {codes.length > 0 && !isZipping && !isSaving && (
-                <>
-                  <button
-                    type="button"
-                    className="print-btn print-btn-amber"
-                    onClick={handleSmartDownload}
-                    title={
-                      codes.length >= 10
-                        ? `Download ${codes.length} kartu dalam 1 file ZIP (Otomatis simpan ke stok)`
-                        : codes.length === 1
-                        ? "Download 1 file PNG langsung (Otomatis simpan ke stok)"
-                        : `Download ${codes.length} file PNG langsung satu per satu (Otomatis simpan ke stok)`
-                    }
-                  >
-                    {codes.length >= 10 ? (
-                      <>📦 Download ZIP ({codes.length})</>
-                    ) : codes.length === 1 ? (
-                      <>💾 Download PNG Kartu</>
-                    ) : (
-                      <>💾 Download {codes.length} PNG Langsung</>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="print-btn print-btn-ghost"
-                    style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#FCA5A5" }}
-                    onClick={handleClearAllCards}
-                    title="Hapus semua kartu yang sudah di-generate"
-                  >
-                    🗑️ Hapus Semua
-                  </button>
-                </>
-              )}
 
               {(isZipping || isSaving) && (
                 <div className="print-progress-pill">
@@ -3387,6 +3108,12 @@ export default function PrintQRCodes() {
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                {(isZipping || isSaving) && (
+                  <div className="print-progress-pill">
+                    <span className="print-spin" />
+                    {isSaving ? "Menyimpan ke stok..." : progress}
+                  </div>
+                )}
                 <button
                   type="button"
                   className="print-btn print-btn-ghost"
@@ -3407,78 +3134,63 @@ export default function PrintQRCodes() {
                 >
                   {copiedAll ? "✓ Semua Link Disalin!" : "📋 Salin Semua Link"}
                 </button>
-                
+
+                {/* Format alternatif (hanya jika ada lebih dari 1 kartu) */}
                 {codes.length >= 10 ? (
-                  <>
-                    <button
-                      type="button"
-                      className="print-btn print-btn-amber"
-                      onClick={handleDownloadZip}
-                      disabled={isZipping}
-                      style={{ padding: "7px 14px", fontSize: "0.78rem" }}
-                      title="Download seluruh kartu dalam 1 file ZIP praktis (Otomatis simpan ke stok)"
-                    >
-                      📦 Download ZIP ({codes.length})
-                    </button>
-                    <button
-                      type="button"
-                      className="print-btn print-btn-ghost"
-                      onClick={handleDownloadAllPngDirect}
-                      style={{ padding: "7px 12px", fontSize: "0.78rem" }}
-                      title="Download semua file PNG satu per satu tanpa kompresi ZIP"
-                    >
-                      ⬇ PNG Langsung
-                    </button>
-                  </>
-                ) : codes.length === 1 ? (
                   <button
                     type="button"
-                    className="print-btn print-btn-amber"
-                    onClick={() => handleDownloadSingle(codes[0])}
-                    style={{ padding: "8px 18px", fontSize: "0.82rem", fontWeight: 700 }}
-                    title="Download langsung file PNG (Otomatis simpan ke stok)"
+                    className="print-btn print-btn-ghost"
+                    onClick={handleDownloadAllPngDirect}
+                    disabled={isZipping || isSaving}
+                    style={{ padding: "7px 12px", fontSize: "0.78rem" }}
+                    title="Download semua file PNG satu per satu tanpa ZIP"
                   >
-                    ⬇ Download PNG Langsung
+                    ⬇ PNG Satuan
                   </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="print-btn print-btn-amber"
-                      onClick={handleDownloadAllPngDirect}
-                      style={{ padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700 }}
-                      title="Download langsung seluruh file PNG satu per satu (Otomatis simpan ke stok)"
-                    >
-                      ⬇ Download {codes.length} PNG Langsung
-                    </button>
-                    <button
-                      type="button"
-                      className="print-btn print-btn-ghost"
-                      onClick={handleDownloadZip}
-                      disabled={isZipping}
-                      style={{ padding: "7px 12px", fontSize: "0.76rem" }}
-                      title="Download sebagai file ZIP jika diinginkan"
-                    >
-                      📦 Jadikan ZIP
-                    </button>
-                  </>
-                )}
+                ) : codes.length > 1 ? (
+                  <button
+                    type="button"
+                    className="print-btn print-btn-ghost"
+                    onClick={handleDownloadZip}
+                    disabled={isZipping || isSaving}
+                    style={{ padding: "7px 12px", fontSize: "0.78rem" }}
+                    title="Download sebagai 1 file ZIP"
+                  >
+                    📦 Jadikan ZIP
+                  </button>
+                ) : null}
+
+                {/* Aksi utama: satu tombol download pintar */}
+                <button
+                  type="button"
+                  className="print-btn print-btn-amber"
+                  onClick={handleSmartDownload}
+                  disabled={isZipping || isSaving}
+                  style={{ padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700 }}
+                  title={
+                    codes.length >= 10
+                      ? `Download ${codes.length} kartu dalam 1 file ZIP (otomatis simpan ke stok)`
+                      : codes.length === 1
+                      ? "Download 1 file PNG (otomatis simpan ke stok)"
+                      : `Download ${codes.length} file PNG satu per satu (otomatis simpan ke stok)`
+                  }
+                >
+                  {codes.length >= 10
+                    ? `📦 Download ZIP (${codes.length})`
+                    : codes.length === 1
+                    ? "⬇ Download PNG"
+                    : `⬇ Download ${codes.length} PNG`}
+                </button>
+
                 <button
                   type="button"
                   className="print-btn print-btn-ghost"
                   style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#FCA5A5", padding: "7px 12px", fontSize: "0.78rem" }}
                   onClick={handleClearAllCards}
+                  disabled={isZipping || isSaving}
                   title="Hapus seluruh kartu yang sudah di-generate"
                 >
                   🗑️ Hapus Semua
-                </button>
-                <button
-                  type="button"
-                  className="print-btn print-btn-ghost"
-                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                  style={{ padding: "7px 12px", fontSize: "0.78rem" }}
-                >
-                  ⬆ Ke Atas
                 </button>
               </div>
             </div>

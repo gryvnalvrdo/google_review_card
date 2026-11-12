@@ -72,10 +72,12 @@ export default function CardsPage() {
   const [editTargetType, setEditTargetType] = useState<"google" | "instagram">("google");
   const [editPlaceId, setEditPlaceId] = useState("");
   const [editInstagramUsername, setEditInstagramUsername] = useState("");
+  const [editConfirmResetTaps, setEditConfirmResetTaps] = useState(false);
 
   function startEdit(card: CardData) {
     setEditingCard({ ...card });
     setOriginalCard(card);
+    setEditConfirmResetTaps(false);
     const rawUrl = card.googleReviewUrl || "";
     if (isInstagramUrl(rawUrl)) {
       setEditTargetType("instagram");
@@ -188,12 +190,10 @@ export default function CardsPage() {
       return;
     }
 
-    const isLocationOrStoreChanged = Boolean(
-      originalCard && (
-        originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase() ||
-        originalCard.googleReviewUrl.trim() !== finalTargetUrl
-      )
+    const isTargetChanged = Boolean(
+      originalCard && originalCard.googleReviewUrl.trim() !== finalTargetUrl
     );
+    const shouldResetTaps = Boolean(isTargetChanged && editConfirmResetTaps);
 
     const res = await fetch("/api/admin/codes", {
       method: "POST",
@@ -203,7 +203,7 @@ export default function CardsPage() {
         storeName: editingCard.storeName.trim(),
         googleReviewUrl: finalTargetUrl,
         price: editingCard.price ?? 50000,
-        resetTaps: isLocationOrStoreChanged,
+        resetTaps: shouldResetTaps,
       }),
     });
     if (res.ok) {
@@ -1114,36 +1114,66 @@ export default function CardsPage() {
                 />
               </div>
 
-              {/* Deteksi jika nama toko atau tujuan redirect berubah */}
+              {/* Deteksi jika target pengalihan atau nama toko berubah saat edit */}
               {(() => {
                 const currentTarget = editTargetType === "instagram"
                   ? formatInstagramUrl(editInstagramUsername)
                   : (editPlaceId ? `https://search.google.com/local/writereview?placeid=${editPlaceId}` : (editingCard.googleReviewUrl?.trim() || ""));
-                const isLocationOrStoreChanged = Boolean(
-                  originalCard && (
-                    originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase() ||
-                    originalCard.googleReviewUrl.trim() !== currentTarget
-                  )
-                );
+                const isTargetChanged = Boolean(originalCard && originalCard.googleReviewUrl.trim() !== currentTarget);
+                const isStoreNameChanged = Boolean(originalCard && originalCard.storeName.trim().toLowerCase() !== editingCard.storeName.trim().toLowerCase());
                 const currentTaps = originalCard?.tapCount ?? 0;
 
-                return isLocationOrStoreChanged ? (
-                  <div style={{
-                    padding: "10px 12px",
-                    background: "rgba(245, 158, 11, 0.12)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
-                    borderRadius: 8,
-                    color: "#FDE68A",
-                    fontSize: "0.76rem",
-                    lineHeight: 1.5,
-                    marginBottom: 12,
-                  }}>
-                    <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                      <span>⚡</span> Toko atau Target Pengalihan Diganti
+                if (isTargetChanged) {
+                  return (
+                    <div style={{
+                      padding: "12px 14px",
+                      background: "rgba(99, 102, 241, 0.08)",
+                      border: "1px solid rgba(99, 102, 241, 0.28)",
+                      borderRadius: 10,
+                      marginBottom: 14,
+                    }}>
+                      <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#C7D2FE", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>🎯 Target Pengalihan Berubah</span>
+                      </div>
+                      <p style={{ fontSize: "0.73rem", color: "#94A3B8", margin: "0 0 10px", lineHeight: 1.45 }}>
+                        Tujuan ulasan/Instagram kartu ini diubah. Secara bawaan, riwayat <strong>{currentTaps} tap</strong> tetap aman dan dipertahankan.
+                      </p>
+                      <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontSize: "0.76rem", color: editConfirmResetTaps ? "#FCA5A5" : "#E2E8F0" }}>
+                        <input
+                          type="checkbox"
+                          checked={editConfirmResetTaps}
+                          onChange={(e) => setEditConfirmResetTaps(e.target.checked)}
+                          style={{ marginTop: 2, accentColor: "#EF4444", cursor: "pointer" }}
+                        />
+                        <span>
+                          <strong>Reset hitungan tap ke 0</strong> (Centang hanya jika kartu ini dipindahkan ke toko/klien baru)
+                        </span>
+                      </label>
                     </div>
-                    Nama toko atau target pengalihan telah diganti. Riwayat tap sebelumnya ({currentTaps} tap) akan otomatis di-reset ke 0 untuk toko baru.
-                  </div>
-                ) : null;
+                  );
+                }
+
+                if (isStoreNameChanged) {
+                  return (
+                    <div style={{
+                      padding: "8px 12px",
+                      background: "rgba(16, 185, 129, 0.08)",
+                      border: "1px solid rgba(16, 185, 129, 0.22)",
+                      borderRadius: 8,
+                      color: "#6EE7B7",
+                      fontSize: "0.74rem",
+                      lineHeight: 1.4,
+                      marginBottom: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}>
+                      <span>✓</span> Nama toko diperbarui. Seluruh riwayat {currentTaps} tap tetap aman dan dipertahankan.
+                    </div>
+                  );
+                }
+
+                return null;
               })()}
 
               </div>
