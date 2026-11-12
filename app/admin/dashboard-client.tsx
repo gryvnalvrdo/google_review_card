@@ -350,10 +350,13 @@ export default function AdminDashboard() {
   }
 
   // Active cards and calculations
+  const cardsWithCost = useMemo(() => cards.filter(c => typeof c.cost === "number" && c.cost > 0), [cards]);
   const totalTaps = useMemo(() => cards.reduce((sum, c) => sum + (c.tapCount ?? 0), 0), [cards]);
   const totalRevenue = useMemo(() => cards.reduce((sum, c) => sum + (c.price ?? 50000), 0), [cards]);
-  const totalCost = useMemo(() => cards.reduce((sum, c) => sum + (c.cost ?? 0), 0), [cards]);
-  const totalProfit = useMemo(() => totalRevenue - totalCost, [totalRevenue, totalCost]);
+  const totalCost = useMemo(() => cardsWithCost.reduce((sum, c) => sum + (c.cost ?? 0), 0), [cardsWithCost]);
+  // Keuntungan bersih HANYA menghitung kartu yang modal awalnya sudah diisi
+  const totalProfit = useMemo(() => cardsWithCost.reduce((sum, c) => sum + ((c.price ?? 50000) - (c.cost ?? 0)), 0), [cardsWithCost]);
+  const missingCostCount = useMemo(() => cards.length - cardsWithCost.length, [cards.length, cardsWithCost.length]);
 
 
   // ── Form content (shared between desktop sidebar & mobile sheet) ──
@@ -927,7 +930,9 @@ export default function AdminDashboard() {
                 value: `Rp ${totalProfit.toLocaleString("id-ID")}`,
                 icon: "💰",
                 color: "#10B981",
-                sub: `Omzet: Rp ${totalRevenue.toLocaleString("id-ID")} • Modal: Rp ${totalCost.toLocaleString("id-ID")}`,
+                sub: missingCostCount > 0
+                  ? `Dari ${cardsWithCost.length} kartu terisi • ⚠️ ${missingCostCount} belum ada modal`
+                  : `Omzet: Rp ${totalRevenue.toLocaleString("id-ID")} • Modal: Rp ${totalCost.toLocaleString("id-ID")}`,
               },
               { id: "taps", label: "Total Tap Pelanggan", value: totalTaps, icon: "👆", color: "#F59E0B", sub: "Scan QR & tap NFC aktif" },
             ].map((s) => (
@@ -952,6 +957,29 @@ export default function AdminDashboard() {
                 <div className="stat-card-value" style={{ fontWeight: 800, color: s.id === "revenue" ? "#34D399" : "var(--text-primary)" }}>
                   {s.value}
                 </div>
+                {s.id === "revenue" && missingCostCount > 0 && (
+                  <Link
+                    href="/admin/cards"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: "0.68rem",
+                      fontWeight: 700,
+                      color: "#FCD34D",
+                      background: "rgba(245, 158, 11, 0.14)",
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                      padding: "2px 7px",
+                      borderRadius: 6,
+                      marginTop: 6,
+                      textDecoration: "none",
+                    }}
+                    title="Buka daftar kartu untuk mengisi modal awal"
+                  >
+                    <span>⚠️ {missingCostCount} kartu belum modal</span>
+                    <span style={{ fontSize: "0.65rem" }}>↗</span>
+                  </Link>
+                )}
                 <div className="mobile-hide-sm" style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 5 }}>
                   {s.sub}
                 </div>

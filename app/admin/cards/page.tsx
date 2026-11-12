@@ -65,7 +65,7 @@ export default function CardsPage() {
   const [cards, setCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price" | "profit">("date");
+  const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price" | "profit" | "missing_cost">("date");
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [originalCard, setOriginalCard] = useState<CardData | null>(null);
@@ -275,9 +275,24 @@ export default function CardsPage() {
         c.code.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .sort((a, b) => {
+        if (sortBy === "missing_cost") {
+          const missingA = !a.cost || a.cost <= 0 ? 1 : 0;
+          const missingB = !b.cost || b.cost <= 0 ? 1 : 0;
+          if (missingA !== missingB) return missingB - missingA;
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
+        }
         if (sortBy === "tap") return (b.tapCount || 0) - (a.tapCount || 0);
         if (sortBy === "name") return a.storeName.localeCompare(b.storeName);
-        if (sortBy === "profit") return ((b.price ?? 50000) - (b.cost ?? 0)) - ((a.price ?? 50000) - (a.cost ?? 0));
+        if (sortBy === "profit") {
+          const hasCostA = typeof a.cost === "number" && a.cost > 0;
+          const hasCostB = typeof b.cost === "number" && b.cost > 0;
+          if (hasCostA !== hasCostB) return hasCostA ? -1 : 1;
+          const profitA = (a.price ?? 50000) - (a.cost ?? 0);
+          const profitB = (b.price ?? 50000) - (b.cost ?? 0);
+          return profitB - profitA;
+        }
         if (sortBy === "price") return (b.price ?? 50000) - (a.price ?? 50000);
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -285,9 +300,13 @@ export default function CardsPage() {
       });
   }, [cards, searchTerm, sortBy]);
 
+  // Kartu yang sudah terisi modal awal > 0
+  const cardsWithCost = useMemo(() => cards.filter(c => typeof c.cost === "number" && c.cost > 0), [cards]);
   const totalRevenue = useMemo(() => cards.reduce((s, c) => s + (c.price ?? 50000), 0), [cards]);
-  const totalCost = useMemo(() => cards.reduce((s, c) => s + (c.cost ?? 0), 0), [cards]);
-  const totalProfit = useMemo(() => totalRevenue - totalCost, [totalRevenue, totalCost]);
+  const totalCost = useMemo(() => cardsWithCost.reduce((s, c) => s + (c.cost ?? 0), 0), [cardsWithCost]);
+  // Keuntungan bersih HANYA menghitung kartu yang modal awalnya sudah diisi
+  const totalProfit = useMemo(() => cardsWithCost.reduce((s, c) => s + ((c.price ?? 50000) - (c.cost ?? 0)), 0), [cardsWithCost]);
+  const missingCostCount = useMemo(() => cards.length - cardsWithCost.length, [cards.length, cardsWithCost.length]);
   const totalTaps = useMemo(() => cards.reduce((s, c) => s + (c.tapCount ?? 0), 0), [cards]);
 
   return (
@@ -395,62 +414,116 @@ export default function CardsPage() {
                   <div className="cards-pill-val" style={{ color: "#34D399" }}>
                     Rp {totalProfit.toLocaleString("id-ID")}
                   </div>
+                  {missingCostCount > 0 && (
+                    <div style={{ fontSize: "0.62rem", color: "#FCD34D", fontWeight: 700, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      ⚠️ {missingCostCount} kartu belum modal
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-              {/* Toolbar: Tetap sejajar (side-by-side) baik di mobile maupun desktop */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 18, alignItems: "center", width: "100%", flexWrap: "nowrap" }}>
-                <div style={{ flex: "1 1 auto", minWidth: 0, position: "relative" }}>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="🔍 Cari nama atau kode..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    style={{
-                      width: "100%",
-                      paddingRight: searchTerm ? 32 : 12,
-                      fontSize: "0.82rem",
-                      textOverflow: "ellipsis",
-                    }}
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.85rem" }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                <select
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value as "date" | "tap" | "name" | "price" | "profit")}
-                  style={{
-                    flex: "0 0 auto",
-                    maxWidth: "46%",
-                    padding: "9px 10px",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 8,
-                    color: "#F0F0FF",
-                    fontSize: "0.8rem",
-                    outline: "none",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  <option value="date" style={{ background: "#111118" }}>Terbaru Ditambahkan</option>
-                  <option value="profit" style={{ background: "#111118" }}>Keuntungan Tertinggi</option>
-                  <option value="price" style={{ background: "#111118" }}>Harga Jual Tertinggi</option>
-                  <option value="tap" style={{ background: "#111118" }}>Tap Terbanyak</option>
-                  <option value="name" style={{ background: "#111118" }}>Nama Toko (A–Z)</option>
-                </select>
+          {/* Banner Peringatan Kartu yang Lupa Diisi Modal Awal */}
+          {missingCostCount > 0 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "11px 14px",
+              marginBottom: 16,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)",
+              border: "1px solid rgba(245, 158, 11, 0.35)",
+              gap: 12,
+              flexWrap: "wrap",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 240px" }}>
+                <span style={{ fontSize: "1.15rem", flexShrink: 0 }}>⚠️</span>
+                <span style={{ fontSize: "0.8rem", color: "#FDE68A", lineHeight: 1.45 }}>
+                  Ada <strong>{missingCostCount} kartu</strong> yang belum diisi modal awal (ditandai kotak kuning). Belum dihitung ke Keuntungan Bersih.
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={() => setSortBy(prev => prev === "missing_cost" ? "date" : "missing_cost")}
+                style={{
+                  background: sortBy === "missing_cost" ? "rgba(245, 158, 11, 0.35)" : "rgba(245, 158, 11, 0.18)",
+                  border: "1px solid rgba(245, 158, 11, 0.5)",
+                  color: "#FEF3C7",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {sortBy === "missing_cost" ? "✓ Menampilkan Kartu Ini" : "Lihat Kartu Ini →"}
+              </button>
+            </div>
+          )}
+
+          {/* Toolbar: Tetap sejajar (side-by-side) baik di mobile maupun desktop */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 18, alignItems: "center", width: "100%", flexWrap: "nowrap" }}>
+            <div style={{ flex: "1 1 auto", minWidth: 0, position: "relative" }}>
+              <input
+                type="text"
+                className="input"
+                placeholder="🔍 Cari nama atau kode..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  paddingRight: searchTerm ? 32 : 12,
+                  fontSize: "0.82rem",
+                  textOverflow: "ellipsis",
+                }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.85rem" }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as "date" | "tap" | "name" | "price" | "profit" | "missing_cost")}
+              style={{
+                flex: "0 0 auto",
+                maxWidth: "46%",
+                padding: "9px 10px",
+                background: sortBy === "missing_cost" ? "rgba(245, 158, 11, 0.15)" : "rgba(255,255,255,0.05)",
+                border: sortBy === "missing_cost" ? "1px solid rgba(245, 158, 11, 0.45)" : "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8,
+                color: sortBy === "missing_cost" ? "#FDE68A" : "#F0F0FF",
+                fontSize: "0.8rem",
+                outline: "none",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+              }}
+            >
+              <option value="date" style={{ background: "#111118", color: "#F0F0FF" }}>Terbaru Ditambahkan</option>
+              {missingCostCount > 0 && (
+                <option value="missing_cost" style={{ background: "#111118", color: "#FCD34D", fontWeight: "bold" }}>
+                  ⚠️ Belum Ada Modal ({missingCostCount})
+                </option>
+              )}
+              <option value="profit" style={{ background: "#111118", color: "#F0F0FF" }}>Keuntungan Tertinggi</option>
+              <option value="price" style={{ background: "#111118", color: "#F0F0FF" }}>Harga Jual Tertinggi</option>
+              <option value="tap" style={{ background: "#111118", color: "#F0F0FF" }}>Tap Terbanyak</option>
+              <option value="name" style={{ background: "#111118", color: "#F0F0FF" }}>Nama Toko (A–Z)</option>
+            </select>
+          </div>
 
               {/* Cards List */}
               {loading ? (
@@ -470,6 +543,7 @@ export default function CardsPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {filtered.map(card => {
                     const fullCardUrl = `${baseUrl}/c/${card.code}`;
+                    const hasCost = typeof card.cost === "number" && card.cost > 0;
                     return (
                       <div
                         key={card.code}
@@ -479,9 +553,16 @@ export default function CardsPage() {
                           display: "flex",
                           flexDirection: "column",
                           gap: 12,
-                          background: "#111118",
-                          border: "1px solid rgba(255,255,255,0.07)",
-                          transition: "border-color 0.2s",
+                          background: !hasCost
+                            ? "linear-gradient(180deg, rgba(245, 158, 11, 0.07) 0%, #13121A 100%)"
+                            : "#111118",
+                          border: !hasCost
+                            ? "1px solid rgba(245, 158, 11, 0.45)"
+                            : "1px solid rgba(255,255,255,0.07)",
+                          boxShadow: !hasCost
+                            ? "0 4px 20px rgba(245, 158, 11, 0.08)"
+                            : undefined,
+                          transition: "border-color 0.2s, background 0.2s",
                         }}
                       >
                         {/* Row 1: Header (Store Name & Code) + Edit/Delete Buttons (Anchored) */}
@@ -510,6 +591,27 @@ export default function CardsPage() {
 
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
                               <span className="badge badge-green">● Aktif</span>
+                              {!hasCost && (
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(card)}
+                                  className="badge"
+                                  style={{
+                                    background: "rgba(245, 158, 11, 0.16)",
+                                    border: "1px solid rgba(245, 158, 11, 0.45)",
+                                    color: "#FCD34D",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                    cursor: "pointer",
+                                  }}
+                                  title="Klik untuk mengisi modal awal kartu ini"
+                                >
+                                  ⚠️ Modal Belum Diisi ✏️
+                                </button>
+                              )}
                               <Link
                                 href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
                                 className="badge badge-orange"
@@ -586,13 +688,42 @@ export default function CardsPage() {
                           const cardCost = card.cost ?? 0;
                           const cardProfit = cardPrice - cardCost;
                           return (
-                            <div className="card-details-summary">
+                            <div
+                              className="card-details-summary"
+                              style={!hasCost ? { borderColor: "rgba(245, 158, 11, 0.25)", background: "rgba(0, 0, 0, 0.38)" } : undefined}
+                            >
                               <div className="card-finance-grid">
                                 <div className="card-finance-item">
-                                  <span className="card-finance-label">Modal Awal</span>
-                                  <span className="card-finance-val" style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)" }}>
-                                    Rp {cardCost.toLocaleString("id-ID")}
+                                  <span className="card-finance-label" style={!hasCost ? { color: "#FCD34D" } : undefined}>
+                                    Modal Awal
                                   </span>
+                                  {hasCost ? (
+                                    <span className="card-finance-val" style={{ color: "#CBD5E1" }}>
+                                      Rp {cardCost.toLocaleString("id-ID")}
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => startEdit(card)}
+                                      style={{
+                                        background: "rgba(245, 158, 11, 0.15)",
+                                        border: "1px dashed rgba(245, 158, 11, 0.45)",
+                                        borderRadius: 6,
+                                        color: "#FDE68A",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 700,
+                                        padding: "2px 6px",
+                                        cursor: "pointer",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: 3,
+                                      }}
+                                      title="Klik untuk isi modal awal"
+                                    >
+                                      ⚠️ Isi Modal
+                                    </button>
+                                  )}
                                 </div>
                                 <div className="card-finance-item card-finance-divider">
                                   <span className="card-finance-label">Harga Jual</span>
@@ -601,10 +732,24 @@ export default function CardsPage() {
                                   </span>
                                 </div>
                                 <div className="card-finance-item card-finance-divider">
-                                  <span className="card-finance-label" style={{ color: "#6EE7B7" }}>Untung Bersih</span>
-                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171" }} className="card-finance-val-hero">
-                                    Rp {cardProfit.toLocaleString("id-ID")}
-                                  </strong>
+                                  <span className="card-finance-label" style={{ color: hasCost ? "#6EE7B7" : "var(--text-muted)" }}>Untung Bersih</span>
+                                  {hasCost ? (
+                                    <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171" }} className="card-finance-val-hero">
+                                      Rp {cardProfit.toLocaleString("id-ID")}
+                                    </strong>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        color: "var(--text-muted)",
+                                        fontSize: "0.72rem",
+                                        fontStyle: "italic",
+                                        fontWeight: 600,
+                                      }}
+                                      title="Untung bersih dihitung otomatis setelah modal awal diisi"
+                                    >
+                                      Perlu Modal
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
