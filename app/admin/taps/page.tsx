@@ -2826,9 +2826,6 @@ export default function TapsPage() {
                     </button>
                   </div>
                 </div>
-                <p className="dashboard-hero-sub" style={{ marginTop: 6, marginBottom: 0 }}>
-                  Pantau performa kartu pelanggan, tren kunjungan, dan leaderboard ulasan langsung.
-                </p>
               </div>
             </div>
 

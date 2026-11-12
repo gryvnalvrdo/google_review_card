@@ -328,52 +328,115 @@ export default function CardsPage() {
       </div>
 
       {/* Delete Card Confirmation Modal */}
-      {deleteConfirmCode && (
-        <>
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 300, backdropFilter: "blur(6px)" }}
-            onClick={() => setDeleteConfirmCode(null)}
-          />
-          <div style={{
-            position: "fixed", top: "50%", left: "50%",
-            transform: "translate(-50%, -50%)", zIndex: 301,
-            background: "#14141E", border: "1px solid rgba(239,68,68,0.35)",
-            borderRadius: 18, padding: "28px 24px",
-            width: "min(92vw, 380px)", textAlign: "center",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
-          }}>
+      {deleteConfirmCode && (() => {
+        const cardToDelete = cards.find(c => c.code === deleteConfirmCode);
+        return (
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 300, backdropFilter: "blur(8px)" }}
+              onClick={() => setDeleteConfirmCode(null)}
+            />
             <div style={{
-              width: 54, height: 54, borderRadius: 16,
-              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 16px", color: "#F87171",
+              position: "fixed", top: "50%", left: "50%",
+              transform: "translate(-50%, -50%)", zIndex: 301,
+              background: "linear-gradient(180deg, #181522 0%, #0F0E17 100%)",
+              border: "1px solid rgba(239, 68, 68, 0.4)",
+              borderRadius: 20, padding: "26px 22px",
+              width: "min(92vw, 400px)", textAlign: "center",
+              boxShadow: "0 25px 60px -10px rgba(0,0,0,0.85), 0 0 35px rgba(239, 68, 68, 0.16)",
             }}>
-              <TrashIcon size={26} color="#F87171" />
+              {/* Glowing Danger Icon */}
+              <div style={{
+                width: 58, height: 58, borderRadius: "50%",
+                background: "linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.1) 100%)",
+                border: "1.5px solid rgba(239, 68, 68, 0.45)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 16px", color: "#F87171",
+                boxShadow: "0 0 20px rgba(239, 68, 68, 0.25)",
+              }}>
+                <TrashIcon size={26} color="#F87171" />
+              </div>
+
+              <h3 style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 6, color: "#F0F0FF" }}>
+                Hapus Kartu Toko?
+              </h3>
+
+              {/* Preview Toko Yang Akan Dihapus */}
+              <div style={{
+                margin: "14px 0 16px",
+                padding: "12px 14px",
+                background: "rgba(0, 0, 0, 0.4)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: 12,
+                textAlign: "left",
+              }}>
+                <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.95rem", marginBottom: 6, wordBreak: "break-word" }}>
+                  {cardToDelete?.storeName || `Kartu ${deleteConfirmCode}`}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{
+                    fontFamily: "monospace",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    color: "#A5B4FC",
+                    background: "rgba(99, 102, 241, 0.15)",
+                    border: "1px solid rgba(99, 102, 241, 0.3)",
+                    padding: "1px 7px",
+                    borderRadius: 5,
+                  }}>
+                    {deleteConfirmCode}
+                  </span>
+                  <span style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    color: "#FBBF24",
+                    background: "rgba(245, 158, 11, 0.12)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    padding: "1px 7px",
+                    borderRadius: 5,
+                  }}>
+                    👆 {cardToDelete?.tapCount ?? 0} Tap
+                  </span>
+                </div>
+              </div>
+
+              <p style={{ color: "#94A3B8", fontSize: "0.8rem", marginBottom: 20, lineHeight: 1.5 }}>
+                Tindakan ini permanen. Kartu fisik tidak akan dapat diakses lagi oleh pelanggan dan datanya dihapus dari sistem.
+              </p>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ flex: 1, justifyContent: "center", borderRadius: 10, padding: "10px", fontSize: "0.85rem" }}
+                  onClick={() => setDeleteConfirmCode(null)}
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  style={{
+                    flex: 1.2,
+                    justifyContent: "center",
+                    borderRadius: 10,
+                    padding: "10px",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    gap: 6,
+                    background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+                    boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)",
+                  }}
+                  onClick={() => handleDelete(deleteConfirmCode)}
+                >
+                  <TrashIcon size={15} color="#FFFFFF" />
+                  <span>Ya, Hapus</span>
+                </button>
+              </div>
             </div>
-            <h3 style={{ fontWeight: 800, fontSize: "1.15rem", marginBottom: 8, color: "#F0F0FF" }}>Hapus Kartu Ini?</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 22, lineHeight: 1.5 }}>
-              Kode <strong style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{deleteConfirmCode}</strong> akan dihapus permanen.
-              Kartu fisik ini tidak dapat diakses lagi oleh pelanggan, dan datanya tidak akan muncul lagi di leaderboard.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                className="btn btn-ghost"
-                style={{ flex: 1, justifyContent: "center" }}
-                onClick={() => setDeleteConfirmCode(null)}
-              >
-                Batal
-              </button>
-              <button
-                className="btn btn-danger"
-                style={{ flex: 1, justifyContent: "center" }}
-                onClick={() => handleDelete(deleteConfirmCode)}
-              >
-                Ya, Hapus
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+          </>
+        );
+      })()}
 
 
       {/* Main Container */}
@@ -386,9 +449,6 @@ export default function CardsPage() {
               <h1 style={{ fontSize: "1.45rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
                 💳 Daftar Kartu Toko
               </h1>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: "4px 0 0" }}>
-                Kelola kartu toko aktif, cetak ulang QR resolusi tinggi, atau edit data toko.
-              </p>
             </div>
 
             {/* Metrics: Kartu Aktif & Keuntungan Bersih (Side by Side di Mobile & Desktop) */}
@@ -612,44 +672,50 @@ export default function CardsPage() {
                                   ⚠️ Modal Belum Diisi ✏️
                                 </button>
                               )}
-                              <Link
-                                href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
-                                className="badge badge-orange"
-                                style={{
-                                  textDecoration: "none",
-                                  cursor: "pointer",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                }}
-                                title={`Klik untuk buka seluruh riwayat tap ${card.storeName}`}
-                              >
-                                👆 {card.tapCount ?? 0} Tap ↗
-                              </Link>
-                              {(card.tapCount ?? 0) > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleResetTaps(card)}
-                                  disabled={resettingCode === card.code}
+                              {/* Cluster: Jumlah Tap & Reset Tap selalu sejajar (side-by-side) */}
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                                <Link
+                                  href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
+                                  className="badge badge-orange"
                                   style={{
-                                    fontSize: "0.68rem",
-                                    fontWeight: 700,
-                                    color: "#FCA5A5",
-                                    background: "rgba(239, 68, 68, 0.12)",
-                                    border: "1px solid rgba(239, 68, 68, 0.25)",
-                                    borderRadius: 6,
-                                    padding: "2px 7px",
+                                    textDecoration: "none",
                                     cursor: "pointer",
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: 3,
-                                    transition: "all 0.15s ease",
+                                    gap: 4,
+                                    whiteSpace: "nowrap",
                                   }}
-                                  title={`Reset ${card.tapCount} tap kartu ini kembali ke 0`}
+                                  title={`Klik untuk buka seluruh riwayat tap ${card.storeName}`}
                                 >
-                                  {resettingCode === card.code ? "⏳ Mereset..." : "🔄 Reset Tap ke 0"}
-                                </button>
-                              )}
+                                  👆 {card.tapCount ?? 0} Tap ↗
+                                </Link>
+                                {(card.tapCount ?? 0) > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResetTaps(card)}
+                                    disabled={resettingCode === card.code}
+                                    style={{
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      color: "#FCA5A5",
+                                      background: "rgba(239, 68, 68, 0.12)",
+                                      border: "1px solid rgba(239, 68, 68, 0.25)",
+                                      borderRadius: 6,
+                                      padding: "2px 7px",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                      whiteSpace: "nowrap",
+                                      lineHeight: 1.4,
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title={`Reset ${card.tapCount} tap kartu ini kembali ke 0`}
+                                  >
+                                    {resettingCode === card.code ? "⏳..." : "🔄 Reset Tap ke 0"}
+                                  </button>
+                                )}
+                              </div>
                               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                                 Ditambahkan: {formatDate(card.createdAt)}
                               </span>
