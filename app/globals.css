@@ -5046,3 +5046,78 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* === Responsive Card Details Summary (Finance Breakdown & Target Link) === */
+.card-details-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 11px 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-finance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+.card-finance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.card-finance-divider {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  padding-left: 8px;
+}
+
+.card-target-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 8px;
+  width: 100%;
+}
+
+.mobile-show-target-label {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .card-details-summary {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+  }
+  .card-finance-grid {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: auto;
+  }
+  .card-finance-divider {
+    padding-left: 14px;
+  }
+  .card-target-row {
+    padding-top: 0;
+    border-top: none;
+    margin-left: auto;
+    width: auto;
+    justify-content: flex-end;
+  }
+  .mobile-show-target-label {
+    display: none;
+  }
+}
+
+

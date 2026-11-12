@@ -602,42 +602,34 @@ export default function CardsPage() {
                           const cardCost = card.cost ?? 0;
                           const cardProfit = cardPrice - cardCost;
                           return (
-                            <div style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              gap: 12,
-                              padding: "10px 14px",
-                              background: "rgba(0,0,0,0.25)",
-                              borderRadius: 10,
-                              fontSize: "0.78rem",
-                              border: "1px solid rgba(255,255,255,0.04)",
-                              flexWrap: "wrap",
-                            }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                                <div>
-                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Untung Bersih</span>
-                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171", fontSize: "0.95rem", fontWeight: 700 }}>
+                            <div className="card-details-summary">
+                              <div className="card-finance-grid">
+                                <div className="card-finance-item">
+                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Untung Bersih</span>
+                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171", fontSize: "0.92rem", fontWeight: 800, whiteSpace: "nowrap" }}>
                                     Rp {cardProfit.toLocaleString("id-ID")}
                                   </strong>
                                 </div>
-                                <div style={{ borderLeft: "1px solid rgba(255,255,255,0.08)", paddingLeft: 12 }}>
-                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
-                                  <span style={{ color: "#E2E8F0", fontSize: "0.82rem", fontWeight: 600 }}>
+                                <div className="card-finance-item card-finance-divider">
+                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
+                                  <span style={{ color: "#E2E8F0", fontSize: "0.82rem", fontWeight: 700, whiteSpace: "nowrap" }}>
                                     Rp {cardPrice.toLocaleString("id-ID")}
                                   </span>
                                 </div>
-                                <div style={{ borderLeft: "1px solid rgba(255,255,255,0.08)", paddingLeft: 12 }}>
-                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Modal Awal</span>
-                                  <span style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.82rem", fontWeight: 600 }}>
+                                <div className="card-finance-item card-finance-divider">
+                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Modal Awal</span>
+                                  <span style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.82rem", fontWeight: 700, whiteSpace: "nowrap" }}>
                                     Rp {cardCost.toLocaleString("id-ID")}
                                   </span>
                                 </div>
                               </div>
-                              <div style={{ textAlign: "right", marginLeft: "auto" }}>
-                                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>
-                                  {isIg ? "Target Instagram" : "Target Google Review"}
-                                </span>
+
+                              <div className="card-target-row">
+                                <div className="mobile-show-target-label">
+                                  <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                    {isIg ? "Target Instagram" : "Target Google Review"}
+                                  </span>
+                                </div>
                                 <a
                                   href={targetUrl}
                                   target="_blank"
@@ -647,7 +639,7 @@ export default function CardsPage() {
                                     background: isIg ? "rgba(236, 72, 153, 0.12)" : "rgba(245, 158, 11, 0.12)",
                                     border: `1px solid ${isIg ? "rgba(236, 72, 153, 0.28)" : "rgba(245, 158, 11, 0.25)"}`,
                                     borderRadius: 7,
-                                    padding: "4px 10px",
+                                    padding: "5px 11px",
                                     textDecoration: "none",
                                     fontWeight: 600,
                                     fontSize: "0.78rem",
