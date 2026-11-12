@@ -1055,7 +1055,7 @@ export default function AdminDashboard() {
 
             {/* Desktop Left Form */}
             <div className="card desktop-form" style={{ position: "sticky", top: 80 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>
                   {isEditing ? "✏️ Edit Kartu Toko" : "➕ Hubungkan Kartu ke Toko"}
                 </h2>
@@ -1063,11 +1063,6 @@ export default function AdminDashboard() {
                   <span className="badge badge-purple" style={{ fontSize: "0.65rem" }}>Edit Mode</span>
                 )}
               </div>
-              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.5 }}>
-                {isEditing
-                  ? "Perbarui nama toko atau Google Place ID."
-                  : "Tautkan kode fisik kartu NFC/QR ke profil Google Review toko."}
-              </p>
 
               {formContent}
 

@@ -2037,12 +2037,9 @@ export default function PrintQRCodes() {
             </span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: 10 }}>
             <div>
               <div className="print-panel-title">🎴 Mesin Cetak QR Code &amp; Desain Kartu</div>
-              <div className="print-panel-sub">
-                Cetak massal QR code unik di atas template standar maupun desain kustom klien.
-              </div>
             </div>
 
             {/* Template & Export Resolution Status Pill */}
