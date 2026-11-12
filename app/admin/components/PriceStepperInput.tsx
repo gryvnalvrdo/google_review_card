@@ -94,7 +94,7 @@ export function PriceStepperInput({
   const curValue = typeof value === "number" && !isNaN(value) ? value : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%", minWidth: 0 }}>
       {/* Input Box with Integrated Dark Stepper */}
       <div
         style={{
@@ -106,6 +106,8 @@ export function PriceStepperInput({
           overflow: "hidden",
           transition: "all 0.18s ease",
           boxShadow: isFocused ? "0 0 14px rgba(139, 92, 246, 0.25)" : "none",
+          width: "100%",
+          minWidth: 0,
         }}
       >
         {/* Left Badge: Rp */}
@@ -113,14 +115,15 @@ export function PriceStepperInput({
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "0 13px",
+            padding: "0 8px",
             background: isFocused ? "rgba(139, 92, 246, 0.22)" : "rgba(139, 92, 246, 0.12)",
             borderRight: "1px solid rgba(255, 255, 255, 0.08)",
             color: "#C4B5FD",
             fontWeight: 800,
-            fontSize: "0.86rem",
+            fontSize: "0.78rem",
             userSelect: "none",
-            letterSpacing: "0.5px",
+            letterSpacing: "0.3px",
+            flexShrink: 0,
           }}
         >
           Rp
@@ -139,16 +142,18 @@ export function PriceStepperInput({
           required={required}
           autoComplete="off"
           style={{
-            flex: 1,
+            flex: "1 1 0%",
+            minWidth: 0,
             background: "transparent",
             border: "none",
             color: "#F8FAFC",
-            padding: "10px 14px",
-            fontSize: "0.95rem",
+            padding: "9px 6px",
+            fontSize: "0.85rem",
             fontWeight: 700,
             outline: "none",
             width: "100%",
-            letterSpacing: "0.5px",
+            letterSpacing: "0.3px",
+            boxSizing: "border-box",
           }}
         />
 
@@ -158,7 +163,7 @@ export function PriceStepperInput({
             display: "flex",
             flexDirection: "column",
             borderLeft: "1px solid rgba(255, 255, 255, 0.08)",
-            width: 38,
+            width: 26,
             flexShrink: 0,
             background: "rgba(15, 15, 24, 0.6)",
           }}
@@ -179,7 +184,7 @@ export function PriceStepperInput({
               borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
               color: "#C4B5FD",
               cursor: "pointer",
-              fontSize: "0.65rem",
+              fontSize: "0.6rem",
               padding: 0,
               transition: "all 0.12s ease",
             }}
@@ -211,7 +216,7 @@ export function PriceStepperInput({
               border: "none",
               color: curValue <= min ? "rgba(255, 255, 255, 0.2)" : "#C4B5FD",
               cursor: curValue <= min ? "not-allowed" : "pointer",
-              fontSize: "0.65rem",
+              fontSize: "0.6rem",
               padding: 0,
               transition: "all 0.12s ease",
             }}

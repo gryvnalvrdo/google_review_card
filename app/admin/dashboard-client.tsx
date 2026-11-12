@@ -644,7 +644,19 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 10 }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="label" htmlFor="price">Harga Jual (Rp)</label>
+          <PriceStepperInput
+            id="price"
+            value={price}
+            onChange={setPrice}
+            placeholder="50.000"
+            step={5000}
+            min={0}
+          />
+        </div>
+
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="label" htmlFor="cost">Modal Awal (Rp)</label>
           <PriceStepperInput
@@ -655,18 +667,6 @@ export default function AdminDashboard() {
             step={5000}
             min={0}
             required={false}
-          />
-        </div>
-
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="label" htmlFor="price">Harga Jual (Rp)</label>
-          <PriceStepperInput
-            id="price"
-            value={price}
-            onChange={setPrice}
-            placeholder="50.000"
-            step={5000}
-            min={0}
           />
         </div>
       </div>
@@ -926,7 +926,7 @@ export default function AdminDashboard() {
               { id: "cards", label: "Kartu Toko Aktif", value: cards.length, icon: "💳", color: "#6366F1", sub: "Terhubung Google Review" },
               {
                 id: "revenue",
-                label: "Keuntungan Bersih",
+                label: "Keuntungan",
                 value: `Rp ${totalProfit.toLocaleString("id-ID")}`,
                 icon: "💰",
                 color: "#10B981",

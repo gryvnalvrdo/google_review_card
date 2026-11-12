@@ -409,7 +409,7 @@ export default function CardsPage() {
                 <span className="cards-pill-icon">💰</span>
                 <div style={{ minWidth: 0 }}>
                   <div className="cards-pill-label" style={{ color: "#6EE7B7" }}>
-                    Keuntungan Bersih
+                    Keuntungan
                   </div>
                   <div className="cards-pill-val" style={{ color: "#34D399" }}>
                     Rp {totalProfit.toLocaleString("id-ID")}
@@ -441,7 +441,7 @@ export default function CardsPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 240px" }}>
                 <span style={{ fontSize: "1.15rem", flexShrink: 0 }}>⚠️</span>
                 <span style={{ fontSize: "0.8rem", color: "#FDE68A", lineHeight: 1.45 }}>
-                  Ada <strong>{missingCostCount} kartu</strong> yang belum diisi modal awal (ditandai kotak kuning). Belum dihitung ke Keuntungan Bersih.
+                  Ada <strong>{missingCostCount} kartu</strong> yang belum diisi modal awal (ditandai kotak kuning). Belum dihitung ke Keuntungan.
                 </span>
               </div>
               <button
@@ -694,6 +694,12 @@ export default function CardsPage() {
                             >
                               <div className="card-finance-grid">
                                 <div className="card-finance-item">
+                                  <span className="card-finance-label">Harga Jual</span>
+                                  <span className="card-finance-val">
+                                    Rp {cardPrice.toLocaleString("id-ID")}
+                                  </span>
+                                </div>
+                                <div className="card-finance-item card-finance-divider">
                                   <span className="card-finance-label" style={!hasCost ? { color: "#FCD34D" } : undefined}>
                                     Modal Awal
                                   </span>
@@ -724,12 +730,6 @@ export default function CardsPage() {
                                       ⚠️ Isi Modal
                                     </button>
                                   )}
-                                </div>
-                                <div className="card-finance-item card-finance-divider">
-                                  <span className="card-finance-label">Harga Jual</span>
-                                  <span className="card-finance-val">
-                                    Rp {cardPrice.toLocaleString("id-ID")}
-                                  </span>
                                 </div>
                                 <div className="card-finance-item card-finance-divider">
                                   <span className="card-finance-label" style={{ color: hasCost ? "#6EE7B7" : "var(--text-muted)" }}>Untung Bersih</span>
@@ -1255,7 +1255,18 @@ export default function CardsPage() {
                 </div>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 10 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="label">Harga Jual (Rp)</label>
+                  <PriceStepperInput
+                    value={editingCard.price ?? 50000}
+                    onChange={p => setEditingCard({ ...editingCard, price: p })}
+                    placeholder="50.000"
+                    step={5000}
+                    min={0}
+                  />
+                </div>
+
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="label">Modal Awal (Rp)</label>
                   <PriceStepperInput
@@ -1265,17 +1276,6 @@ export default function CardsPage() {
                     step={5000}
                     min={0}
                     required={false}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="label">Harga Jual (Rp)</label>
-                  <PriceStepperInput
-                    value={editingCard.price ?? 50000}
-                    onChange={p => setEditingCard({ ...editingCard, price: p })}
-                    placeholder="50.000"
-                    step={5000}
-                    min={0}
                   />
                 </div>
               </div>
