@@ -5055,14 +5055,15 @@ input[type="number"] {
   background: rgba(0, 0, 0, 0.28);
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  width: 100%;
 }
 
 .card-finance-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
   align-items: center;
   width: 100%;
+  text-align: center;
 }
 
 .card-finance-item {
@@ -5072,23 +5073,56 @@ input[type="number"] {
   min-width: 0;
 }
 
+.card-finance-label {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-finance-val-hero {
+  font-size: 0.92rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.card-finance-val {
+  color: #E2E8F0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .card-finance-divider {
   border-left: 1px solid rgba(255, 255, 255, 0.08);
-  padding-left: 8px;
 }
 
 .card-target-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
-  gap: 8px;
   width: 100%;
 }
 
-.mobile-show-target-label {
-  display: block;
+.card-target-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
 @media (min-width: 768px) {
@@ -5102,21 +5136,22 @@ input[type="number"] {
   .card-finance-grid {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
     width: auto;
+    text-align: left;
   }
   .card-finance-divider {
-    padding-left: 14px;
+    padding-left: 16px;
   }
   .card-target-row {
     padding-top: 0;
     border-top: none;
-    margin-left: auto;
     width: auto;
-    justify-content: flex-end;
+    margin-left: auto;
   }
-  .mobile-show-target-label {
-    display: none;
+  .card-target-btn {
+    width: auto;
+    padding: 5px 12px;
   }
 }
 

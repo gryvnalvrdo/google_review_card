@@ -605,54 +605,40 @@ export default function CardsPage() {
                             <div className="card-details-summary">
                               <div className="card-finance-grid">
                                 <div className="card-finance-item">
-                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Untung Bersih</span>
-                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171", fontSize: "0.92rem", fontWeight: 800, whiteSpace: "nowrap" }}>
+                                  <span className="card-finance-label">Untung Bersih</span>
+                                  <strong style={{ color: cardProfit >= 0 ? "#34D399" : "#F87171" }} className="card-finance-val-hero">
                                     Rp {cardProfit.toLocaleString("id-ID")}
                                   </strong>
                                 </div>
                                 <div className="card-finance-item card-finance-divider">
-                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Harga Jual</span>
-                                  <span style={{ color: "#E2E8F0", fontSize: "0.82rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                  <span className="card-finance-label">Harga Jual</span>
+                                  <span className="card-finance-val">
                                     Rp {cardPrice.toLocaleString("id-ID")}
                                   </span>
                                 </div>
                                 <div className="card-finance-item card-finance-divider">
-                                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Modal Awal</span>
-                                  <span style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)", fontSize: "0.82rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                  <span className="card-finance-label">Modal Awal</span>
+                                  <span className="card-finance-val" style={{ color: cardCost > 0 ? "#CBD5E1" : "var(--text-muted)" }}>
                                     Rp {cardCost.toLocaleString("id-ID")}
                                   </span>
                                 </div>
                               </div>
 
                               <div className="card-target-row">
-                                <div className="mobile-show-target-label">
-                                  <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                    {isIg ? "Target Instagram" : "Target Google Review"}
-                                  </span>
-                                </div>
                                 <a
                                   href={targetUrl}
                                   target="_blank"
                                   rel="noreferrer"
+                                  className="card-target-btn"
                                   style={{
                                     color: isIg ? "#F472B6" : "#FCD34D",
                                     background: isIg ? "rgba(236, 72, 153, 0.12)" : "rgba(245, 158, 11, 0.12)",
                                     border: `1px solid ${isIg ? "rgba(236, 72, 153, 0.28)" : "rgba(245, 158, 11, 0.25)"}`,
-                                    borderRadius: 7,
-                                    padding: "5px 11px",
-                                    textDecoration: "none",
-                                    fontWeight: 600,
-                                    fontSize: "0.78rem",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                    whiteSpace: "nowrap",
-                                    transition: "all 0.15s ease",
                                   }}
                                   title={isIg ? "Buka profil Instagram" : "Buka ulasan toko di Google Search"}
                                 >
                                   <span>{isIg ? "📸" : "⭐"}</span>
-                                  <span>{isIg ? "Buka Instagram" : "Buka Menu Ulasan"}</span>
+                                  <span>{isIg ? "Buka Profil Instagram" : "Buka Menu Google Review"}</span>
                                   <span style={{ fontSize: "0.72rem", opacity: 0.8 }}>↗</span>
                                 </a>
                               </div>
