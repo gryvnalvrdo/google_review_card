@@ -67,6 +67,7 @@ export default function CardsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "tap" | "name" | "price" | "profit" | "missing_cost">("date");
   const [deleteConfirmCode, setDeleteConfirmCode] = useState<string | null>(null);
+  const [resetConfirmCard, setResetConfirmCard] = useState<CardData | null>(null);
   const [editingCard, setEditingCard] = useState<CardData | null>(null);
   const [originalCard, setOriginalCard] = useState<CardData | null>(null);
   const [resettingCode, setResettingCode] = useState<string | null>(null);
@@ -115,7 +116,7 @@ export default function CardsPage() {
   }, []);
 
   useEffect(() => {
-    if (editingCard || deleteConfirmCode) {
+    if (editingCard || deleteConfirmCode || resetConfirmCard) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -123,7 +124,7 @@ export default function CardsPage() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [editingCard, deleteConfirmCode]);
+  }, [editingCard, deleteConfirmCode, resetConfirmCard]);
 
   async function fetchCards() {
     try {
@@ -151,18 +152,15 @@ export default function CardsPage() {
     setDeleteConfirmCode(null);
   }
 
-  async function handleResetTaps(card: CardData) {
-    const confirmed = window.confirm(
-      `Reset riwayat tap untuk "${card.storeName}" (${card.code})?\n\nHitungan ${card.tapCount ?? 0} tap dan seluruh entri log kartu ini akan dihapus dan kembali ke 0.`
-    );
-    if (!confirmed) return;
+  async function executeResetTaps(card: CardData) {
     setResettingCode(card.code);
     try {
       const res = await fetch(`/api/admin/codes/${card.code}`, { method: "POST" });
       if (res.ok) {
         await fetchCards();
+        setResetConfirmCard(null);
       } else {
-        alert("Gagal mereset tap kartu.");
+        alert("Gagal mereset hitungan tap kartu.");
       }
     } catch (e) {
       console.error(e);
@@ -438,6 +436,144 @@ export default function CardsPage() {
         );
       })()}
 
+      {/* Reset Taps Confirmation Modal */}
+      {resetConfirmCard && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 300, backdropFilter: "blur(8px)" }}
+            onClick={() => {
+              if (resettingCode !== resetConfirmCard.code) setResetConfirmCard(null);
+            }}
+          />
+          <div style={{
+            position: "fixed", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)", zIndex: 301,
+            background: "linear-gradient(180deg, #181522 0%, #0F0E17 100%)",
+            border: "1px solid rgba(245, 158, 11, 0.4)",
+            borderRadius: 20, padding: "26px 22px",
+            width: "min(92vw, 400px)", textAlign: "center",
+            boxShadow: "0 25px 60px -10px rgba(0,0,0,0.85), 0 0 35px rgba(245, 158, 11, 0.16)",
+          }}>
+            {/* Glowing Orange/Amber Refresh Icon */}
+            <div style={{
+              width: 58, height: 58, borderRadius: "50%",
+              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%)",
+              border: "1.5px solid rgba(245, 158, 11, 0.45)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px", color: "#FCD34D",
+              boxShadow: "0 0 24px rgba(245, 158, 11, 0.22)",
+            }}>
+              <span style={{ fontSize: "1.5rem" }}>🔄</span>
+            </div>
+
+            <h3 style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 6, color: "#F0F0FF" }}>
+              Reset Hitungan Tap?
+            </h3>
+
+            {/* Preview Toko & Counter: X -> 0 */}
+            <div style={{
+              margin: "16px 0 14px",
+              padding: "14px 16px",
+              background: "rgba(0, 0, 0, 0.45)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: 14,
+              textAlign: "left",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.98rem", wordBreak: "break-word" }}>
+                    {resetConfirmCard.storeName}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <span style={{
+                      fontFamily: "monospace",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      color: "#A5B4FC",
+                      background: "rgba(99, 102, 241, 0.15)",
+                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                      padding: "1px 7px",
+                      borderRadius: 5,
+                    }}>
+                      {resetConfirmCard.code}
+                    </span>
+                    <span style={{ fontSize: "0.7rem", color: "#34D399", fontWeight: 600 }}>
+                      ● Kartu Aktif
+                    </span>
+                  </div>
+                </div>
+
+                {/* Animated / Visual Counter Change Badge */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(245, 158, 11, 0.12)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  flexShrink: 0,
+                }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.58rem", color: "#FDE68A", textTransform: "uppercase", fontWeight: 700 }}>Kini</div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#FCD34D" }}>{resetConfirmCard.tapCount ?? 0}</div>
+                  </div>
+                  <span style={{ color: "#FDE68A", opacity: 0.7, fontSize: "0.82rem" }}>➔</span>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "0.58rem", color: "#A7F3D0", textTransform: "uppercase", fontWeight: 700 }}>Baru</div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#34D399" }}>0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p style={{ color: "#94A3B8", fontSize: "0.82rem", lineHeight: 1.55, margin: "0 0 20px" }}>
+              Hitungan tap toko ini akan dikembalikan ke <strong>0</strong>. Cocok saat kartu dipindahkan ke klien baru atau memulai periode pelacakan baru. Tautan ulasan Google tetap aktif dan tidak berubah.
+            </p>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ flex: 1, justifyContent: "center", borderRadius: 10, padding: "11px", fontSize: "0.86rem" }}
+                onClick={() => setResetConfirmCard(null)}
+                disabled={resettingCode === resetConfirmCard.code}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => executeResetTaps(resetConfirmCard)}
+                disabled={resettingCode === resetConfirmCard.code}
+                style={{
+                  flex: 1.3,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  borderRadius: 10,
+                  padding: "11px",
+                  fontSize: "0.86rem",
+                  fontWeight: 800,
+                  color: "#FFFFFF",
+                  background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                  border: "none",
+                  boxShadow: "0 4px 16px rgba(245, 158, 11, 0.35)",
+                  cursor: resettingCode === resetConfirmCard.code ? "wait" : "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {resettingCode === resetConfirmCard.code ? (
+                  <><div className="spinner" style={{ width: 14, height: 14 }} /> Mereset...</>
+                ) : (
+                  <><span>🔄</span> Ya, Reset ke 0</>
+                )}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
 
       {/* Main Container */}
       <div style={{ background: "#0A0A0F", minHeight: "calc(100vh - 65px)", paddingBottom: "calc(110px + env(safe-area-inset-bottom, 24px))" }}>
@@ -695,7 +831,7 @@ export default function CardsPage() {
                             {(card.tapCount ?? 0) > 0 && (
                               <button
                                 type="button"
-                                onClick={() => handleResetTaps(card)}
+                                onClick={() => setResetConfirmCard(card)}
                                 disabled={resettingCode === card.code}
                                 style={{
                                   fontSize: "0.68rem",
