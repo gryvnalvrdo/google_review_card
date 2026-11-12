@@ -1154,7 +1154,7 @@ export default function CardsPage() {
                   <PriceStepperInput
                     value={editingCard.price ?? 50000}
                     onChange={p => setEditingCard({ ...editingCard, price: p })}
-                    placeholder="50000"
+                    placeholder="50.000"
                     step={5000}
                     min={0}
                   />

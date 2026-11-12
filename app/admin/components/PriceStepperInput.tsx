@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface PriceStepperInputProps {
   id?: string;
@@ -20,25 +20,75 @@ export function PriceStepperInput({
   min = 0,
   max = 100000000,
   step = 5000,
-  placeholder = "50000",
+  placeholder = "50.000",
   required = true,
 }: PriceStepperInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
+  // Format angka ke format ribuan bertitik Indonesia: misal 45000 -> "45.000"
+  const formatNumber = (num: number | undefined | null): string => {
+    if (num === undefined || num === null || isNaN(num)) return "";
+    return num.toLocaleString("id-ID");
+  };
+
+  const [displayValue, setDisplayValue] = useState<string>(() => {
+    if (typeof value === "number" && !isNaN(value)) {
+      return formatNumber(value);
+    }
+    return "";
+  });
+
+  // Sinkronisasi displayValue saat prop value dari luar berubah
+  useEffect(() => {
+    // Jika input sedang difokuskan oleh pengguna dan input sengaja dikosongkan (ingin dihapus),
+    // jangan paksa kembali angka "0" agar pengguna bisa leluasa mengetik angka baru
+    if (isFocused && displayValue === "" && value === 0) {
+      return;
+    }
+    if (typeof value === "number" && !isNaN(value)) {
+      setDisplayValue(formatNumber(value));
+    } else {
+      setDisplayValue("");
+    }
+  }, [value, isFocused]);
+
   const handleStep = (delta: number) => {
     const cur = typeof value === "number" && !isNaN(value) ? value : 0;
     const next = Math.max(min, Math.min(max, cur + delta));
+    setDisplayValue(formatNumber(next));
     onChange(next);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "");
-    if (raw === "") {
-      onChange(0);
+    const rawDigits = e.target.value.replace(/\D/g, "");
+    if (rawDigits === "") {
+      // Pengguna menghapus semua angka di input
+      setDisplayValue("");
+      onChange(0); // Jika tidak memasukkan apa-apa, tersimpan otomatis sebagai 0
       return;
     }
-    const num = parseInt(raw, 10);
-    onChange(isNaN(num) ? 0 : Math.min(max, num));
+    const num = Math.min(max, parseInt(rawDigits, 10));
+    setDisplayValue(formatNumber(num));
+    onChange(num);
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(true);
+    e.target.select();
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (displayValue === "") {
+      // Saat kursor keluar dan input kosong, tampilkan "0" dan pastikan nilainya 0
+      setDisplayValue("0");
+      onChange(0);
+    } else {
+      const rawDigits = displayValue.replace(/\D/g, "");
+      const num = rawDigits ? Math.min(max, parseInt(rawDigits, 10)) : 0;
+      setDisplayValue(formatNumber(num));
+      onChange(num);
+    }
   };
 
   const curValue = typeof value === "number" && !isNaN(value) ? value : 0;
@@ -76,19 +126,18 @@ export function PriceStepperInput({
           Rp
         </div>
 
-        {/* Number Input */}
+        {/* Text Input with Thousands Formatter */}
         <input
           id={id}
-          type="number"
-          step={step}
-          min={min}
-          max={max}
-          value={curValue === 0 && !isFocused ? "" : curValue}
+          type="text"
+          inputMode="numeric"
+          value={displayValue}
           onChange={handleInputChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder={placeholder}
           required={required}
+          autoComplete="off"
           style={{
             flex: 1,
             background: "transparent",

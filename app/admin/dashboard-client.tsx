@@ -648,7 +648,7 @@ export default function AdminDashboard() {
             id="price"
             value={price}
             onChange={setPrice}
-            placeholder="50000"
+            placeholder="50.000"
             step={5000}
             min={0}
           />
