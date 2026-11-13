@@ -484,116 +484,44 @@ export default function CardsPage() {
           <div style={{
             position: "fixed", top: "50%", left: "50%",
             transform: "translate(-50%, -50%)", zIndex: 301,
-            background: "linear-gradient(180deg, #191624 0%, #100E17 100%)",
-            border: "1px solid rgba(245, 158, 11, 0.4)",
-            borderRadius: 22, padding: "26px 22px 22px",
-            width: "min(92vw, 390px)", textAlign: "center",
-            boxShadow: "0 28px 65px -12px rgba(0,0,0,0.9), 0 0 40px rgba(245, 158, 11, 0.14)",
-            overflow: "hidden",
+            background: "#13131C",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: 16, padding: "20px",
+            width: "min(92vw, 360px)",
+            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.78)",
           }}>
-            {/* Top Accent Line */}
-            <div style={{
-              position: "absolute", top: 0, left: 0, right: 0, height: 3,
-              background: "linear-gradient(90deg, transparent, #F59E0B, transparent)",
-            }} />
-
-            {/* Glowing Amber Icon */}
-            <div style={{
-              width: 54, height: 54, borderRadius: 16,
-              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.08) 100%)",
-              border: "1px solid rgba(245, 158, 11, 0.42)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 14px", color: "#FCD34D",
-              boxShadow: "0 8px 24px rgba(245, 158, 11, 0.22)",
-            }}>
-              <span style={{ fontSize: "1.45rem", lineHeight: 1 }}>🔄</span>
-            </div>
-
-            <h3 style={{ fontWeight: 800, fontSize: "1.15rem", margin: "0 0 4px", color: "#F8FAFC", letterSpacing: "-0.01em" }}>
-              Reset Hitungan Tap?
-            </h3>
-            <p style={{ fontSize: "0.75rem", color: "#94A3B8", margin: "0 0 16px" }}>
-              Mulai ulang statistik kunjungan dari awal
-            </p>
-
-            {/* Preview Toko & Counter Transition */}
-            <div style={{
-              margin: "0 0 14px",
-              padding: "13px 14px",
-              background: "rgba(0, 0, 0, 0.42)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: 14,
-              textAlign: "left",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-                <div style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "0.94rem", wordBreak: "break-word", minWidth: 0 }}>
-                  {resetConfirmCard.storeName}
-                </div>
-                <span style={{
-                  fontFamily: "monospace",
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  color: "#A5B4FC",
-                  background: "rgba(99, 102, 241, 0.15)",
-                  border: "1px solid rgba(99, 102, 241, 0.3)",
-                  padding: "2px 7px",
-                  borderRadius: 6,
-                  flexShrink: 0,
-                }}>
-                  #{resetConfirmCard.code}
-                </span>
-              </div>
-
-              {/* Visual Counter Transition Bar */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
               <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto 1fr",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 10px",
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                borderRadius: 10,
+                width: 38, height: 38, borderRadius: 10,
+                background: "rgba(245, 158, 11, 0.14)",
+                border: "1px solid rgba(245, 158, 11, 0.28)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, fontSize: "1.1rem", lineHeight: 1,
               }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "0.6rem", color: "#94A3B8", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>
-                    Saat Ini
-                  </div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#FBBF24", marginTop: 1 }}>
-                    {resetConfirmCard.tapCount ?? 0} Tap
-                  </div>
-                </div>
-
+                🔄
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ fontWeight: 700, fontSize: "1rem", margin: 0, color: "#F8FAFC", lineHeight: 1.3 }}>
+                  Reset Tap ke 0?
+                </h3>
                 <div style={{
-                  width: 26, height: 26, borderRadius: "50%",
-                  background: "rgba(245, 158, 11, 0.15)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#FCD34D", fontSize: "0.75rem", fontWeight: 800,
+                  fontSize: "0.76rem", color: "#94A3B8", marginTop: 2,
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}>
-                  ➔
-                </div>
-
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "0.6rem", color: "#6EE7B7", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>
-                    Setelah Reset
-                  </div>
-                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#34D399", marginTop: 1 }}>
-                    0 Tap
-                  </div>
+                  {resetConfirmCard.storeName} · <span style={{ fontFamily: "monospace", color: "#A5B4FC" }}>{resetConfirmCard.code}</span>
                 </div>
               </div>
             </div>
 
-            <p style={{ color: "#94A3B8", fontSize: "0.78rem", lineHeight: 1.45, margin: "0 0 18px" }}>
-              Riwayat kunjungan pada kartu ini akan dibersihkan dan hitungan dimulai kembali dari <strong>0</strong>.
+            <p style={{ color: "#CBD5E1", fontSize: "0.82rem", lineHeight: 1.5, margin: "0 0 18px" }}>
+              Hitungan <strong style={{ color: "#FBBF24" }}>{resetConfirmCard.tapCount ?? 0} tap</strong> dan riwayat kunjungan kartu ini akan dikembalikan ke <strong style={{ color: "#34D399" }}>0</strong>.
             </p>
 
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8 }}>
               <button
                 type="button"
                 className="btn btn-ghost"
-                style={{ flex: 1, justifyContent: "center", borderRadius: 11, padding: "11px", fontSize: "0.85rem", fontWeight: 700 }}
+                style={{ flex: 1, justifyContent: "center", borderRadius: 10, padding: "9px 12px", fontSize: "0.82rem", fontWeight: 600 }}
                 onClick={() => setResetConfirmCard(null)}
                 disabled={resettingCode === resetConfirmCard.code}
               >
@@ -604,27 +532,27 @@ export default function CardsPage() {
                 onClick={() => executeResetTaps(resetConfirmCard)}
                 disabled={resettingCode === resetConfirmCard.code}
                 style={{
-                  flex: 1.3,
+                  flex: 1,
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 6,
-                  borderRadius: 11,
-                  padding: "11px",
-                  fontSize: "0.85rem",
-                  fontWeight: 800,
+                  borderRadius: 10,
+                  padding: "9px 12px",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
                   color: "#FFFFFF",
-                  background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-                  border: "none",
-                  boxShadow: "0 6px 18px rgba(245, 158, 11, 0.35)",
+                  background: "#D97706",
+                  border: "1px solid rgba(245, 158, 11, 0.45)",
                   cursor: resettingCode === resetConfirmCard.code ? "wait" : "pointer",
-                  transition: "all 0.15s ease",
+                  touchAction: "manipulation",
+                  transition: "background-color 0.15s ease, opacity 0.15s ease",
                 }}
               >
                 {resettingCode === resetConfirmCard.code ? (
                   <><div className="spinner" style={{ width: 14, height: 14 }} /> Mereset...</>
                 ) : (
-                  <><span>🔄</span> Reset Sekarang</>
+                  "Ya, Reset"
                 )}
               </button>
             </div>
@@ -821,8 +749,8 @@ export default function CardsPage() {
                       >
                         {/* Row 1: Header (Store Name & Code) + Edit/Delete Buttons (Anchored) */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
-                            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF", wordBreak: "break-word" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 5, minWidth: 0 }}>
+                            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#F0F0FF", wordBreak: "break-word", lineHeight: 1.3, margin: 0 }}>
                               {card.storeName}
                             </h3>
                             <button
