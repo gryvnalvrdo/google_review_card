@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { removeStokCode } from "../../../../../lib/kv";
 import { isAdminLoggedIn } from "../../../../../lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function DELETE(
   request: Request,
   { params }: { params: { code: string } }

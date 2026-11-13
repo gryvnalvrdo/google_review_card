@@ -162,37 +162,69 @@ export async function setCard(record: CardRecord): Promise<void> {
   memoryStore.set(record.code, record);
 }
 
+async function replaceTapLogList(validLogs: TapLogEntry[], suffix: string): Promise<void> {
+  if (!vercelKv) return;
+  if (validLogs.length === 0) {
+    await vercelKv.del(TAP_LOG_KEY);
+    return;
+  }
+
+  const tempKey = `${TAP_LOG_KEY}:${suffix}:${Date.now()}`;
+  const serialized = validLogs.map((e) => JSON.stringify(e));
+  const CHUNK_SIZE = 500;
+  for (let i = 0; i < serialized.length; i += CHUNK_SIZE) {
+    await vercelKv.rpush(tempKey, ...serialized.slice(i, i + CHUNK_SIZE));
+  }
+  await vercelKv.rename(tempKey, TAP_LOG_KEY);
+}
+
 /** Reset hitungan tap dan bersihkan entri log tap untuk satu kartu tertentu (misal toko/lokasi berganti). */
 export async function resetCardTaps(code: string): Promise<void> {
   if (hasKv && vercelKv) {
+    const delTapPromise = vercelKv.del(TAP_PREFIX + code);
     try {
       const rawLogs = await vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1);
       if (rawLogs && rawLogs.length > 0) {
-        const remaining = rawLogs
-          .map((item) => {
-            if (typeof item === "string") {
-              try { return JSON.parse(item) as TapLogEntry; } catch { return null; }
-            }
-            return item as unknown as TapLogEntry;
-          })
-          .filter((e): e is TapLogEntry => e !== null && e.code !== code);
+        const remaining: TapLogEntry[] = [];
+        let removedAny = false;
+        let hasMalformed = false;
+        let isOutOfOrder = false;
+        let prevTs = Number.POSITIVE_INFINITY;
 
-        // Pastikan urutan selalu kronologis (newest-first)
-        remaining.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
+        for (const item of rawLogs) {
+          let entry: TapLogEntry | null = null;
+          if (typeof item === "string") {
+            try { entry = JSON.parse(item) as TapLogEntry; } catch { entry = null; }
+          } else {
+            entry = item as unknown as TapLogEntry;
+          }
 
-        if (remaining.length > 0) {
-          const tempKey = `${TAP_LOG_KEY}:reset:${Date.now()}`;
-          await vercelKv.rpush(tempKey, ...remaining.map((e) => JSON.stringify(e)));
-          await vercelKv.rename(tempKey, TAP_LOG_KEY);
-        } else {
-          await vercelKv.del(TAP_LOG_KEY);
+          if (!entry || !entry.code) {
+            hasMalformed = true;
+            continue;
+          }
+          if (entry.code === code) {
+            removedAny = true;
+            continue;
+          }
+
+          const ts = new Date(entry.tappedAt).getTime();
+          if (ts > prevTs) isOutOfOrder = true;
+          prevTs = ts;
+          remaining.push(entry);
+        }
+
+        // Hanya tulis ulang list Redis jika memang ada log kartu ini yang dihapus atau urutan rusak
+        if (removedAny || hasMalformed || isOutOfOrder) {
+          remaining.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
+          await replaceTapLogList(remaining, "reset");
         }
       }
     } catch (e) {
       console.error("Gagal membersihkan tap_log untuk kode", code, e);
     }
 
-    await vercelKv.del(TAP_PREFIX + code);
+    await delTapPromise;
     return;
   }
 
@@ -369,33 +401,54 @@ export async function addTapLog(entry: TapLogEntry): Promise<void> {
 /** Ambil N entri tap terbaru (hanya untuk kartu yang masih aktif). */
 export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
   if (hasKv && vercelKv) {
-    const [activeCodesList, raw] = await Promise.all([
+    const initialEnd = Math.min(TAP_LOG_MAX - 1, Math.max(limit * 5 - 1, 299));
+    let isFullScan = initialEnd >= TAP_LOG_MAX - 1;
+
+    const [activeCodesList, initialRaw] = await Promise.all([
       vercelKv.smembers<string[]>(INDEX_KEY),
-      vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1),
+      vercelKv.lrange<string>(TAP_LOG_KEY, 0, initialEnd),
     ]);
 
     const activeCodes = new Set(activeCodesList ?? []);
+    let raw = initialRaw;
     if (!raw || raw.length === 0) return [];
 
-    let hasOrphan = false;
-    const validLogs: TapLogEntry[] = [];
+    const parseRawLogs = (items: unknown[]) => {
+      let hasOrphan = false;
+      let hasMalformed = false;
+      const validLogs: TapLogEntry[] = [];
 
-    for (const item of raw) {
-      let entry: TapLogEntry | null = null;
-      if (typeof item === "string") {
-        try { entry = JSON.parse(item) as TapLogEntry; } catch { entry = null; }
-      } else {
-        entry = item as unknown as TapLogEntry;
-      }
-
-      if (entry && entry.code) {
-        if (activeCodes.has(entry.code)) {
-          validLogs.push(entry);
+      for (const item of items) {
+        let entry: TapLogEntry | null = null;
+        if (typeof item === "string") {
+          try { entry = JSON.parse(item) as TapLogEntry; } catch { entry = null; }
         } else {
-          hasOrphan = true;
+          entry = item as unknown as TapLogEntry;
+        }
+
+        if (entry && entry.code) {
+          if (activeCodes.has(entry.code)) {
+            validLogs.push(entry);
+          } else {
+            hasOrphan = true;
+          }
+        } else {
+          hasMalformed = true;
         }
       }
+      return { validLogs, hasOrphan, hasMalformed };
+    };
+
+    let parsed = parseRawLogs(raw);
+
+    // Jika limit besar atau banyak log orphan di awal list, fallback ke full scan agar jumlah log tetap lengkap
+    if (!isFullScan && parsed.validLogs.length < limit && raw.length >= initialEnd + 1) {
+      raw = await vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1);
+      isFullScan = true;
+      parsed = parseRawLogs(raw ?? []);
     }
+
+    const { validLogs, hasOrphan, hasMalformed } = parsed;
 
     // Cek apakah ada entri yang tidak berurutan secara kronologis
     let isOutOfOrder = false;
@@ -409,21 +462,11 @@ export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
     // Pastikan SELALU diurutkan dari yang terbaru (newest-first)
     validLogs.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
 
-    // Jika ada orphan log atau urutan di Redis sempat teracak, rapikan kembali di Redis secara atomik
-    if (hasOrphan || isOutOfOrder) {
-      (async () => {
-        try {
-          if (validLogs.length > 0) {
-            const tempKey = `${TAP_LOG_KEY}:heal:${Date.now()}`;
-            await vercelKv.rpush(tempKey, ...validLogs.map((e) => JSON.stringify(e)));
-            await vercelKv.rename(tempKey, TAP_LOG_KEY);
-          } else {
-            await vercelKv.del(TAP_LOG_KEY);
-          }
-        } catch (err) {
-          console.error("Gagal auto-heal urutan tap_log di KV:", err);
-        }
-      })();
+    // Hanya jalankan auto-heal saat full scan agar log lama tidak pernah terpotong
+    if (isFullScan && (hasOrphan || isOutOfOrder || hasMalformed)) {
+      await replaceTapLogList(validLogs, "heal").catch((err) => {
+        console.error("Gagal auto-heal urutan tap_log di KV:", err);
+      });
     }
 
     return validLogs.slice(0, limit);

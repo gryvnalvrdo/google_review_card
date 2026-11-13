@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminLoggedIn } from "../../../../../lib/auth";
 import { deleteCard, resetCardTaps } from "../../../../../lib/kv";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+};
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: { code: string } }
@@ -16,7 +23,7 @@ export async function DELETE(
   }
 
   await deleteCard(code);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
 
 /** POST /api/admin/codes/[code] — Reset riwayat & hitungan tap kartu tertentu ke 0 */
@@ -34,5 +41,5 @@ export async function POST(
   }
 
   await resetCardTaps(code);
-  return NextResponse.json({ ok: true, reset: true });
+  return NextResponse.json({ ok: true, reset: true, tapCount: 0 }, { headers: NO_STORE_HEADERS });
 }

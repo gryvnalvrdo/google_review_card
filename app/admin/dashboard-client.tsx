@@ -191,10 +191,10 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // Lock body scroll when sheet open
+  // Lock root scroll when sheet open
   useEffect(() => {
-    document.body.style.overflow = showSheet ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    document.documentElement.style.overflow = showSheet ? "hidden" : "";
+    return () => { document.documentElement.style.overflow = ""; };
   }, [showSheet]);
 
   function resetForm() {
@@ -293,7 +293,7 @@ export default function AdminDashboard() {
   }
 
   async function handleDelete(cardCode: string) {
-    const res = await fetch(`/api/admin/codes/${cardCode}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/codes/${cardCode}`, { method: "DELETE", cache: "no-store" });
     if (res.ok) {
       setCards((prev) => prev.filter((c) => c.code !== cardCode));
       // Refresh tap logs to ensure deleted card is instantly removed
@@ -877,7 +877,7 @@ export default function AdminDashboard() {
         return (
           <>
             <div
-              style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.82)", zIndex: 300, backdropFilter: "blur(10px)" }}
+              style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.88)", zIndex: 300, overscrollBehavior: "contain" }}
               onClick={() => setDeleteConfirm(null)}
             />
             <div style={{

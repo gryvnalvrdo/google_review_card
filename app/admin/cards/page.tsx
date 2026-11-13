@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { QRCodeCanvas } from "qrcode.react";
+import QRCode from "qrcode";
 import AdminNav from "../components/AdminNav";
 import QRScanner from "../components/QRScanner";
 import { PriceStepperInput } from "../components/PriceStepperInput";
@@ -106,7 +106,6 @@ export default function CardsPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [copiedLinkText, setCopiedLinkText] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const qrOnlyRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const [baseUrl, setBaseUrl] = useState("");
 
   useEffect(() => {
@@ -115,18 +114,22 @@ export default function CardsPage() {
 
   useEffect(() => {
     if (editingCard || deleteConfirmCode || resetConfirmCard) {
-      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     };
   }, [editingCard, deleteConfirmCode, resetConfirmCard]);
 
   async function fetchCards() {
     try {
-      const resCodes = await fetch("/api/admin/codes");
+      const rand = Math.random().toString(36).slice(2, 8);
+      const resCodes = await fetch(`/api/admin/codes?_t=${Date.now()}&_r=${rand}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      });
       if (resCodes.ok) {
         const data = await resCodes.json();
         setCards(data.cards ?? []);
@@ -141,22 +144,34 @@ export default function CardsPage() {
   useEffect(() => { fetchCards(); }, []);
 
   async function handleDelete(code: string) {
-    const res = await fetch(`/api/admin/codes/${code}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/codes/${code}`, {
+      method: "DELETE",
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
     if (res.ok) {
       setCards(prev => prev.filter(c => c.code !== code));
+      setDeleteConfirmCode(null);
+      void fetchCards();
     } else {
+      setDeleteConfirmCode(null);
       alert("Gagal menghapus kartu.");
     }
-    setDeleteConfirmCode(null);
   }
 
   async function executeResetTaps(card: CardData) {
     setResettingCode(card.code);
     try {
-      const res = await fetch(`/api/admin/codes/${card.code}`, { method: "POST" });
+      const res = await fetch(`/api/admin/codes/${card.code}`, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       if (res.ok) {
-        await fetchCards();
+        // Update optimistik agar UI langsung terasa instan & tutup modal segera
+        setCards(prev => prev.map(c => c.code === card.code ? { ...c, tapCount: 0 } : c));
         setResetConfirmCard(null);
+        void fetchCards();
       } else {
         alert("Gagal mereset hitungan tap kartu.");
       }
@@ -193,7 +208,8 @@ export default function CardsPage() {
 
     const res = await fetch("/api/admin/codes", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
       body: JSON.stringify({
         code: editingCard.code,
         storeName: editingCard.storeName.trim(),
@@ -206,7 +222,7 @@ export default function CardsPage() {
     if (res.ok) {
       setEditingCard(null);
       setOriginalCard(null);
-      fetchCards();
+      void fetchCards();
     } else {
       alert("Gagal menyimpan perubahan.");
     }
@@ -214,32 +230,53 @@ export default function CardsPage() {
 
 
   async function downloadQrOnly(card: CardData) {
+    if (!baseUrl) return;
     setDownloadingQrCode(card.code);
-    await new Promise(r => setTimeout(r, 300));
-    const qrCanvas = qrOnlyRefs.current[card.code];
-    if (!qrCanvas) {
-      alert("QR sedang disiapkan, silakan coba lagi.");
+    try {
+      const qr = QRCode.create(`${baseUrl}/c/${card.code}`, { errorCorrectionLevel: "H" });
+      const count = qr.modules.size;
+      const cellSize = Math.max(1, Math.floor(QR_EXPORT_SIZE / count));
+      const qrDrawSize = cellSize * count;
+      const margin = 40;
+      const offset = margin + Math.floor((QR_EXPORT_SIZE - qrDrawSize) / 2);
+
+      const out = document.createElement("canvas");
+      out.width = QR_EXPORT_SIZE + margin * 2;
+      out.height = QR_EXPORT_SIZE + margin * 2;
+      const ctx = out.getContext("2d");
+      if (!ctx) {
+        alert("Gagal menyiapkan kanvas QR.");
+        setDownloadingQrCode(null);
+        return;
+      }
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, out.width, out.height);
+      ctx.fillStyle = "#000000";
+      for (let r = 0; r < count; r++) {
+        for (let c = 0; c < count; c++) {
+          if (qr.modules.get(r, c)) {
+            ctx.fillRect(offset + c * cellSize, offset + r * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+
+      out.toBlob(blob => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `QR_${card.storeName.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_")}_${card.code}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+        setDownloadingQrCode(null);
+      }, "image/png");
+    } catch (e) {
+      console.error("Gagal membuat QR PNG:", e);
+      alert("Gagal membuat gambar QR.");
       setDownloadingQrCode(null);
-      return;
     }
-    const PAD = 40;
-    const out = document.createElement("canvas");
-    out.width = QR_EXPORT_SIZE + PAD * 2;
-    out.height = QR_EXPORT_SIZE + PAD * 2;
-    const ctx = out.getContext("2d")!;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, out.width, out.height);
-    ctx.drawImage(qrCanvas, PAD, PAD, QR_EXPORT_SIZE, QR_EXPORT_SIZE);
-    out.toBlob(blob => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `QR_${card.storeName.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_")}_${card.code}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }, "image/png");
-    setDownloadingQrCode(null);
   }
 
   function copyCodeText(text: string) {
@@ -308,27 +345,13 @@ export default function CardsPage() {
     <>
       <AdminNav active="cards" />
 
-      {/* Hidden QR canvases for PNG export */}
-      <div style={{ position: "fixed", left: -9999, top: -9999, pointerEvents: "none" }} aria-hidden="true">
-        {baseUrl && cards.map(card => (
-          <QRCodeCanvas
-            key={`only-${card.code}`}
-            value={`${baseUrl}/c/${card.code}`}
-            size={QR_EXPORT_SIZE}
-            ref={(el: HTMLCanvasElement | null) => { qrOnlyRefs.current[card.code] = el; }}
-            level="H"
-            includeMargin={false}
-          />
-        ))}
-      </div>
-
       {/* Delete Card Confirmation Modal */}
       {deleteConfirmCode && (() => {
         const cardToDelete = cards.find(c => c.code === deleteConfirmCode);
         return (
           <>
             <div
-              style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.82)", zIndex: 300, backdropFilter: "blur(10px)" }}
+              style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.88)", zIndex: 300, overscrollBehavior: "contain" }}
               onClick={() => setDeleteConfirmCode(null)}
             />
             <div style={{
@@ -453,7 +476,7 @@ export default function CardsPage() {
       {resetConfirmCard && (
         <>
           <div
-            style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.82)", zIndex: 300, backdropFilter: "blur(10px)" }}
+            style={{ position: "fixed", inset: 0, background: "rgba(6, 6, 12, 0.88)", zIndex: 300, overscrollBehavior: "contain" }}
             onClick={() => {
               if (resettingCode !== resetConfirmCard.code) setResetConfirmCard(null);
             }}
@@ -882,7 +905,8 @@ export default function CardsPage() {
                                   gap: 3,
                                   whiteSpace: "nowrap",
                                   lineHeight: 1.4,
-                                  transition: "all 0.15s ease",
+                                  touchAction: "manipulation",
+                                  transition: "background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease",
                                 }}
                                 title={`Reset ${card.tapCount} tap kartu ini kembali ke 0`}
                               >
@@ -1191,16 +1215,13 @@ export default function CardsPage() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.82)",
+            background: "rgba(0,0,0,0.88)",
             zIndex: 400,
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
+            overscrollBehavior: "contain",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             padding: 16,
-            overflowY: "auto",
-            WebkitOverflowScrolling: "touch",
           }}
           onClick={() => setEditingCard(null)}
         >
@@ -1258,6 +1279,7 @@ export default function CardsPage() {
                 style={{
                   flex: 1,
                   overflowY: "auto",
+                  overscrollBehavior: "contain",
                   WebkitOverflowScrolling: "touch",
                   padding: "18px 20px",
                 }}

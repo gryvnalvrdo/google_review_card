@@ -1295,10 +1295,12 @@ export default function TapsPage() {
     fetchData(false);
   }, []);
 
-  // ── Auto-refresh setiap 60 detik (background, tidak reset tampilan) ──
+  // ── Auto-refresh setiap 60 detik (hanya saat tab aktif) ──
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchData(true);
+      if (document.visibilityState === "visible") {
+        fetchData(true);
+      }
     }, 60_000);
     return () => clearInterval(interval);
   }, []);
@@ -1308,11 +1310,8 @@ export default function TapsPage() {
 
   useEffect(() => {
     function handleScroll() {
-      if (window.scrollY > 320) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
+      const next = window.scrollY > 320;
+      setShowScrollTop((prev) => (prev !== next ? next : prev));
     }
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);

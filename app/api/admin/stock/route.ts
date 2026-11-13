@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminLoggedIn } from "../../../../lib/auth";
 import { addStokCodes, listStokCodes, removeStokCode } from "../../../../lib/kv";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const MAX_BATCH = 200;
 
 /** GET /api/admin/stock — list semua kode stok */
@@ -10,7 +13,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const codes = await listStokCodes();
-  return NextResponse.json({ codes, count: codes.length });
+  return NextResponse.json(
+    { codes, count: codes.length },
+    { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" } }
+  );
 }
 
 /** POST /api/admin/stock — simpan batch kode ke stok */
