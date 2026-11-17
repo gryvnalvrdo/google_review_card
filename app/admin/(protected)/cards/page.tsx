@@ -811,12 +811,16 @@ export default function CardsPage() {
                         onClick={() =>
                           copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
                         }
-                        className="inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
+                        className={`inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors ${
+                          copiedId === `url:${card.code}`
+                            ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
+                            : "border-hairline bg-elevated text-ink hover:border-white/20"
+                        }`}
                       >
                         {copiedId === `url:${card.code}` ? (
-                          <Check className="h-4 w-4 shrink-0" />
+                          <Check className="h-4 w-4 shrink-0 text-emerald-400" />
                         ) : (
-                          <Copy className="h-4 w-4 shrink-0" />
+                          <Copy className="h-4 w-4 shrink-0 text-indigo-400" />
                         )}
                         <span>{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
                       </button>
@@ -1080,12 +1084,16 @@ export default function CardsPage() {
                       onClick={() =>
                         copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
                       }
-                      className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
+                      className={`inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors ${
+                        copiedId === `url:${card.code}`
+                          ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
+                          : "border-hairline bg-elevated text-ink hover:border-white/20"
+                      }`}
                     >
                       {copiedId === `url:${card.code}` ? (
-                        <Check className="h-3.5 w-3.5 shrink-0" />
+                        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                       ) : (
-                        <Copy className="h-3.5 w-3.5 shrink-0" />
+                        <Copy className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
                       )}
                       <span className="truncate">{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
                     </button>

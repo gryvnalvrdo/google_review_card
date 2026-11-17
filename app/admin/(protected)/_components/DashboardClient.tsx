@@ -367,10 +367,12 @@ export default function DashboardClient() {
                   type="button"
                   onClick={() => loadAll(true)}
                   disabled={refreshing}
-                  className="inline-flex min-h-[34px] items-center gap-1.5 rounded-lg border border-hairline bg-elevated px-3 text-xs font-medium text-subtle transition-colors hover:text-ink disabled:opacity-50"
+                  aria-label="Refresh"
+                  title="Refresh"
+                  className="inline-flex h-8 w-8 items-center justify-center gap-1.5 rounded-lg border border-hairline bg-elevated text-xs font-medium text-subtle transition-colors hover:text-ink disabled:opacity-50 sm:w-auto sm:px-3"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-                  <span>Refresh</span>
+                  <span className="hidden sm:inline">Refresh</span>
                 </button>
                 <Link
                   href="/admin/taps"

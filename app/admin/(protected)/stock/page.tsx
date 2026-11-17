@@ -526,7 +526,7 @@ export default function StockPage() {
                   <button
                     type="button"
                     onClick={() => router.push(`/admin?code=${encodeURIComponent(code)}`)}
-                    className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
+                    className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/15 px-3 text-xs font-semibold text-indigo-200 transition-colors hover:bg-indigo-500/25"
                   >
                     <span>Assign</span>
                     <ArrowRight className="h-3.5 w-3.5" />
