@@ -40,7 +40,6 @@ const TAP_PREFIX = "tap:";
 const INDEX_KEY = "card:_index";
 const STOK_INDEX = "stok:_index";
 const STOK_TIMED = "stok:_timed";
-const STOK_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 const TAP_LOG_KEY = "tap_log";
 const TAP_LOG_MAX = 25000;
 
@@ -316,16 +315,7 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
   }));
 }
 
-function pruneMemoryStok(): void {
-  const cutoff = Date.now() - STOK_TTL_MS;
-  for (const [code, createdAtMs] of Array.from(stokStore.entries())) {
-    if (createdAtMs < cutoff) {
-      stokStore.delete(code);
-    }
-  }
-}
-
-async function syncAndPruneKvStok(): Promise<void> {
+async function syncLegacyKvStok(): Promise<void> {
   if (!hasKv || !vercelKv) return;
 
   const legacyMembers = await vercelKv.smembers<string[]>(STOK_INDEX).catch(() => []);
@@ -345,16 +335,13 @@ async function syncAndPruneKvStok(): Promise<void> {
     }
     await vercelKv.del(STOK_INDEX).catch(() => {});
   }
-
-  const cutoff = Date.now() - STOK_TTL_MS;
-  await vercelKv.zremrangebyscore(STOK_TIMED, 0, cutoff).catch(() => {});
 }
 
 export async function addStokCodes(codes: string[]): Promise<void> {
   if (codes.length === 0) return;
   const now = Date.now();
   if (hasKv && vercelKv) {
-    await syncAndPruneKvStok();
+    await syncLegacyKvStok();
     const entries = codes.map((code) => ({ score: now, member: code }));
     const CHUNK = 100;
     for (let i = 0; i < entries.length; i += CHUNK) {
@@ -363,7 +350,6 @@ export async function addStokCodes(codes: string[]): Promise<void> {
     }
     return;
   }
-  pruneMemoryStok();
   codes.forEach((c) => stokStore.set(c, now));
 }
 
@@ -380,11 +366,10 @@ export async function removeStokCode(code: string): Promise<void> {
 
 export async function listStokCodes(): Promise<string[]> {
   if (hasKv && vercelKv) {
-    await syncAndPruneKvStok();
+    await syncLegacyKvStok();
     const members = await vercelKv.zrange<string[]>(STOK_TIMED, 0, -1);
     return members ?? [];
   }
-  pruneMemoryStok();
   return Array.from(stokStore.keys());
 }
 
@@ -398,11 +383,10 @@ export async function clearStok(): Promise<void> {
 
 export async function getStokCount(): Promise<number> {
   if (hasKv && vercelKv) {
-    await syncAndPruneKvStok();
+    await syncLegacyKvStok();
     const n = await vercelKv.zcard(STOK_TIMED);
     return n ?? 0;
   }
-  pruneMemoryStok();
   return stokStore.size;
 }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminLoggedIn, isValidSameOrigin } from "../../../../lib/auth";
-import { addStokCodes, listCards, listStokCodes, removeStokCode } from "../../../../lib/kv";
+import { addStokCodes, clearStok, listCards, listStokCodes, removeStokCode } from "../../../../lib/kv";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -66,6 +66,11 @@ export async function DELETE(req: NextRequest) {
   }
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (req.nextUrl.searchParams.get("all") === "1") {
+    await clearStok();
+    return NextResponse.json({ ok: true, cleared: true });
   }
 
   const code = req.nextUrl.searchParams.get("code")?.trim();

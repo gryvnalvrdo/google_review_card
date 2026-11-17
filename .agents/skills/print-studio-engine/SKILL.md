@@ -16,8 +16,8 @@ Skill ini menjaga kualitas output cetak fisik dan performa browser saat merender
 2. **Ketajaman Cetak Fisik**:
    - Modul QR harus dibulatkan ke piksel utuh (`Math.floor(size / count)`) agar tidak muncul anti-aliasing kabur saat dicetak pada kartu PVC atau stiker meja.
    - Pertahankan error correction level `H` terutama ketika logo tengah (`google`, `star`, `nfc`) diaktifkan.
-3. **Alur Auto-Save Kode Sementara (90 Hari)**:
-   - Saat ekspor PNG tunggal, multi-PNG, atau ZIP selesai, simpan kode yang berhasil dicetak ke `/api/admin/stock` (`stok:_timed`) di background agar langsung tersedia di pemilih cepat form Hubungkan Kartu dan otomatis terhapus setelah 90 hari bila belum digunakan.
+3. **Alur Auto-Save Kode Cetak**:
+   - Saat ekspor PNG tunggal, multi-PNG, atau ZIP selesai, simpan kode yang berhasil dicetak ke `/api/admin/stock` (`stok:_timed`) di background agar langsung tersedia di pemilih cepat `Kode Cetak` pada form Hubungkan Kartu (dapat dihapus manual kapan saja bila tidak jadi dipakai).
 4. **Ruang Lingkup Terfokus**:
    - Jangan menambahkan kompleksitas fitur simpan preset desain ke database kecuali diminta secara eksplisit; pertahankan pengaturan sesi aktif yang cepat dan ringan.
 

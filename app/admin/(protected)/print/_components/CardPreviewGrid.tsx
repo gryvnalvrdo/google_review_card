@@ -140,8 +140,8 @@ export default function CardPreviewGrid({
       <div className="rounded-2xl border border-hairline bg-surface px-6 py-14 text-center">
         <p className="text-sm font-semibold text-ink">Belum ada kartu di-generate</p>
         <p className="mx-auto mt-1 max-w-md text-xs text-subtle">
-          Atur jumlah kartu lalu klik Generate Kartu. Kode yang diunduh tersedia otomatis di form
-          Hubungkan Kartu dan akan terhapus otomatis setelah 90 hari bila tidak dipakai.
+          Atur jumlah kartu lalu klik Generate Kartu. Kode yang diunduh tersedia di pemilih Kode Cetak
+          pada form Hubungkan Kartu.
         </p>
       </div>
     );

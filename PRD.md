@@ -63,10 +63,10 @@ Dokumen ini merancang perombakan antarmuka (*de-slopification*), modularisasi ko
 ## 5. Lingkup Fitur & Spesifikasi Fungsional
 
 ### 5.1 Fitur Baru & Peningkatan Inti (Masuk Lingkup)
-1. **Auto-Expire Kode Cetak Belum Di-Assign (90 Hari / 3 Bulan)**:
-   - Kode batch hasil desain atau cetak QR disimpan sementara dengan timestamp di Redis ZSET `stok:_timed` (`stok:_index` lama dimigrasikan otomatis).
-   - Kode yang belum pernah dihubungkan ke toko selama **90 hari (3 bulan)** otomatis terhapus oleh server (`syncAndPruneKvStok`) agar rancangan uji coba/batal pakai tidak menumpuk di database, sehingga tidak diperlukan halaman khusus stok (`/admin/stock` ditiadakan).
-   - Kode cetak yang belum kedaluwarsa (`< 90 hari`) tetap tersedia sebagai pemilih cepat `Kode Cetak (N)` di dalam form Hubungkan Kartu, dan otomatis pindah menjadi kartu aktif permanen setelah disimpan via `POST /api/admin/codes`.
+1. **Penyimpanan Kode Cetak & Hapus Manual (Tanpa Halaman Stok)**:
+   - Kode batch hasil desain atau cetak QR disimpan di Redis ZSET `stok:_timed` (`stok:_index` lama dimigrasikan otomatis) dan **tetap tersimpan tanpa auto-delete** sampai dihubungkan ke toko atau dihapus manual.
+   - Halaman khusus stok (`/admin/stock`), menu navigasi stok, dan KPI stok ditiadakan agar antarmuka tetap ringkas.
+   - Kode cetak yang belum terhubung dapat dipilih atau dihapus manual (satuan maupun `Hapus Semua`) melalui pemilih ringkas `Kode Cetak (N)` di dalam form Hubungkan Kartu (`DELETE /api/admin/stock`).
 2. **Test Redirect Tanpa Mengotori Statistik (`?preview=1`)**:
    - Endpoint `GET /c/<code>` mendukung parameter `?preview=1` **hanya jika** sesi cookie admin valid (`isAdminLoggedIn()`).
    - Ketika mode preview aktif, server tetap melakukan validasi kartu dan redirect (atau menampilkan bridge Instagram), tetapi **melewati** `incrementTapCount` dan `addTapLog`.

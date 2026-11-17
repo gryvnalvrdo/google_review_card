@@ -13,6 +13,8 @@ import {
   Package,
   RefreshCw,
   Star,
+  Trash2,
+  X,
 } from "lucide-react";
 import { InstagramIcon } from "./BrandIcons";
 import type { CardRecord } from "../../../lib/types";
@@ -30,6 +32,7 @@ interface CardFormProps {
   initialCode?: string;
   stockCodes?: string[];
   onSaved: (savedCode: string, isEdit: boolean) => Promise<void> | void;
+  onStockChanged?: () => Promise<void> | void;
   onCancel?: () => void;
   onOpenScanner?: () => void;
   onCloseAfterSave?: () => void;
@@ -40,6 +43,7 @@ export default function CardForm({
   initialCode = "",
   stockCodes = [],
   onSaved,
+  onStockChanged,
   onCancel,
   onOpenScanner,
   onCloseAfterSave,
@@ -62,6 +66,38 @@ export default function CardForm({
   const [savedCardUrl, setSavedCardUrl] = useState<string | null>(null);
   const [copiedNfc, setCopiedNfc] = useState(false);
   const [showStockPicker, setShowStockPicker] = useState(false);
+  const [deletingStockCode, setDeletingStockCode] = useState<string | null>(null);
+  const [confirmClearStock, setConfirmClearStock] = useState(false);
+  const [clearingStock, setClearingStock] = useState(false);
+
+  async function handleRemoveStockCode(sc: string) {
+    setDeletingStockCode(sc);
+    try {
+      const res = await fetch(`/api/admin/stock?code=${encodeURIComponent(sc)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        if (code === sc) setCode("");
+        if (onStockChanged) await onStockChanged();
+      }
+    } finally {
+      setDeletingStockCode(null);
+    }
+  }
+
+  async function handleClearAllStock() {
+    setClearingStock(true);
+    try {
+      const res = await fetch("/api/admin/stock?all=1", { method: "DELETE" });
+      if (res.ok) {
+        setConfirmClearStock(false);
+        setShowStockPicker(false);
+        if (onStockChanged) await onStockChanged();
+      }
+    } finally {
+      setClearingStock(false);
+    }
+  }
 
   useEffect(() => {
     setError(null);
@@ -266,33 +302,80 @@ export default function CardForm({
 
         {!isEditing && showStockPicker && stockCodes.length > 0 && (
           <div className="mt-2 rounded-lg border border-hairline bg-canvas p-2.5">
-            <div className="mb-2 flex items-center justify-between text-[11px] text-subtle">
-              <span>Pilih kode cetak (&lt; 90 hari belum terhubung):</span>
-              <button
-                type="button"
-                onClick={() => setShowStockPicker(false)}
-                className="text-muted hover:text-ink"
-              >
-                Tutup
-              </button>
-            </div>
-            <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
-              {stockCodes.slice(0, 24).map((sc) => (
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-subtle">
+              <span>Pilih kode cetak siap pakai:</span>
+              <div className="flex items-center gap-2">
+                {confirmClearStock ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={clearingStock}
+                      onClick={handleClearAllStock}
+                      className="rounded border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 font-semibold text-rose-300 hover:bg-rose-500/25 disabled:opacity-50"
+                    >
+                      {clearingStock ? "Menghapus..." : "Ya, Hapus Semua"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClearStock(false)}
+                      className="text-muted hover:text-ink"
+                    >
+                      Batal
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClearStock(true)}
+                    className="inline-flex items-center gap-1 text-rose-300/90 hover:text-rose-200"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    <span>Hapus Semua</span>
+                  </button>
+                )}
                 <button
-                  key={sc}
                   type="button"
                   onClick={() => {
-                    setCode(sc);
+                    setConfirmClearStock(false);
                     setShowStockPicker(false);
                   }}
-                  className={`rounded-md border px-2 py-1 font-mono text-xs transition-colors ${
+                  className="text-muted hover:text-ink"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+              {stockCodes.map((sc) => (
+                <div
+                  key={sc}
+                  className={`inline-flex items-center overflow-hidden rounded-md border font-mono text-xs transition-colors ${
                     code === sc
                       ? "border-indigo-500 bg-indigo-500/20 text-indigo-200"
-                      : "border-hairline bg-surface text-subtle hover:border-white/20 hover:text-ink"
+                      : "border-hairline bg-surface text-subtle"
                   }`}
                 >
-                  {sc}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCode(sc);
+                      setShowStockPicker(false);
+                    }}
+                    className="px-2 py-1 hover:text-ink"
+                  >
+                    {sc}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deletingStockCode === sc}
+                    onClick={() => handleRemoveStockCode(sc)}
+                    title={`Hapus kode ${sc}`}
+                    aria-label={`Hapus kode ${sc}`}
+                    className="border-l border-hairline px-1.5 py-1 text-muted transition-colors hover:bg-rose-500/15 hover:text-rose-300 disabled:opacity-40"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>

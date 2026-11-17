@@ -441,9 +441,7 @@ export default function PrintQRCodesPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setSaveResult(
-          `${data.saved ?? codesToSave.length} kode disimpan ke antrean siap assign (otomatis terhapus dalam 90 hari jika belum dipakai).`
-        );
+        setSaveResult(`${data.saved ?? codesToSave.length} kode disimpan ke daftar kode cetak siap assign.`);
         window.dispatchEvent(new Event("stock-updated"));
       }
     } catch {}

@@ -288,6 +288,9 @@ export default function DashboardClient() {
             onSaved={async () => {
               await loadAll(false);
             }}
+            onStockChanged={async () => {
+              await loadAll(false);
+            }}
             onCancel={editingCard ? () => setEditingCard(null) : undefined}
             onOpenScanner={() => setShowScanner(true)}
           />
@@ -490,6 +493,9 @@ export default function DashboardClient() {
               initialCode={selectedCode}
               stockCodes={stockCodes}
               onSaved={async () => {
+                await loadAll(false);
+              }}
+              onStockChanged={async () => {
                 await loadAll(false);
               }}
               onCancel={() => setShowMobileSheet(false)}
