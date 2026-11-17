@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface PriceStepperInputProps {
   id?: string;
@@ -25,35 +26,31 @@ export function PriceStepperInput({
 }: PriceStepperInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
-  // Format angka ke format ribuan bertitik Indonesia: misal 45000 -> "45.000"
   const formatNumber = (num: number | undefined | null): string => {
-    if (num === undefined || num === null || isNaN(num)) return "";
+    if (num === undefined || num === null || Number.isNaN(num)) return "";
     return num.toLocaleString("id-ID");
   };
 
   const [displayValue, setDisplayValue] = useState<string>(() => {
-    if (typeof value === "number" && !isNaN(value)) {
+    if (typeof value === "number" && !Number.isNaN(value)) {
       return formatNumber(value);
     }
     return "";
   });
 
-  // Sinkronisasi displayValue saat prop value dari luar berubah
   useEffect(() => {
-    // Jika input sedang difokuskan oleh pengguna dan input sengaja dikosongkan (ingin dihapus),
-    // jangan paksa kembali angka "0" agar pengguna bisa leluasa mengetik angka baru
     if (isFocused && displayValue === "" && value === 0) {
       return;
     }
-    if (typeof value === "number" && !isNaN(value)) {
+    if (typeof value === "number" && !Number.isNaN(value)) {
       setDisplayValue(formatNumber(value));
     } else {
       setDisplayValue("");
     }
-  }, [value, isFocused]);
+  }, [value, isFocused, displayValue]);
 
   const handleStep = (delta: number) => {
-    const cur = typeof value === "number" && !isNaN(value) ? value : 0;
+    const cur = typeof value === "number" && !Number.isNaN(value) ? value : 0;
     const next = Math.max(min, Math.min(max, cur + delta));
     setDisplayValue(formatNumber(next));
     onChange(next);
@@ -62,9 +59,8 @@ export function PriceStepperInput({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawDigits = e.target.value.replace(/\D/g, "");
     if (rawDigits === "") {
-      // Pengguna menghapus semua angka di input
       setDisplayValue("");
-      onChange(0); // Jika tidak memasukkan apa-apa, tersimpan otomatis sebagai 0
+      onChange(0);
       return;
     }
     const num = Math.min(max, parseInt(rawDigits, 10));
@@ -80,7 +76,6 @@ export function PriceStepperInput({
   const handleBlur = () => {
     setIsFocused(false);
     if (displayValue === "") {
-      // Saat kursor keluar dan input kosong, tampilkan "0" dan pastikan nilainya 0
       setDisplayValue("0");
       onChange(0);
     } else {
@@ -91,151 +86,56 @@ export function PriceStepperInput({
     }
   };
 
-  const curValue = typeof value === "number" && !isNaN(value) ? value : 0;
+  const curValue = typeof value === "number" && !Number.isNaN(value) ? value : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%", minWidth: 0 }}>
-      {/* Input Box with Integrated Dark Stepper */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "stretch",
-          background: isFocused ? "rgba(22, 22, 34, 0.95)" : "rgba(255, 255, 255, 0.04)",
-          border: isFocused ? "1.5px solid #8B5CF6" : "1px solid rgba(255, 255, 255, 0.12)",
-          borderRadius: 8,
-          overflow: "hidden",
-          transition: "all 0.18s ease",
-          boxShadow: isFocused ? "0 0 14px rgba(139, 92, 246, 0.25)" : "none",
-          width: "100%",
-          minWidth: 0,
-        }}
-      >
-        {/* Left Badge: Rp */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "0 8px",
-            background: isFocused ? "rgba(139, 92, 246, 0.22)" : "rgba(139, 92, 246, 0.12)",
-            borderRight: "1px solid rgba(255, 255, 255, 0.08)",
-            color: "#C4B5FD",
-            fontWeight: 800,
-            fontSize: "0.78rem",
-            userSelect: "none",
-            letterSpacing: "0.3px",
-            flexShrink: 0,
-          }}
+    <div
+      className={`flex w-full min-w-0 items-stretch overflow-hidden rounded-lg border transition-colors ${
+        isFocused
+          ? "border-indigo-500/70 bg-elevated ring-2 ring-indigo-500/20"
+          : "border-hairline bg-elevated/70"
+      }`}
+    >
+      <div className="flex shrink-0 select-none items-center border-r border-hairline bg-white/[0.03] px-2.5 text-xs font-semibold text-subtle">
+        Rp
+      </div>
+
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        value={displayValue}
+        onChange={handleInputChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        required={required}
+        autoComplete="off"
+        className="w-full min-w-0 flex-1 bg-transparent px-2.5 py-2.5 text-sm font-semibold tabular-nums text-ink outline-none placeholder:text-muted"
+      />
+
+      <div className="flex w-7 shrink-0 flex-col border-l border-hairline bg-white/[0.02]">
+        <button
+          type="button"
+          onClick={() => handleStep(step)}
+          aria-label={`Tambah Rp ${step.toLocaleString("id-ID")}`}
+          title={`Tambah Rp ${step.toLocaleString("id-ID")}`}
+          className="flex flex-1 items-center justify-center border-b border-hairline text-subtle transition-colors hover:bg-white/[0.08] hover:text-ink"
         >
-          Rp
-        </div>
+          <ChevronUp className="h-3 w-3" strokeWidth={2.5} />
+        </button>
 
-        {/* Text Input with Thousands Formatter */}
-        <input
-          id={id}
-          type="text"
-          inputMode="numeric"
-          value={displayValue}
-          onChange={handleInputChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          placeholder={placeholder}
-          required={required}
-          autoComplete="off"
-          style={{
-            flex: "1 1 0%",
-            minWidth: 0,
-            background: "transparent",
-            border: "none",
-            color: "#F8FAFC",
-            padding: "9px 6px",
-            fontSize: "0.85rem",
-            fontWeight: 700,
-            outline: "none",
-            width: "100%",
-            letterSpacing: "0.3px",
-            boxSizing: "border-box",
-          }}
-        />
-
-        {/* Custom Premium Stepper Buttons (Turun & Naik) */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            borderLeft: "1px solid rgba(255, 255, 255, 0.08)",
-            width: 26,
-            flexShrink: 0,
-            background: "rgba(15, 15, 24, 0.6)",
-          }}
+        <button
+          type="button"
+          onClick={() => handleStep(-step)}
+          disabled={curValue <= min}
+          aria-label={`Kurangi Rp ${step.toLocaleString("id-ID")}`}
+          title={`Kurangi Rp ${step.toLocaleString("id-ID")}`}
+          className="flex flex-1 items-center justify-center text-subtle transition-colors hover:bg-white/[0.08] hover:text-ink disabled:cursor-not-allowed disabled:opacity-25"
         >
-          {/* Tombol Naik (+5000) */}
-          <button
-            type="button"
-            onClick={() => handleStep(step)}
-            aria-label={`Tambah Rp ${step.toLocaleString("id-ID")}`}
-            title={`Tambah Rp ${step.toLocaleString("id-ID")} (Naik)`}
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "transparent",
-              border: "none",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-              color: "#C4B5FD",
-              cursor: "pointer",
-              fontSize: "0.6rem",
-              padding: 0,
-              transition: "all 0.12s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(139, 92, 246, 0.35)";
-              e.currentTarget.style.color = "#FFFFFF";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#C4B5FD";
-            }}
-          >
-            ▲
-          </button>
-
-          {/* Tombol Turun (-5000) */}
-          <button
-            type="button"
-            onClick={() => handleStep(-step)}
-            disabled={curValue <= min}
-            aria-label={`Kurangi Rp ${step.toLocaleString("id-ID")}`}
-            title={`Kurangi Rp ${step.toLocaleString("id-ID")} (Turun)`}
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "transparent",
-              border: "none",
-              color: curValue <= min ? "rgba(255, 255, 255, 0.2)" : "#C4B5FD",
-              cursor: curValue <= min ? "not-allowed" : "pointer",
-              fontSize: "0.6rem",
-              padding: 0,
-              transition: "all 0.12s ease",
-            }}
-            onMouseEnter={(e) => {
-              if (curValue > min) {
-                e.currentTarget.style.background = "rgba(139, 92, 246, 0.35)";
-                e.currentTarget.style.color = "#FFFFFF";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = curValue <= min ? "rgba(255, 255, 255, 0.2)" : "#C4B5FD";
-            }}
-          >
-            ▼
-          </button>
-        </div>
+          <ChevronDown className="h-3 w-3" strokeWidth={2.5} />
+        </button>
       </div>
     </div>
   );
 }
-

@@ -15,6 +15,14 @@ const ALLOWED_HOSTS = [
   "instagr.am",
 ];
 
+export type GoogleInputParseResult = {
+  kind: "empty" | "placeid" | "url" | "invalid";
+  placeId?: string;
+  reviewUrl: string;
+  suggestedStoreName?: string;
+  error?: string;
+};
+
 export function isInstagramUrl(url?: string): boolean {
   if (!url) return false;
   try {
@@ -44,7 +52,6 @@ export function extractInstagramUsername(urlOrUsername?: string): string {
       }
     } catch {}
   }
-  // Bare username handling: bersihkan nama domain jika ada
   clean = clean.replace(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\//i, "");
   clean = clean.split("/")[0].split("?")[0].trim();
   return clean;
@@ -54,7 +61,6 @@ export function formatInstagramUrl(input: string): string {
   const raw = input.trim();
   if (!raw) return "";
 
-  // Jika sudah URL Instagram lengkap untuk post/reel spesifik
   if (raw.startsWith("http://") || raw.startsWith("https://")) {
     try {
       const parsed = new URL(raw);
@@ -84,12 +90,11 @@ export function getInstagramDeepLinks(urlOrUsername: string): {
   const username = extractInstagramUsername(clean);
   const webUrl = formatInstagramUrl(clean);
 
-  // Jika URL mengarah ke post atau reel spesifik
   const isPostOrReel = clean.includes("/p/") || clean.includes("/reel/");
   if (isPostOrReel) {
     try {
       const parsed = new URL(clean);
-      const pathname = parsed.pathname.replace(/^\/|\/$/g, ""); // cth: "p/Cxyz123" atau "reel/Cxyz123"
+      const pathname = parsed.pathname.replace(/^\/|\/$/g, "");
       return {
         username: "",
         webUrl,
@@ -137,6 +142,73 @@ export function isAllowedReviewUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function parseGoogleMapsOrPlaceId(rawInput: string): GoogleInputParseResult {
+  const raw = (rawInput || "").trim();
+  if (!raw) {
+    return { kind: "empty", reviewUrl: "" };
+  }
+
+  const placeIdParamMatch = raw.match(/[?&]placeid=([a-zA-Z0-9_-]+)/i);
+  if (placeIdParamMatch?.[1]) {
+    const placeId = placeIdParamMatch[1];
+    return {
+      kind: "placeid",
+      placeId,
+      reviewUrl: `https://search.google.com/local/writereview?placeid=${placeId}`,
+    };
+  }
+
+  const looksLikeUrl =
+    /^https?:\/\//i.test(raw) ||
+    /^(?:www\.)?(?:google\.|g\.page|maps\.app\.goo\.gl|goo\.gl|g\.co|maps\.google\.)/i.test(raw);
+
+  if (looksLikeUrl) {
+    const candidateUrl = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const chijMatch = candidateUrl.match(/(ChIJ[a-zA-Z0-9_-]{10,})/);
+    const placeNameMatch = candidateUrl.match(/\/maps\/place\/([^/@?#]+)/i);
+    const suggestedStoreName = placeNameMatch?.[1]
+      ? decodeURIComponent(placeNameMatch[1]).replace(/\+/g, " ").trim()
+      : undefined;
+
+    if (chijMatch?.[1]) {
+      return {
+        kind: "placeid",
+        placeId: chijMatch[1],
+        reviewUrl: `https://search.google.com/local/writereview?placeid=${chijMatch[1]}`,
+        suggestedStoreName,
+      };
+    }
+
+    if (isAllowedReviewUrl(candidateUrl) && !isInstagramUrl(candidateUrl)) {
+      return {
+        kind: "url",
+        reviewUrl: candidateUrl,
+        suggestedStoreName,
+      };
+    }
+
+    return {
+      kind: "invalid",
+      reviewUrl: "",
+      error: "Link harus berasal dari domain resmi Google Review atau Google Maps.",
+    };
+  }
+
+  if (/^[a-zA-Z0-9_-]{6,120}$/.test(raw)) {
+    return {
+      kind: "placeid",
+      placeId: raw,
+      reviewUrl: `https://search.google.com/local/writereview?placeid=${raw}`,
+    };
+  }
+
+  return {
+    kind: "invalid",
+    reviewUrl: "",
+    error: "Masukkan Google Place ID yang valid atau tempel tautan resmi Google Maps.",
+  };
 }
 
 export function getPublicGoogleReviewUrl(url?: string, storeName?: string): string {

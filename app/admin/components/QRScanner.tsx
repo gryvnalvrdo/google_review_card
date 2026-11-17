@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, CameraOff, CheckCircle2, SwitchCamera, Upload, X, Zap } from "lucide-react";
 
 interface QRScannerProps {
   onScan: (result: string) => void;
@@ -9,15 +10,12 @@ interface QRScannerProps {
 
 function extractCode(text: string): string {
   const trimmed = text.trim();
-  // Check /c/<code > pattern
   const cMatch = trimmed.match(/\/c\/([a-zA-Z0-9_-]+)/i);
   if (cMatch) return cMatch[1];
 
-  // Check code= parameter
   const codeParam = trimmed.match(/[?&]code=([a-zA-Z0-9_-]+)/i);
   if (codeParam) return codeParam[1];
 
-  // If it's a URL ending with a slug
   try {
     const url = new URL(trimmed);
     const parts = url.pathname.split("/").filter(Boolean);
@@ -31,22 +29,22 @@ function extractCode(text: string): string {
 
 function playBeep() {
   try {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.12);
-  } catch {
-    // Audio context might fail if user hasn't interacted
-  }
+  } catch {}
 }
 
 const LS_CAMERA_ID = "grc_preferred_camera_id";
@@ -67,7 +65,6 @@ function selectBestCamera(videoDevices: MediaDeviceInfo[]): MediaDeviceInfo | nu
   if (videoDevices.length === 0) return null;
   if (videoDevices.length === 1) return videoDevices[0];
 
-  // 1. Check if user already saved a preference
   try {
     const savedId = localStorage.getItem(LS_CAMERA_ID);
     if (savedId) {
@@ -77,13 +74,12 @@ function selectBestCamera(videoDevices: MediaDeviceInfo[]): MediaDeviceInfo | nu
     const savedIdx = localStorage.getItem(LS_CAMERA_INDEX);
     if (savedIdx !== null) {
       const idx = parseInt(savedIdx, 10);
-      if (!isNaN(idx) && idx >= 0 && idx < videoDevices.length) {
+      if (!Number.isNaN(idx) && idx >= 0 && idx < videoDevices.length) {
         return videoDevices[idx];
       }
     }
   } catch {}
 
-  // 2. Filter out front / selfie cameras
   const rearCameras = videoDevices.filter((d) => {
     const l = (d.label || "").toLowerCase();
     return (
@@ -96,16 +92,7 @@ function selectBestCamera(videoDevices: MediaDeviceInfo[]): MediaDeviceInfo | nu
 
   const candidates = rearCameras.length > 0 ? rearCameras : videoDevices;
   if (candidates.length === 1) return candidates[0];
-
-  // 3. If there are multiple rear cameras, on multi-lens phones (Samsung/Xiaomi/iPhone):
-  // The first camera in the list (index 0) is often the fixed-focus ultra-wide (0.5x),
-  // while the second camera (index 1) is the main sharp 1.0x autofocus sensor.
-  // When the user clicked the button next to the lamp, it switched to index 1!
-  // So if index 1 is available among rear candidates, default to index 1!
-  if (candidates.length >= 2) {
-    return candidates[1];
-  }
-
+  if (candidates.length >= 2) return candidates[1];
   return candidates[0];
 }
 
@@ -127,7 +114,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const activeTrackRef = useRef<MediaStreamTrack | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const isStoppedRef = useRef(false);
-  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -137,7 +124,6 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     }, 2800);
   }, []);
 
-  // Stop all camera streams
   const stopStream = useCallback(() => {
     isStoppedRef.current = true;
     if (animFrameRef.current) {
@@ -152,53 +138,54 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     setTorchOn(false);
   }, []);
 
-  const handleFoundCode = useCallback((rawText: string) => {
-    if (isStoppedRef.current) return;
-    isStoppedRef.current = true;
-    const code = extractCode(rawText);
+  const handleFoundCode = useCallback(
+    (rawText: string) => {
+      if (isStoppedRef.current) return;
+      isStoppedRef.current = true;
+      const code = extractCode(rawText);
 
-    playBeep();
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      try { navigator.vibrate(60); } catch {}
-    }
+      playBeep();
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(60);
+        } catch {}
+      }
 
-    setScannedSuccess(true);
-    stopStream();
+      setScannedSuccess(true);
+      stopStream();
 
-    setTimeout(() => {
-      onScan(code);
-    }, 400);
-  }, [onScan, stopStream]);
+      setTimeout(() => {
+        onScan(code);
+      }, 360);
+    },
+    [onScan, stopStream]
+  );
 
-  // Decode a canvas using ZXing or BarcodeDetector
   const decodeCanvas = useCallback(async (canvas: HTMLCanvasElement): Promise<string | null> => {
-    // 1. Try Native BarcodeDetector
     if (typeof window !== "undefined" && "BarcodeDetector" in window) {
       try {
-        const detector = new (window as unknown as { BarcodeDetector: new (opts: { formats: string[] }) => { detect: (src: HTMLCanvasElement | HTMLVideoElement) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector({ formats: ["qr_code"] });
+        const detector = new (window as unknown as {
+          BarcodeDetector: new (opts: { formats: string[] }) => {
+            detect: (src: HTMLCanvasElement | HTMLVideoElement) => Promise<Array<{ rawValue: string }>>;
+          };
+        }).BarcodeDetector({ formats: ["qr_code"] });
         const barcodes = await detector.detect(canvas);
         if (barcodes.length > 0 && barcodes[0].rawValue) {
           return barcodes[0].rawValue;
         }
-      } catch {
-        // Fallback to ZXing
-      }
+      } catch {}
     }
 
-    // 2. Fallback to @zxing/library
     try {
       const { BrowserQRCodeReader } = await import("@zxing/browser");
       const reader = new BrowserQRCodeReader();
       const result = await reader.decodeFromCanvas(canvas);
       if (result) return result.getText();
-    } catch {
-      // Not found in this frame
-    }
+    } catch {}
 
     return null;
   }, []);
 
-  // Continuous scanning loop from video
   const startScanningLoop = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -216,7 +203,6 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         isProcessing = true;
 
         try {
-          // Keep canvas dimensions matched to video for sharp pixel data
           const w = video.videoWidth || 640;
           const h = video.videoHeight || 480;
 
@@ -227,10 +213,13 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
 
           ctx.drawImage(video, 0, 0, w, h);
 
-          // Fast native detection directly from video element if supported
           if (typeof window !== "undefined" && "BarcodeDetector" in window) {
             try {
-              const detector = new (window as unknown as { BarcodeDetector: new (opts: { formats: string[] }) => { detect: (src: HTMLVideoElement) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector({ formats: ["qr_code"] });
+              const detector = new (window as unknown as {
+                BarcodeDetector: new (opts: { formats: string[] }) => {
+                  detect: (src: HTMLVideoElement) => Promise<Array<{ rawValue: string }>>;
+                };
+              }).BarcodeDetector({ formats: ["qr_code"] });
               const barcodes = await detector.detect(video);
               if (barcodes.length > 0 && barcodes[0].rawValue) {
                 handleFoundCode(barcodes[0].rawValue);
@@ -239,21 +228,18 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
             } catch {}
           }
 
-          // Fallback detection from canvas
           const decoded = await decodeCanvas(canvas);
           if (decoded) {
             handleFoundCode(decoded);
             return;
           }
         } catch {
-          // ignore frame decode error
         } finally {
           isProcessing = false;
         }
       }
 
       if (!isStoppedRef.current) {
-        // Run scan every ~80ms (approx 12 fps) to keep CPU low while remaining responsive
         setTimeout(() => {
           if (!isStoppedRef.current) {
             animFrameRef.current = requestAnimationFrame(scanFrame);
@@ -265,153 +251,143 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     animFrameRef.current = requestAnimationFrame(scanFrame);
   }, [decodeCanvas, handleFoundCode]);
 
-  // Start Camera Stream with HD constraints & Continuous Autofocus
-  const startCamera = useCallback(async (preferredId?: string) => {
-    stopStream();
-    isStoppedRef.current = false;
-    setLoading(true);
-    setError(null);
-    setScannedSuccess(false);
+  const startCamera = useCallback(
+    async (preferredId?: string) => {
+      stopStream();
+      isStoppedRef.current = false;
+      setLoading(true);
+      setError(null);
+      setScannedSuccess(false);
 
-    try {
-      // 1. Determine target device ID
-      let targetId = preferredId;
-
-      if (!targetId && typeof window !== "undefined") {
-        try {
-          const savedId = localStorage.getItem(LS_CAMERA_ID);
-          if (savedId) targetId = savedId;
-        } catch {}
-      }
-
-      // If no targetId is set yet, check if we can inspect enumerated devices
-      if (!targetId && typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
-        try {
-          const all = await navigator.mediaDevices.enumerateDevices();
-          const vInputs = all.filter((d) => d.kind === "videoinput");
-          if (vInputs.length > 0) {
-            setDevices(vInputs);
-            const best = selectBestCamera(vInputs);
-            if (best && best.deviceId) {
-              targetId = best.deviceId;
-              try {
-                localStorage.setItem(LS_CAMERA_ID, best.deviceId);
-              } catch {}
-            }
-          }
-        } catch {
-          // Non-critical enumeration check before getUserMedia
-        }
-      }
-
-      // 2. High Resolution & Autofocus Constraints
-      let stream: MediaStream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: targetId
-            ? {
-                deviceId: { exact: targetId },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
+        let targetId = preferredId;
+
+        if (!targetId && typeof window !== "undefined") {
+          try {
+            const savedId = localStorage.getItem(LS_CAMERA_ID);
+            if (savedId) targetId = savedId;
+          } catch {}
+        }
+
+        if (!targetId && typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+          try {
+            const all = await navigator.mediaDevices.enumerateDevices();
+            const vInputs = all.filter((d) => d.kind === "videoinput");
+            if (vInputs.length > 0) {
+              setDevices(vInputs);
+              const best = selectBestCamera(vInputs);
+              if (best && best.deviceId) {
+                targetId = best.deviceId;
+                try {
+                  localStorage.setItem(LS_CAMERA_ID, best.deviceId);
+                } catch {}
               }
-            : {
+            }
+          } catch {}
+        }
+
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: targetId
+              ? {
+                  deviceId: { exact: targetId },
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                }
+              : {
+                  facingMode: { ideal: "environment" },
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                },
+          });
+        } catch (firstErr) {
+          if (targetId) {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: false,
+              video: {
+                deviceId: { ideal: targetId },
                 facingMode: { ideal: "environment" },
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
               },
-        });
-      } catch (firstErr) {
-        // Fallback if exact deviceId constraint is rejected
-        if (targetId) {
-          stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              deviceId: { ideal: targetId },
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            },
-          });
-        } else {
-          throw firstErr;
-        }
-      }
-
-      streamRef.current = stream;
-
-      const track = stream.getVideoTracks()[0];
-      if (track) {
-        activeTrackRef.current = track;
-
-        // Try applying continuous autofocus if available in device capabilities
-        try {
-          const caps = (track as unknown as { getCapabilities?: () => Record<string, unknown> }).getCapabilities?.() || {};
-          if ("torch" in caps) {
-            setHasTorch(true);
+            });
           } else {
-            setHasTorch(false);
+            throw firstErr;
           }
-          if ("focusMode" in caps && Array.isArray((caps as { focusMode: unknown[] }).focusMode)) {
-            const fm = (caps as { focusMode: string[] }).focusMode;
-            if (fm.includes("continuous")) {
-              await (track as unknown as { applyConstraints: (c: Record<string, unknown>) => Promise<void> }).applyConstraints({
-                advanced: [{ focusMode: "continuous" }],
-              });
+        }
+
+        streamRef.current = stream;
+
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          activeTrackRef.current = track;
+
+          try {
+            const caps =
+              (track as unknown as { getCapabilities?: () => Record<string, unknown> }).getCapabilities?.() ||
+              {};
+            setHasTorch("torch" in caps);
+            if ("focusMode" in caps && Array.isArray((caps as { focusMode: unknown[] }).focusMode)) {
+              const fm = (caps as { focusMode: string[] }).focusMode;
+              if (fm.includes("continuous")) {
+                await (track as unknown as {
+                  applyConstraints: (c: Record<string, unknown>) => Promise<void>;
+                }).applyConstraints({
+                  advanced: [{ focusMode: "continuous" }],
+                });
+              }
             }
+          } catch {}
+        }
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.setAttribute("playsinline", "true");
+          await videoRef.current.play();
+        }
+
+        try {
+          const allDevices = await navigator.mediaDevices.enumerateDevices();
+          const videoInputs = allDevices.filter((d) => d.kind === "videoinput");
+          setDevices(videoInputs);
+          const actualId = track ? track.getSettings().deviceId : targetId;
+          if (actualId) {
+            setSelectedDeviceId(actualId);
           }
-        } catch {
-          // Non-critical capability check
+        } catch {}
+
+        setLoading(false);
+        startScanningLoop();
+      } catch (err: unknown) {
+        setLoading(false);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("Permission") || msg.includes("NotAllowed")) {
+          setError("Izin akses kamera ditolak. Berikan izin kamera di browser untuk memindai QR code.");
+        } else if (msg.includes("NotFound") || msg.includes("Devices")) {
+          setError("Tidak ditemukan kamera pada perangkat ini.");
+        } else {
+          setError("Gagal membuka kamera. Anda juga dapat memilih foto QR dari galeri.");
         }
       }
+    },
+    [startScanningLoop, stopStream]
+  );
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        await videoRef.current.play();
-      }
-
-      // Re-enumerate available cameras now that permission is definitely granted
-      try {
-        const allDevices = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = allDevices.filter((d) => d.kind === "videoinput");
-        setDevices(videoInputs);
-        const actualId = track ? track.getSettings().deviceId : targetId;
-        if (actualId) {
-          setSelectedDeviceId(actualId);
-        }
-      } catch {}
-
-      setLoading(false);
-      startScanningLoop();
-    } catch (err: unknown) {
-      setLoading(false);
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("Permission") || msg.includes("NotAllowed")) {
-        setError("Izin akses kamera ditolak. Berikan izin kamera di browser untuk memindai QR code.");
-      } else if (msg.includes("NotFound") || msg.includes("Devices")) {
-        setError("Tidak ditemukan kamera pada perangkat ini.");
-      } else {
-        setError("Gagal membuka kamera beresolusi tinggi. Anda juga dapat memilih foto QR dari galeri.");
-      }
-    }
-  }, [startScanningLoop, stopStream]);
-
-  // Toggle Torch/Flashlight
   const toggleTorch = async () => {
     if (!activeTrackRef.current) return;
     try {
       const nextState = !torchOn;
-      await (activeTrackRef.current as unknown as { applyConstraints: (c: Record<string, unknown>) => Promise<void> }).applyConstraints({
+      await (activeTrackRef.current as unknown as {
+        applyConstraints: (c: Record<string, unknown>) => Promise<void>;
+      }).applyConstraints({
         advanced: [{ torch: nextState }],
       });
       setTorchOn(nextState);
-    } catch {
-      // Torch failed
-    }
+    } catch {}
   };
 
-  // Handle Image File Upload (From Gallery or Native Camera Photo)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -434,9 +410,9 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
             return;
           }
         }
-        alert("QR Code tidak terdeteksi pada gambar tersebut. Pastikan foto QR jelas dan cukup cahaya.");
+        setError("QR Code tidak terdeteksi pada gambar tersebut. Pastikan foto jelas dan cukup cahaya.");
       } catch {
-        alert("Gagal membaca gambar QR.");
+        setError("Gagal membaca gambar QR.");
       } finally {
         URL.revokeObjectURL(objectUrl);
         setLoading(false);
@@ -446,7 +422,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
       setLoading(false);
-      alert("Format gambar tidak valid.");
+      setError("Format gambar tidak valid.");
     };
 
     img.src = objectUrl;
@@ -465,7 +441,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
       } catch {}
 
       const displayName = getCameraDisplayName(nextDevice, nextIndex);
-      showToast(`${displayName} disimpan sebagai default ⭐`);
+      showToast(`${displayName} disimpan sebagai default`);
       startCamera(nextDevice.deviceId);
     }
   }, [devices, selectedDeviceId, showToast, startCamera]);
@@ -479,259 +455,146 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   }, [startCamera, stopStream]);
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 600,
-      background: "rgba(0,0,0,0.94)",
-      backdropFilter: "blur(12px)",
-      display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      padding: 16,
-    }}>
-      {/* Hidden processing canvas & file input */}
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+      <canvas ref={canvasRef} className="hidden" />
       <input
         type="file"
         ref={fileInputRef}
         accept="image/*"
-        style={{ display: "none" }}
+        className="hidden"
         onChange={handleFileUpload}
       />
 
-      <div style={{
-        width: "100%", maxWidth: 420,
-        background: "#12121C",
-        borderRadius: 22,
-        overflow: "hidden",
-        border: "1px solid rgba(255,255,255,0.12)",
-        boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
-        display: "flex", flexDirection: "column",
-      }}>
-
-        {/* Modal Header */}
-        <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "16px 20px",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(255,255,255,0.02)",
-        }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#F0F0FF", display: "flex", alignItems: "center", gap: 8 }}>
-              <span>📷</span> Scan QR Kartu Fisik
+      <div className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-2xl">
+        <div className="flex items-center justify-between border-b border-hairline px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-hairline bg-elevated text-indigo-400">
+              <Camera className="h-4 w-4" strokeWidth={2} />
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#9A9AB0", marginTop: 2 }}>
-              Kamera HD otomatis fokus &amp; mendeteksi kode kartu
+            <div>
+              <h3 className="text-sm font-semibold text-ink">Scan QR Kartu Fisik</h3>
+              <p className="text-xs text-subtle">Arahkan kamera ke QR pada kartu</p>
             </div>
           </div>
+
           <button
-            onClick={() => { stopStream(); onClose(); }}
-            className="btn btn-ghost"
-            style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: 8 }}
+            type="button"
+            onClick={() => {
+              stopStream();
+              onClose();
+            }}
+            className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-hairline bg-elevated px-3 text-xs font-medium text-subtle transition-colors hover:text-ink"
           >
-            ✕ Tutup
+            <X className="h-3.5 w-3.5" />
+            <span>Tutup</span>
           </button>
         </div>
 
-        {/* Camera Viewport Area */}
-        <div style={{ position: "relative", background: "#050508", aspectRatio: "1", overflow: "hidden" }}>
+        <div className="relative aspect-square overflow-hidden bg-black">
           {error ? (
-            <div style={{
-              position: "absolute", inset: 0,
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              padding: 24, textAlign: "center", gap: 14,
-            }}>
-              <div style={{ fontSize: "2.8rem" }}>📵</div>
-              <div style={{ color: "#FCA5A5", fontSize: "0.85rem", lineHeight: 1.6, maxWidth: 320 }}>
-                {error}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400">
+                <CameraOff className="h-6 w-6" />
               </div>
+              <p className="max-w-xs text-xs leading-relaxed text-rose-300">{error}</p>
               <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="btn btn-primary"
-                style={{ fontSize: "0.85rem", padding: "10px 18px" }}
+                className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-indigo-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
               >
-                📁 Pilih Foto QR dari Galeri
+                <Upload className="h-4 w-4" />
+                <span>Pilih Foto QR dari Galeri</span>
               </button>
             </div>
           ) : (
             <>
-              {/* Live Video Feed */}
-              <video
-                ref={videoRef}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                muted
-                playsInline
-              />
+              <video ref={videoRef} className="block h-full w-full object-cover" muted playsInline />
 
-              {/* Scanning Target Box & Animated Reticle */}
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                pointerEvents: "none",
-              }}>
-                <div style={{
-                  width: "66%", height: "66%",
-                  maxWidth: 240, maxHeight: 240,
-                  border: scannedSuccess ? "3px solid #10B981" : "2px solid rgba(99,102,241,0.7)",
-                  borderRadius: 20,
-                  boxShadow: scannedSuccess
-                    ? "0 0 40px rgba(16,185,129,0.7), 0 0 0 9999px rgba(0,0,0,0.55)"
-                    : "0 0 0 9999px rgba(0,0,0,0.5)",
-                  position: "relative",
-                  transition: "all 0.25s ease",
-                }}>
-                  {/* Glowing Corner Brackets */}
-                  {[
-                    { top: -2, left: -2, borderTop: "4px solid #6366F1", borderLeft: "4px solid #6366F1", borderTopLeftRadius: 18 },
-                    { top: -2, right: -2, borderTop: "4px solid #6366F1", borderRight: "4px solid #6366F1", borderTopRightRadius: 18 },
-                    { bottom: -2, left: -2, borderBottom: "4px solid #6366F1", borderLeft: "4px solid #6366F1", borderBottomLeftRadius: 18 },
-                    { bottom: -2, right: -2, borderBottom: "4px solid #6366F1", borderRight: "4px solid #6366F1", borderBottomRightRadius: 18 },
-                  ].map((s, i) => (
-                    <div key={i} style={{ position: "absolute", width: 30, height: 30, ...s }} />
-                  ))}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div
+                  className={`relative h-2/3 w-2/3 max-h-60 max-w-60 rounded-2xl border-2 transition-colors ${
+                    scannedSuccess
+                      ? "border-emerald-500 shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]"
+                      : "border-indigo-400/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.52)]"
+                  }`}
+                >
+                  <div className="absolute -left-0.5 -top-0.5 h-6 w-6 rounded-tl-2xl border-l-4 border-t-4 border-indigo-400" />
+                  <div className="absolute -right-0.5 -top-0.5 h-6 w-6 rounded-tr-2xl border-r-4 border-t-4 border-indigo-400" />
+                  <div className="absolute -bottom-0.5 -left-0.5 h-6 w-6 rounded-bl-2xl border-b-4 border-l-4 border-indigo-400" />
+                  <div className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-br-2xl border-b-4 border-r-4 border-indigo-400" />
 
-                  {/* Laser Scan Line */}
                   {!scannedSuccess && !loading && (
-                    <div style={{
-                      position: "absolute", left: 10, right: 10, height: 3,
-                      background: "linear-gradient(90deg, transparent, #818CF8, #6366F1, #818CF8, transparent)",
-                      borderRadius: 999,
-                      boxShadow: "0 0 14px #6366F1",
-                      animation: "qrscanline 1.6s ease-in-out infinite",
-                    }} />
+                    <div className="animate-qr-scanline absolute inset-x-3 h-0.5 rounded-full bg-indigo-400" />
                   )}
 
-                  {/* Success Flash Overlay */}
                   {scannedSuccess && (
-                    <div style={{
-                      position: "absolute", inset: 0, borderRadius: 18,
-                      background: "rgba(16,185,129,0.25)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "3rem",
-                    }}>
-                      ✅
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-300">
+                      <CheckCircle2 className="h-12 w-12" strokeWidth={2} />
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* In-camera Controls Toolbar (Torch, Camera Switch) */}
-              <div style={{
-                position: "absolute", top: 12, right: 12,
-                display: "flex", gap: 8, zIndex: 10,
-              }}>
+              <div className="absolute right-3 top-3 z-10 flex gap-2">
                 {hasTorch && (
                   <button
+                    type="button"
                     onClick={toggleTorch}
-                    style={{
-                      width: 38, height: 38, borderRadius: 10,
-                      background: torchOn ? "rgba(245,158,11,0.3)" : "rgba(0,0,0,0.6)",
-                      border: torchOn ? "1px solid #F59E0B" : "1px solid rgba(255,255,255,0.2)",
-                      color: torchOn ? "#FCD34D" : "#FFF",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer", fontSize: "1.1rem",
-                      backdropFilter: "blur(8px)",
-                    }}
-                    title={torchOn ? "Matikan Lampu Senter" : "Nyalakan Lampu Senter"}
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl border backdrop-blur-md transition-colors ${
+                      torchOn
+                        ? "border-amber-400 bg-amber-500/25 text-amber-300"
+                        : "border-white/20 bg-black/60 text-white"
+                    }`}
+                    title={torchOn ? "Matikan Lampu" : "Nyalakan Lampu"}
                   >
-                    💡
+                    <Zap className="h-4 w-4" />
                   </button>
                 )}
 
                 {devices.length > 1 && (
                   <button
+                    type="button"
                     onClick={switchCamera}
-                    style={{
-                      width: 38, height: 38, borderRadius: 10,
-                      background: "rgba(0,0,0,0.6)",
-                      border: "1px solid rgba(255,255,255,0.2)",
-                      color: "#FFF",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer", fontSize: "1.1rem",
-                      backdropFilter: "blur(8px)",
-                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-black/80"
                     title="Ganti Lensa & Simpan sebagai Default"
                   >
-                    🔄
+                    <SwitchCamera className="h-4 w-4" />
                   </button>
                 )}
               </div>
 
-              {/* Toast Feedback: Camera saved as default */}
               {toastMsg && (
-                <div style={{
-                  position: "absolute",
-                  bottom: 14,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "rgba(16, 185, 129, 0.95)",
-                  color: "#FFFFFF",
-                  fontSize: "0.76rem",
-                  fontWeight: 600,
-                  padding: "6px 14px",
-                  borderRadius: 20,
-                  boxShadow: "0 6px 20px rgba(0,0,0,0.6)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  zIndex: 25,
-                  pointerEvents: "none",
-                  whiteSpace: "nowrap",
-                }}>
+                <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border border-emerald-500/30 bg-surface/95 px-3.5 py-1.5 text-xs font-medium text-emerald-300 shadow-lg">
                   {toastMsg}
                 </div>
               )}
 
-              {/* Loading Spinner */}
               {loading && (
-                <div style={{
-                  position: "absolute", inset: 0,
-                  display: "flex", flexDirection: "column",
-                  alignItems: "center", justifyContent: "center",
-                  background: "rgba(0,0,0,0.7)", gap: 10,
-                }}>
-                  <div className="spinner" style={{ width: 28, height: 28 }} />
-                  <span style={{ fontSize: "0.8rem", color: "#A5B4FC" }}>Membuka kamera fokus tinggi...</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-black/75">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-indigo-400" />
+                  <span className="text-xs text-subtle">Membuka kamera...</span>
                 </div>
               )}
-
-              <style>{`
-                @keyframes qrscanline {
-                  0%   { top: 12px; opacity: 0; }
-                  15%  { opacity: 1; }
-                  85%  { opacity: 1; }
-                  100% { top: calc(100% - 15px); opacity: 0; }
-                }
-              `}</style>
             </>
           )}
         </div>
 
-        {/* Modal Footer & Alternatives */}
-        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-              {scannedSuccess ? "✅ QR Berhasil Terbaca!" : "Arahkan kamera 10–25 cm dari QR code kartu"}
+        <div className="flex flex-col gap-3 border-t border-hairline px-5 py-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-subtle">
+              {scannedSuccess ? "QR berhasil terbaca" : "Jarak ideal 10 sampai 25 cm dari kartu"}
             </span>
 
-            {/* Upload image button as foolproof fallback */}
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="btn btn-ghost"
-              style={{
-                padding: "6px 12px", fontSize: "0.75rem",
-                color: "#A5B4FC", borderColor: "rgba(99,102,241,0.3)",
-                background: "rgba(99,102,241,0.08)",
-              }}
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-hairline bg-elevated px-3 text-xs font-medium text-ink transition-colors hover:border-white/20"
             >
-              📁 Unggah Foto QR
+              <Upload className="h-3.5 w-3.5 text-indigo-400" />
+              <span>Unggah Foto</span>
             </button>
           </div>
-
-          <div style={{ fontSize: "0.68rem", color: "#7A7A95", textAlign: "center", lineHeight: 1.4 }}>
-            💡 Tekan tombol 🔄 samping lampu untuk ganti lensa — pilihan Anda otomatis tersimpan sebagai kamera default.
-          </div>
         </div>
-
       </div>
     </div>
   );

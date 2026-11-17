@@ -7,7 +7,6 @@ export const revalidate = 0;
 
 const MAX_BATCH = 200;
 
-/** GET /api/admin/stock — list semua kode stok */
 export async function GET() {
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +18,6 @@ export async function GET() {
   );
 }
 
-/** POST /api/admin/stock — simpan batch kode ke stok */
 export async function POST(req: NextRequest) {
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,7 +45,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, saved: sanitized.length });
 }
 
-/** DELETE /api/admin/stock?code=xxx — hapus satu kode dari stok */
 export async function DELETE(req: NextRequest) {
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

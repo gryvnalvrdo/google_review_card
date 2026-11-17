@@ -1,0 +1,11 @@
+:root {
+  --bg-canvas: #0B0D12;
+  --bg-surface: #12151E;
+  --bg-elevated: #181C27;
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --text-ink: #E6EAF2;
+  --text-subtle: #9BA3B4;
+  --text-muted: #667085;
+  color-scheme: dark;
+}

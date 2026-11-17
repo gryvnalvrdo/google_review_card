@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Password tidak valid." }, { status: 400 });
   }
 
-  // Timing-safe comparison — tidak menggunakan === langsung
   if (!verifyPassword(password)) {
     return NextResponse.json({ error: "Password salah." }, { status: 401 });
   }

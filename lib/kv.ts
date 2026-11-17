@@ -3,12 +3,9 @@ import { createClient } from "@vercel/kv";
 export type TapLogEntry = {
   code: string;
   storeName: string;
-  tappedAt: string; // ISO timestamp
+  tappedAt: string;
 };
 
-/** Coba ulang fn maksimal maxAttempts kali.
- *  Jika semua retry gagal karena exception (bukan karena data null),
- *  lempar error agar caller bisa membedakan "tidak ditemukan" vs "gagal koneksi". */
 async function retryOrThrow<T>(
   fn: () => Promise<T>,
   maxAttempts = 3,
@@ -25,7 +22,7 @@ async function retryOrThrow<T>(
       }
     }
   }
-  throw lastErr; // semua retry gagal → lempar error ke caller
+  throw lastErr;
 }
 
 export type CardRecord = {
@@ -35,31 +32,27 @@ export type CardRecord = {
   createdAt: string;
   updatedAt: string;
   price?: number;
-  cost?: number; // Modal awal pembuatan kartu (HPP)
+  cost?: number;
 };
 
-const KEY_PREFIX   = "card:";
-const TAP_PREFIX   = "tap:";
-const INDEX_KEY    = "card:_index";
-const STOK_INDEX   = "stok:_index";   // set kode yang sudah dicetak tapi belum di-assign
-const TAP_LOG_KEY  = "tap_log";        // list riwayat tap (JSON string), newest first
-const TAP_LOG_MAX  = 25000;            // maksimal entri yang disimpan (kapasitas jangka panjang multi-tahun puluhan cafe)
+const KEY_PREFIX = "card:";
+const TAP_PREFIX = "tap:";
+const INDEX_KEY = "card:_index";
+const STOK_INDEX = "stok:_index";
+const TAP_LOG_KEY = "tap_log";
+const TAP_LOG_MAX = 25000;
 
-// Mengambil env vars standar atau nama hasil auto-generate Vercel Integration
 const kvUrl = process.env.KV_REST_API_URL || process.env.KV_REST_API_URL_KV_REST_API_URL;
 const kvToken = process.env.KV_REST_API_TOKEN || process.env.KV_REST_API_URL_KV_REST_API_TOKEN;
 
-// Fallback in-memory untuk dev lokal tanpa Vercel KV.
-// DATA HILANG tiap restart — jangan dipakai di produksi.
 const memoryStore = new Map<string, CardRecord>();
-const tapStore    = new Map<string, number>();
-const stokStore   = new Set<string>();          // in-memory stok fallback
-const tapLogStore: TapLogEntry[] = [];          // in-memory tap log fallback
+const tapStore = new Map<string, number>();
+const stokStore = new Set<string>();
+const tapLogStore: TapLogEntry[] = [];
 
 const hasKv = Boolean(kvUrl && kvToken);
 const vercelKv = hasKv ? createClient({ url: kvUrl!, token: kvToken! }) : null;
 
-// Initial seed data for local dev demonstration (when Vercel KV is not configured)
 if (!hasKv && memoryStore.size === 0) {
   const sampleStores = [
     { code: "KPK01", name: "Kopi Kenangan Senopati" },
@@ -81,6 +74,8 @@ if (!hasKv && memoryStore.size === 0) {
       cost: 25000,
     });
   }
+
+  ["stk7a2", "stk9b4", "stk3m8", "stk5p1", "stk8r6"].forEach((code) => stokStore.add(code));
 
   const now = Date.now();
   for (let dayOffset = 55; dayOffset >= 0; dayOffset--) {
@@ -112,9 +107,6 @@ if (!hasKv && memoryStore.size === 0) {
   }
 }
 
-// Cache memori jangka pendek per serverless container untuk kartu (TTL 45 detik)
-// Sangat krusial agar NFC tap instan (<5ms), menghemat kuota Upstash,
-// dan mencegah error koneksi/rate-limit menampilkan "kartu belum aktif".
 const cardMemCache = new Map<string, { card: CardRecord | null; expires: number }>();
 
 export async function getCard(code: string): Promise<CardRecord | null> {
@@ -129,7 +121,6 @@ export async function getCard(code: string): Promise<CardRecord | null> {
 
   if (hasKv && vercelKv) {
     try {
-      // Retry hingga 3x untuk menangani transient error Vercel KV.
       const data = await retryOrThrow(() =>
         vercelKv!.get<CardRecord>(KEY_PREFIX + normalized)
       );
@@ -137,8 +128,6 @@ export async function getCard(code: string): Promise<CardRecord | null> {
       cardMemCache.set(normalized, { card: res, expires: now + 45000 });
       return res;
     } catch (err) {
-      // Jika terjadi error koneksi ke KV tetapi sebelumnya ada cache di memori (meskipun stale),
-      // gunakan data cache tersebut agar pelanggan tidak pernah terblokir!
       if (cached?.card) {
         console.warn("KV fetch error, using stale cached card for code=" + normalized, err);
         return cached.card;
@@ -151,7 +140,6 @@ export async function getCard(code: string): Promise<CardRecord | null> {
 }
 
 export async function setCard(record: CardRecord): Promise<void> {
-  // Update cache memori lokal segera
   cardMemCache.set(record.code, { card: record, expires: Date.now() + 45000 });
 
   if (hasKv && vercelKv) {
@@ -178,7 +166,6 @@ async function replaceTapLogList(validLogs: TapLogEntry[], suffix: string): Prom
   await vercelKv.rename(tempKey, TAP_LOG_KEY);
 }
 
-/** Reset hitungan tap dan bersihkan entri log tap untuk satu kartu tertentu (misal toko/lokasi berganti). */
 export async function resetCardTaps(code: string): Promise<void> {
   if (hasKv && vercelKv) {
     const delTapPromise = vercelKv.del(TAP_PREFIX + code);
@@ -214,7 +201,6 @@ export async function resetCardTaps(code: string): Promise<void> {
           remaining.push(entry);
         }
 
-        // Hanya tulis ulang list Redis jika memang ada log kartu ini yang dihapus atau urutan rusak
         if (removedAny || hasMalformed || isOutOfOrder) {
           remaining.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
           await replaceTapLogList(remaining, "reset");
@@ -265,8 +251,6 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
     const cardKeys = codes.map((c) => KEY_PREFIX + c);
     const tapKeys = codes.map((c) => TAP_PREFIX + c);
 
-    // Optimasi MGET: Ambil seluruh data kartu dan tap dalam 1 batch command Redis
-    // (Menghemat 99% kuota command Redis dibandingkan loop GET per kartu)
     const [rawRecords, rawTaps, rawLogs] = await Promise.all([
       cardKeys.length > 0
         ? vercelKv.mget<CardRecord[]>(...cardKeys).catch(() => Promise.all(codes.map((c) => getCard(c))))
@@ -280,7 +264,6 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
     const records = (rawRecords as (CardRecord | null)[]) ?? [];
     const taps = ((rawTaps as (number | null)[]) ?? []).map((v) => (typeof v === "number" ? v : 0));
 
-    // Warm-up memory cache untuk semua kartu yang diambil
     const now = Date.now();
     for (const r of records) {
       if (r && r.code) {
@@ -288,8 +271,6 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
       }
     }
 
-    // Hitung riwayat log per kode kartu agar angka di Daftar Kartu selalu 100% konsisten
-    // dengan halaman Riwayat Tap (menghindari selisih akibat log masa lalu ter-trim atau async delay)
     const logCounts = new Map<string, number>();
     if (rawLogs && rawLogs.length > 0) {
       for (const item of rawLogs) {
@@ -310,12 +291,9 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
         if (!r) return null;
         const code = r.code;
         const countFromLogs = logCounts.get(code) ?? 0;
-        // Jika ada tap_log tersimpan di sistem, jumlah log riil adalah acuan mutlak (single source of truth)
         const hasLogsInSystem = rawLogs && rawLogs.length > 0;
         const tapCount = hasLogsInSystem ? countFromLogs : (taps[i] ?? 0);
 
-        // Self-healing: jika counter numerik tap:code berbeda dengan jumlah log riil,
-        // sinkronkan counter ke Redis secara otomatis agar konsisten di semua tempat
         if (hasLogsInSystem && taps[i] !== countFromLogs) {
           vercelKv.set(TAP_PREFIX + code, countFromLogs).catch(() => {});
         }
@@ -328,7 +306,7 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
   const activeCodes = new Set(memoryStore.keys());
   const valid = tapLogStore.filter((e) => activeCodes.has(e.code));
   const logCounts = new Map<string, number>();
-  valid.forEach(l => logCounts.set(l.code, (logCounts.get(l.code) ?? 0) + 1));
+  valid.forEach((l) => logCounts.set(l.code, (logCounts.get(l.code) ?? 0) + 1));
 
   return Array.from(memoryStore.values()).map((r) => ({
     ...r,
@@ -336,9 +314,6 @@ export async function listCards(): Promise<(CardRecord & { tapCount: number })[]
   }));
 }
 
-// ── STOK FUNCTIONS ──────────────────────────────────────────────────────────
-
-/** Simpan sejumlah kode sebagai stok (belum di-assign). */
 export async function addStokCodes(codes: string[]): Promise<void> {
   if (codes.length === 0) return;
   if (hasKv && vercelKv) {
@@ -348,7 +323,6 @@ export async function addStokCodes(codes: string[]): Promise<void> {
   codes.forEach((c) => stokStore.add(c));
 }
 
-/** Hapus satu kode dari stok (ketika di-assign ke toko). */
 export async function removeStokCode(code: string): Promise<void> {
   if (hasKv && vercelKv) {
     await vercelKv.srem(STOK_INDEX, code);
@@ -357,7 +331,6 @@ export async function removeStokCode(code: string): Promise<void> {
   stokStore.delete(code);
 }
 
-/** Daftar semua kode stok (belum di-assign). */
 export async function listStokCodes(): Promise<string[]> {
   if (hasKv && vercelKv) {
     const members = await vercelKv.smembers<string[]>(STOK_INDEX);
@@ -366,7 +339,6 @@ export async function listStokCodes(): Promise<string[]> {
   return Array.from(stokStore);
 }
 
-/** Hapus semua kode stok. */
 export async function clearStok(): Promise<void> {
   if (hasKv && vercelKv) {
     await vercelKv.del(STOK_INDEX);
@@ -375,7 +347,6 @@ export async function clearStok(): Promise<void> {
   stokStore.clear();
 }
 
-/** Jumlah kode stok. */
 export async function getStokCount(): Promise<number> {
   if (hasKv && vercelKv) {
     const n = await vercelKv.scard(STOK_INDEX);
@@ -384,12 +355,8 @@ export async function getStokCount(): Promise<number> {
   return stokStore.size;
 }
 
-// ── TAP LOG FUNCTIONS ───────────────────────────────────────────────
-
-/** Catat satu tap event ke log. Simpan maks TAP_LOG_MAX entri terbaru. */
 export async function addTapLog(entry: TapLogEntry): Promise<void> {
   if (hasKv && vercelKv) {
-    // LPUSH = push ke head list (newest first), lalu trim ke TAP_LOG_MAX
     await vercelKv.lpush(TAP_LOG_KEY, JSON.stringify(entry));
     await vercelKv.ltrim(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1);
     return;
@@ -398,7 +365,6 @@ export async function addTapLog(entry: TapLogEntry): Promise<void> {
   if (tapLogStore.length > TAP_LOG_MAX) tapLogStore.splice(TAP_LOG_MAX);
 }
 
-/** Ambil N entri tap terbaru (hanya untuk kartu yang masih aktif). */
 export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
   if (hasKv && vercelKv) {
     const initialEnd = Math.min(TAP_LOG_MAX - 1, Math.max(limit * 5 - 1, 299));
@@ -441,7 +407,6 @@ export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
 
     let parsed = parseRawLogs(raw);
 
-    // Jika limit besar atau banyak log orphan di awal list, fallback ke full scan agar jumlah log tetap lengkap
     if (!isFullScan && parsed.validLogs.length < limit && raw.length >= initialEnd + 1) {
       raw = await vercelKv.lrange<string>(TAP_LOG_KEY, 0, TAP_LOG_MAX - 1);
       isFullScan = true;
@@ -450,7 +415,6 @@ export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
 
     const { validLogs, hasOrphan, hasMalformed } = parsed;
 
-    // Cek apakah ada entri yang tidak berurutan secara kronologis
     let isOutOfOrder = false;
     for (let i = 0; i < validLogs.length - 1; i++) {
       if (new Date(validLogs[i].tappedAt).getTime() < new Date(validLogs[i + 1].tappedAt).getTime()) {
@@ -459,10 +423,8 @@ export async function getTapLogs(limit = 50): Promise<TapLogEntry[]> {
       }
     }
 
-    // Pastikan SELALU diurutkan dari yang terbaru (newest-first)
     validLogs.sort((a, b) => new Date(b.tappedAt).getTime() - new Date(a.tappedAt).getTime());
 
-    // Hanya jalankan auto-heal saat full scan agar log lama tidak pernah terpotong
     if (isFullScan && (hasOrphan || isOutOfOrder || hasMalformed)) {
       await replaceTapLogList(validLogs, "heal").catch((err) => {
         console.error("Gagal auto-heal urutan tap_log di KV:", err);

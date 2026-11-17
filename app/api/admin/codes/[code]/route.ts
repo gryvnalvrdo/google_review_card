@@ -26,7 +26,6 @@ export async function DELETE(
   return NextResponse.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
 
-/** POST /api/admin/codes/[code] — Reset riwayat & hitungan tap kartu tertentu ke 0 */
 export async function POST(
   _req: NextRequest,
   { params }: { params: { code: string } }

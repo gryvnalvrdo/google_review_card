@@ -1,0 +1,26 @@
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes qr-scanline {
+  0% {
+    top: 10px;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 14px);
+    opacity: 0;
+  }
+}
+
+.animate-qr-scanline {
+  animation: qr-scanline 1.6s ease-in-out infinite;
+}

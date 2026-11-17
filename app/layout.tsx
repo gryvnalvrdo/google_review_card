@@ -1,9 +1,24 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import "./styles/tokens.css";
+import "./styles/animations.css";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Google Review Card — Hantic",
-  description: "Sistem redirect kartu NFC/QR ke halaman Google Review toko. Tap kartu → langsung ke halaman review Google.",
+  title: "Review Card Hantic",
+  description: "Sistem manajemen dan redirect kartu NFC/QR ke Google Review dan Instagram toko.",
   icons: {
     icon: "/favicon.ico",
   },
@@ -11,8 +26,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id">
-      <body>{children}</body>
+    <html lang="id" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className="bg-canvas font-sans text-ink antialiased selection:bg-indigo-500/30 selection:text-ink">
+        {children}
+      </body>
     </html>
   );
 }

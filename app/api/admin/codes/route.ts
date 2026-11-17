@@ -37,9 +37,12 @@ export async function POST(req: NextRequest) {
   const storeName = body?.storeName?.trim();
   const googleReviewUrl = body?.googleReviewUrl?.trim();
   const price = typeof body?.price === "number" ? Math.max(0, body.price) : 50000;
-  const cost = typeof body?.cost === "number"
-    ? Math.max(0, body.cost)
-    : (typeof body?.modal === "number" ? Math.max(0, body.modal) : 0);
+  const cost =
+    typeof body?.cost === "number"
+      ? Math.max(0, body.cost)
+      : typeof body?.modal === "number"
+      ? Math.max(0, body.modal)
+      : 0;
   const explicitResetTap = Boolean(body?.resetTaps || body?.resetTap);
 
   if (!code || !storeName || !googleReviewUrl) {
@@ -49,20 +52,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Validasi panjang input
   if (code.length > MAX_CODE_LEN) {
-    return NextResponse.json({ error: `Kode terlalu panjang (maks ${MAX_CODE_LEN} karakter).` }, { status: 400 });
+    return NextResponse.json(
+      { error: `Kode terlalu panjang (maks ${MAX_CODE_LEN} karakter).` },
+      { status: 400 }
+    );
   }
   if (storeName.length > MAX_NAME_LEN) {
-    return NextResponse.json({ error: `Nama toko terlalu panjang (maks ${MAX_NAME_LEN} karakter).` }, { status: 400 });
+    return NextResponse.json(
+      { error: `Nama toko terlalu panjang (maks ${MAX_NAME_LEN} karakter).` },
+      { status: 400 }
+    );
   }
   if (googleReviewUrl.length > MAX_URL_LEN) {
-    return NextResponse.json({ error: `URL terlalu panjang (maks ${MAX_URL_LEN} karakter).` }, { status: 400 });
+    return NextResponse.json(
+      { error: `URL terlalu panjang (maks ${MAX_URL_LEN} karakter).` },
+      { status: 400 }
+    );
   }
 
   if (!isAllowedReviewUrl(googleReviewUrl)) {
     return NextResponse.json(
-      { error: "Link harus berupa link Google Review resmi atau link/profil Instagram resmi. Link lain ditolak demi keamanan." },
+      {
+        error:
+          "Link harus berupa link Google Review/Maps resmi atau link/profil Instagram resmi. Link lain ditolak demi keamanan.",
+      },
       { status: 400 }
     );
   }
@@ -70,8 +84,6 @@ export async function POST(req: NextRequest) {
   const existing = await getCard(code);
   const now = new Date().toISOString();
 
-  // Jika lokasi tujuan (Google Place ID / URL Review / Instagram) berubah,
-  // atau admin secara eksplisit meminta reset tap, otomatis kembalikan hitungan tap ke 0.
   const isTargetChanged = Boolean(
     existing && existing.googleReviewUrl.trim() !== googleReviewUrl.trim()
   );
@@ -91,7 +103,6 @@ export async function POST(req: NextRequest) {
     updatedAt: now,
   });
 
-  // Hapus dari stok jika ada (kartu sudah di-assign ke toko)
   await removeStokCode(code);
 
   return NextResponse.json({
