@@ -9,7 +9,7 @@ Dokumen ini adalah aturan kerja wajib bagi seluruh AI agent dan developer yang m
 - **Database**: Vercel KV / Upstash Redis (`lib/kv.ts`) dengan fallback in-memory untuk pengembangan lokal.
 - **Domain Fitur**:
   - Redirect publik & bridge Instagram mobile: `app/c/[code]/route.ts`, `lib/redirect.ts`.
-  - Admin Dashboard, Manajemen Kartu, Manajemen Stok, Analitik Tap, dan Print Studio QR: `app/admin/*`.
+  - Admin Dashboard, Manajemen Kartu, Analitik Tap, dan Print Studio QR (antrean kode cetak auto-expire 90 hari): `app/admin/*`.
   - API terproteksi sesi cookie HMAC: `app/api/admin/*`.
 
 ## 2. Invarian Keamanan & Data (Pantang Dilanggar)
@@ -35,7 +35,7 @@ Dokumen ini adalah aturan kerja wajib bagi seluruh AI agent dan developer yang m
    - Gunakan kelas Tailwind CSS untuk layout, grid responsif, spacing, dan state hover/focus. Hindari inline `style={{ ... }}` kecuali nilai dinamis murni (misal lebar bar persentase atau koordinat canvas).
 6. **Responsif Nyaman di Desktop & Mobile**:
    - Header halaman admin tetap bersih tanpa kalimat pengantar deskriptif di bawah judul.
-   - Stok Kartu dan grafik Tren & Jam di Analitik Tap hanya ditampilkan pada layar desktop (`md:` ke atas) agar tampilan mobile ringkas.
+   - Grafik Tren & Jam di Analitik Tap hanya ditampilkan pada layar desktop (`md:` ke atas) agar tampilan mobile ringkas; tidak perlu halaman khusus stok karena kode cetak yang belum di-assign dalam 90 hari otomatis terhapus.
    - Tambah kartu dan akses Scan QR di mobile Dashboard memakai Floating Action Button (`+`).
    - Pastikan target sentuh interaktif di mobile memadai (`min-h-[44px]` pada tombol aksi utama) dan bottom dock memperhitungkan `safe-area-inset-bottom`.
 7. **Bahasa Indonesia**: Seluruh copywriting UI menggunakan Bahasa Indonesia yang ringkas, lugas, dan konsisten.

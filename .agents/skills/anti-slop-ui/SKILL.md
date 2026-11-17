@@ -35,7 +35,7 @@ Skill ini memastikan seluruh antarmuka admin dan halaman publik mengikuti standa
 2. **Mobile (`< md` / `< lg`)**:
    - Flow 1 kolom yang bersih dengan padding horizontal konsisten (`px-4`), tanpa overflow horizontal, dan tanpa kalimat pengantar 1 baris di bawah `h1`.
    - KPI grid 2 kolom hanya jika label dan nominal tidak terpotong; nominal panjang (keuntungan/omzet) diberi ruang penuh (`col-span-2` bila perlu).
-   - Stok Kartu dan tab grafik **Tren & Jam** tidak ditampilkan di mobile agar navigasi serta analitik mobile fokus pada **Riwayat Tap**, **Leaderboard**, dan **Belum Ada Tap**.
+   - Tab grafik **Tren & Jam** tidak ditampilkan di mobile agar navigasi serta analitik mobile fokus pada **Riwayat**, **Peringkat**, dan **Pasif**, tanpa menu atau halaman stok terpisah.
    - Di Dashboard mobile, pemicu tambah kartu/Scan QR menggunakan Floating Action Button (`+`) di sudut kanan bawah di atas bottom dock (`bottom-24`).
    - Beri jarak bawah ekstra pada kontainer utama agar konten terakhir tidak tertutup mobile bottom dock (`pb-28 lg:pb-12`).
 3. **Modal & Drawer**:

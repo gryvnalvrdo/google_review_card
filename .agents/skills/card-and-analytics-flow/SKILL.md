@@ -11,10 +11,10 @@ Skill ini menjaga konsistensi alur data antara `lib/kv.ts`, `lib/redirect.ts`, A
 
 ## Langkah & Aturan Inti
 
-1. **Manajemen Stok & Assign Kartu**:
-   - Kode yang dicetak dari Print Studio masuk ke `stok:_index` melalui `POST /api/admin/stock`.
-   - Saat kartu disimpan melalui `POST /api/admin/codes`, `removeStokCode(code)` otomatis memindahkan kode tersebut dari stok ke daftar kartu aktif.
-   - UI `/admin/stock` dan form assign harus selalu mengambil data stok terbaru dengan `cache: "no-store"`.
+1. **Kode Cetak Sementara (Auto-Delete 90 Hari) & Assign Kartu**:
+   - Kode yang dicetak dari Print Studio disimpan ke Redis ZSET `stok:_timed` melalui `POST /api/admin/stock` dan otomatis dihapus server apabila belum dihubungkan ke toko melewati 90 hari (3 bulan).
+   - Saat kartu disimpan melalui `POST /api/admin/codes`, `removeStokCode(code)` otomatis memindahkan kode tersebut menjadi kartu aktif permanen di `card:_index`.
+   - Form assign selalu mengambil daftar kode cetak aktif (`< 90 hari`) via `/api/admin/stock` dengan `cache: "no-store"`.
 2. **Target Google Review & Instagram (Zero-Billing)**:
    - Terima input Place ID mentah (`ChIJ...`), link Google Review (`placeid=...`), atau URL Google Maps umum via parser lokal tanpa memanggil Google Places API.
    - Pertahankan validasi whitelist `isAllowedReviewUrl()` di sisi server (`POST /api/admin/codes`) dan saat redirect publik (`GET /c/[code]`).

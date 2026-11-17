@@ -5,9 +5,9 @@ import Link from "next/link";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import {
+  ArrowUpRight,
   Crosshair,
   Monitor,
-  Package,
   Palette,
   RefreshCw,
   RotateCcw,
@@ -441,7 +441,9 @@ export default function PrintQRCodesPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setSaveResult(`${data.saved ?? codesToSave.length} kode otomatis disimpan ke Stok Kartu.`);
+        setSaveResult(
+          `${data.saved ?? codesToSave.length} kode disimpan ke antrean siap assign (otomatis terhapus dalam 90 hari jika belum dipakai).`
+        );
         window.dispatchEvent(new Event("stock-updated"));
       }
     } catch {}
@@ -903,11 +905,11 @@ export default function PrintQRCodesPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200">
           <span>{saveResult}</span>
           <Link
-            href="/admin/stock"
+            href="/admin"
             className="inline-flex items-center gap-1 font-semibold text-emerald-300 hover:text-emerald-200"
           >
-            <Package className="h-3.5 w-3.5" />
-            <span>Lihat Stok Kartu</span>
+            <span>Hubungkan di Dashboard</span>
+            <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       )}

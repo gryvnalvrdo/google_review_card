@@ -232,7 +232,7 @@ export default function CardForm({
                   className="inline-flex items-center gap-1 rounded-md border border-hairline bg-elevated px-2 py-1 text-[11px] font-medium text-subtle transition-colors hover:border-white/20 hover:text-ink"
                 >
                   <Package className="h-3 w-3 text-amber-400" />
-                  <span>Stok ({stockCodes.length})</span>
+                  <span>Kode Cetak ({stockCodes.length})</span>
                 </button>
               )}
               {onOpenScanner && (
@@ -267,7 +267,7 @@ export default function CardForm({
         {!isEditing && showStockPicker && stockCodes.length > 0 && (
           <div className="mt-2 rounded-lg border border-hairline bg-canvas p-2.5">
             <div className="mb-2 flex items-center justify-between text-[11px] text-subtle">
-              <span>Pilih kode stok siap pakai:</span>
+              <span>Pilih kode cetak (&lt; 90 hari belum terhubung):</span>
               <button
                 type="button"
                 onClick={() => setShowStockPicker(false)}

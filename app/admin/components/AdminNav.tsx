@@ -2,24 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   BarChart3,
   CreditCard,
   LayoutDashboard,
   LogOut,
-  Package,
   Printer,
   QrCode,
 } from "lucide-react";
 
 interface AdminNavProps {
-  active?: "dashboard" | "cards" | "stock" | "taps" | "print";
+  active?: "dashboard" | "cards" | "taps" | "print";
 }
 
 export default function AdminNav({ active }: AdminNavProps) {
   const pathname = usePathname();
-  const [stockCount, setStockCount] = useState<number | null>(null);
 
   const currentTab =
     active ||
@@ -27,46 +24,20 @@ export default function AdminNav({ active }: AdminNavProps) {
       ? "dashboard"
       : pathname.startsWith("/admin/cards")
       ? "cards"
-      : pathname.startsWith("/admin/stock")
-      ? "stock"
       : pathname.startsWith("/admin/taps")
       ? "taps"
       : pathname.startsWith("/admin/print")
       ? "print"
       : "dashboard");
 
-  useEffect(() => {
-    let mounted = true;
-    async function fetchStockCount() {
-      try {
-        const res = await fetch(`/api/admin/stock?_t=${Date.now()}`, { cache: "no-store" });
-        if (res.ok && mounted) {
-          const data = await res.json();
-          setStockCount(typeof data.count === "number" ? data.count : 0);
-        }
-      } catch {}
-    }
-
-    fetchStockCount();
-    const onStockUpdated = () => fetchStockCount();
-    window.addEventListener("stock-updated", onStockUpdated);
-    return () => {
-      mounted = false;
-      window.removeEventListener("stock-updated", onStockUpdated);
-    };
-  }, [pathname]);
-
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     window.location.href = "/admin/login";
   }
 
-  const isLowStock = stockCount !== null && stockCount <= 10;
-
   const navItems = [
     { id: "dashboard", label: "Dashboard", shortLabel: "Dashboard", href: "/admin", Icon: LayoutDashboard },
     { id: "cards", label: "Kartu Toko", shortLabel: "Kartu", href: "/admin/cards", Icon: CreditCard },
-    { id: "stock", label: "Stok Kartu", shortLabel: "Stok", href: "/admin/stock", Icon: Package, desktopOnly: true },
     { id: "taps", label: "Riwayat Tap", shortLabel: "Analitik", href: "/admin/taps", Icon: BarChart3 },
     { id: "print", label: "Cetak QR", shortLabel: "Cetak", href: "/admin/print", Icon: Printer, desktopOnly: true },
   ] as const;
@@ -103,17 +74,6 @@ export default function AdminNav({ active }: AdminNavProps) {
                 >
                   <Icon className={`h-3.5 w-3.5 ${isActive ? "text-indigo-400" : "text-muted"}`} strokeWidth={2} />
                   <span>{item.label}</span>
-                  {item.id === "stock" && stockCount !== null && (
-                    <span
-                      className={`tabular-nums rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-                        isLowStock
-                          ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30"
-                          : "bg-white/[0.06] text-subtle"
-                      }`}
-                    >
-                      {stockCount}
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -155,9 +115,6 @@ export default function AdminNav({ active }: AdminNavProps) {
                 >
                   <div className="relative">
                     <Icon className="h-4 w-4" strokeWidth={isActive ? 2.2 : 1.75} />
-                    {item.id === "stock" && isLowStock && (
-                      <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-surface" />
-                    )}
                   </div>
                   <span className="leading-none">{item.shortLabel}</span>
                 </Link>

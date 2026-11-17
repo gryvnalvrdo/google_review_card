@@ -7,7 +7,6 @@ Lihat `AGENTS.md`, `PRD.md`, dan `SKILLS.md` sebagai acuan utama arsitektur, atu
 - **Route Utama**:
   - `app/c/[code]/route.ts`: redirect publik (+ mode tes `?preview=1` khusus admin terautentikasi & Instagram deep-link bridge).
   - `app/admin/(protected)/page.tsx`: Dashboard ringkasan & form assign kartu.
-  - `app/admin/(protected)/cards/page.tsx`: Daftar & kelola kartu toko (Tabel/Kartu, quick edit HPP).
-  - `app/admin/(protected)/stock/page.tsx`: Manajemen stok kartu fisik & assign 1-klik.
-  - `app/admin/(protected)/taps/page.tsx`: Analitik tap (Tren & Jam, Riwayat, Leaderboard, Kartu Pasif).
-  - `app/admin/(protected)/print/page.tsx`: Studio cetak batch QR & auto-simpan ke stok.
+  - `app/admin/(protected)/cards/page.tsx`: Daftar & kelola kartu toko (Tabel/Kartu desktop, Kartu Interaktif mobile, quick edit HPP).
+  - `app/admin/(protected)/taps/page.tsx`: Analitik tap (default Riwayat Tap Hari Ini; Tren & Jam di desktop).
+  - `app/admin/(protected)/print/page.tsx`: Studio cetak batch QR & auto-simpan kode sementara (hapus otomatis setelah 90 hari bila belum di-assign).

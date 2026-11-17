@@ -63,11 +63,10 @@ Dokumen ini merancang perombakan antarmuka (*de-slopification*), modularisasi ko
 ## 5. Lingkup Fitur & Spesifikasi Fungsional
 
 ### 5.1 Fitur Baru & Peningkatan Inti (Masuk Lingkup)
-1. **Manajemen Stok Kartu Fisik (`/admin/stock`)**:
-   - Menampilkan total stok kode kartu siap jual yang tersimpan di `stok:_index`.
-   - Pencarian kode stok, tambah kode stok cepat (manual/batch acak), hapus kode satuan, dan bersihkan stok (dengan konfirmasi).
-   - **Aksi Assign 1-Klik**: Klik "Gunakan Kode" langsung mengarahkan ke form Hubungkan Kartu dengan kode terisi otomatis.
-   - **Indikator Stok Menipis**: Peringatan di Dashboard dan navbar/badge stok bila sisa stok di bawah ambang batas (mis. `<= 10` kartu) agar operator siap cetak ulang sebelum habis.
+1. **Auto-Expire Kode Cetak Belum Di-Assign (90 Hari / 3 Bulan)**:
+   - Kode batch hasil desain atau cetak QR disimpan sementara dengan timestamp di Redis ZSET `stok:_timed` (`stok:_index` lama dimigrasikan otomatis).
+   - Kode yang belum pernah dihubungkan ke toko selama **90 hari (3 bulan)** otomatis terhapus oleh server (`syncAndPruneKvStok`) agar rancangan uji coba/batal pakai tidak menumpuk di database, sehingga tidak diperlukan halaman khusus stok (`/admin/stock` ditiadakan).
+   - Kode cetak yang belum kedaluwarsa (`< 90 hari`) tetap tersedia sebagai pemilih cepat `Kode Cetak (N)` di dalam form Hubungkan Kartu, dan otomatis pindah menjadi kartu aktif permanen setelah disimpan via `POST /api/admin/codes`.
 2. **Test Redirect Tanpa Mengotori Statistik (`?preview=1`)**:
    - Endpoint `GET /c/<code>` mendukung parameter `?preview=1` **hanya jika** sesi cookie admin valid (`isAdminLoggedIn()`).
    - Ketika mode preview aktif, server tetap melakukan validasi kartu dan redirect (atau menampilkan bridge Instagram), tetapi **melewati** `incrementTapCount` dan `addTapLog`.
@@ -77,7 +76,7 @@ Dokumen ini merancang perombakan antarmuka (*de-slopification*), modularisasi ko
    - Input tujuan Google Review menerima Place ID langsung (`ChIJ...`), URL `placeid=...`, maupun tautan Google Maps / pencarian toko.
    - Helper pencarian langsung membuka Google Place ID Finder / Google Maps dengan nama toko yang sudah terisi otomatis di query URL tanpa API berbayar Google Cloud.
 4. **Redesign Dashboard (`/admin`)**:
-   - KPI Ringkas (Kartu Aktif, Total Tap, Keuntungan Bersih dengan `col-span-2` di mobile, serta Sisa Stok Kartu khusus desktop `md:` ke atas).
+   - KPI Ringkas 3 kartu utama (`Kartu Aktif`, `Total Tap`, dan `Keuntungan Bersih` dengan `col-span-2` di mobile).
    - Header bersih tanpa subjudul panjang; tombol hubungkan kartu & Scan QR di header mobile diganti dengan Floating Action Button (`+`) yang membuka form kartu lengkap (termasuk Scan QR).
    - Panel Aktivitas Tap Terbaru dengan tata letak dua baris adaptif di mobile (nama toko penuh + waktu rapi tanpa terpotong), tombol refresh, dan tes redirect aman.
 5. **Redesign Manajemen Kartu (`/admin/cards`)**:

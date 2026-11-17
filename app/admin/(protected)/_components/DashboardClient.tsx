@@ -8,7 +8,6 @@ import {
   CreditCard,
   ExternalLink,
   MousePointerClick,
-  Package,
   Plus,
   RefreshCw,
   TrendingUp,
@@ -21,7 +20,6 @@ import CardForm from "../../components/CardForm";
 import QRScanner from "../../components/QRScanner";
 
 const LS_KEY = "admin_dashboard_last_visited";
-const LOW_STOCK_THRESHOLD = 10;
 
 export default function DashboardClient() {
   const [cards, setCards] = useState<CardRecord[]>([]);
@@ -177,7 +175,6 @@ export default function DashboardClient() {
     [cardsWithCost]
   );
   const missingCostCount = cards.length - cardsWithCost.length;
-  const isLowStock = stockCodes.length <= LOW_STOCK_THRESHOLD;
 
   function openNewAssign(code = "") {
     setEditingCard(null);
@@ -216,52 +213,25 @@ export default function DashboardClient() {
         </h1>
       </div>
 
-      {(isLowStock || missingCostCount > 0) && (
-        <div
-          className={`grid grid-cols-1 gap-2.5 md:grid-cols-2 ${
-            missingCostCount === 0 ? "hidden md:grid" : ""
-          }`}
-        >
-          {isLowStock && (
-            <div className="hidden items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-xs md:flex">
-              <div className="flex items-center gap-2.5 text-amber-200">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
-                <span>
-                  Stok kartu fisik tersisa{" "}
-                  <strong className="tabular-nums text-amber-300">{stockCodes.length} unit</strong>.
-                  {stockCodes.length === 0 ? " Segera siapkan kode baru." : " Mendekati habis."}
-                </span>
-              </div>
-              <Link
-                href="/admin/stock"
-                className="shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 font-semibold text-amber-200 transition-colors hover:bg-amber-500/25"
-              >
-                Kelola Stok
-              </Link>
-            </div>
-          )}
-
-          {missingCostCount > 0 && (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-xs">
-              <div className="flex items-center gap-2.5 text-subtle">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
-                <span>
-                  <strong className="tabular-nums text-ink">{missingCostCount} kartu</strong> belum
-                  diisi modal awal (HPP) sehingga belum masuk hitungan profit.
-                </span>
-              </div>
-              <Link
-                href="/admin/cards?sort=missing_cost"
-                className="shrink-0 rounded-lg border border-hairline bg-elevated px-2.5 py-1.5 font-medium text-ink transition-colors hover:border-white/20"
-              >
-                Lengkapi
-              </Link>
-            </div>
-          )}
+      {missingCostCount > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-xs">
+          <div className="flex items-center gap-2.5 text-subtle">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+            <span>
+              <strong className="tabular-nums text-ink">{missingCostCount} kartu</strong> belum diisi
+              modal awal (HPP) sehingga belum masuk hitungan profit.
+            </span>
+          </div>
+          <Link
+            href="/admin/cards?sort=missing_cost"
+            className="shrink-0 rounded-lg border border-hairline bg-elevated px-2.5 py-1.5 font-medium text-ink transition-colors hover:border-white/20"
+          >
+            Lengkapi
+          </Link>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:gap-4">
         <div className="rounded-xl border border-hairline bg-surface p-4">
           <div className="flex items-center justify-between text-xs text-subtle">
             <span>Kartu Aktif</span>
@@ -296,30 +266,6 @@ export default function DashboardClient() {
             Omzet {formatRupiah(totalRevenue)}, Modal {formatRupiah(totalCost)}
           </div>
         </div>
-
-        <Link
-          href="/admin/stock"
-          className={`hidden rounded-xl border p-4 transition-colors md:order-4 md:block ${
-            isLowStock
-              ? "border-amber-500/35 bg-amber-500/[0.06] hover:border-amber-500/50"
-              : "border-hairline bg-surface hover:border-white/20"
-          }`}
-        >
-          <div className="flex items-center justify-between text-xs text-subtle">
-            <span>Stok Kartu</span>
-            <Package className={`h-4 w-4 ${isLowStock ? "text-amber-400" : "text-indigo-400"}`} />
-          </div>
-          <div
-            className={`mt-2 text-2xl font-semibold tabular-nums tracking-tight ${
-              isLowStock ? "text-amber-300" : "text-ink"
-            }`}
-          >
-            {stockCodes.length}
-          </div>
-          <div className="mt-1 text-[11px] text-muted">
-            {isLowStock ? "Stok menipis, klik untuk kelola" : "Siap dihubungkan ke toko"}
-          </div>
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
