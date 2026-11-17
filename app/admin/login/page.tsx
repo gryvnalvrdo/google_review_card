@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, ArrowRight, Eye, EyeOff, QrCode } from "lucide-react";
+import { AlertCircle, ArrowRight, Eye, EyeOff, QrCode } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -95,16 +94,6 @@ export default function LoginPage() {
               {!loading && <ArrowRight className="h-4 w-4" />}
             </button>
           </form>
-        </div>
-
-        <div className="mt-5 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-subtle"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Kembali ke beranda</span>
-          </Link>
         </div>
       </div>
     </main>
