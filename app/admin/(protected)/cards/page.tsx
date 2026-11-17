@@ -808,21 +808,13 @@ export default function CardsPage() {
                     <div className="mt-3.5 flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
-                        }
-                        className={`inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors ${
-                          copiedId === `url:${card.code}`
-                            ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
-                            : "border-hairline bg-elevated text-ink hover:border-white/20"
-                        }`}
+                        onClick={() => setResetTarget(card)}
+                        disabled={(card.tapCount ?? 0) === 0}
+                        title={(card.tapCount ?? 0) === 0 ? "Tap kartu masih 0" : "Reset jumlah tap ke 0"}
+                        className="inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-hairline bg-elevated px-3 text-xs font-medium text-ink transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-hairline"
                       >
-                        {copiedId === `url:${card.code}` ? (
-                          <Check className="h-4 w-4 shrink-0 text-emerald-400" />
-                        ) : (
-                          <Copy className="h-4 w-4 shrink-0 text-indigo-400" />
-                        )}
-                        <span>{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
+                        <RotateCcw className="h-4 w-4 shrink-0 text-indigo-400" />
+                        <span>Reset Tap</span>
                       </button>
 
                       <a
@@ -914,12 +906,21 @@ export default function CardsPage() {
 
                         <button
                           type="button"
-                          onClick={() => setResetTarget(card)}
-                          disabled={(card.tapCount ?? 0) === 0}
-                          className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-hairline bg-elevated px-3 text-xs font-medium text-ink disabled:cursor-not-allowed disabled:opacity-45"
+                          onClick={() =>
+                            copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
+                          }
+                          className={`inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors ${
+                            copiedId === `url:${card.code}`
+                              ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
+                              : "border-hairline bg-elevated text-ink hover:border-white/20"
+                          }`}
                         >
-                          <RotateCcw className="h-3.5 w-3.5 text-indigo-300" />
-                          <span>Reset Tap</span>
+                          {copiedId === `url:${card.code}` ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5 text-indigo-300" />
+                          )}
+                          <span>{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
                         </button>
 
                         <button
@@ -1081,21 +1082,13 @@ export default function CardsPage() {
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <button
                       type="button"
-                      onClick={() =>
-                        copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
-                      }
-                      className={`inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors ${
-                        copiedId === `url:${card.code}`
-                          ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
-                          : "border-hairline bg-elevated text-ink hover:border-white/20"
-                      }`}
+                      onClick={() => setResetTarget(card)}
+                      disabled={(card.tapCount ?? 0) === 0}
+                      title={(card.tapCount ?? 0) === 0 ? "Tap kartu masih 0" : "Reset jumlah tap ke 0"}
+                      className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border border-hairline bg-elevated px-2.5 text-xs font-medium text-ink transition-colors hover:border-white/20 disabled:cursor-not-allowed disabled:text-muted disabled:opacity-45 disabled:hover:border-hairline"
                     >
-                      {copiedId === `url:${card.code}` ? (
-                        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
-                      )}
-                      <span className="truncate">{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
+                      <RotateCcw className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                      <span>Reset Tap</span>
                     </button>
 
                     <a
@@ -1123,13 +1116,21 @@ export default function CardsPage() {
 
                     <button
                       type="button"
-                      onClick={() => setResetTarget(card)}
-                      disabled={(card.tapCount ?? 0) === 0}
-                      title={(card.tapCount ?? 0) === 0 ? "Tap kartu masih 0" : "Reset jumlah tap ke 0"}
-                      className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border border-hairline bg-elevated px-2.5 text-xs font-medium text-amber-300 transition-colors hover:border-amber-500/40 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:text-muted disabled:opacity-45 disabled:hover:border-hairline disabled:hover:bg-elevated"
+                      onClick={() =>
+                        copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
+                      }
+                      className={`inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors ${
+                        copiedId === `url:${card.code}`
+                          ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
+                          : "border-hairline bg-elevated text-ink hover:border-white/20"
+                      }`}
                     >
-                      <RotateCcw className="h-3.5 w-3.5 shrink-0" />
-                      <span>Reset Tap</span>
+                      {copiedId === `url:${card.code}` ? (
+                        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                      )}
+                      <span className="truncate">{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
                     </button>
                   </div>
 
