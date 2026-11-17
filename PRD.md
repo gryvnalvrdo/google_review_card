@@ -80,7 +80,7 @@ Dokumen ini merancang perombakan antarmuka (*de-slopification*), modularisasi ko
    - Header bersih tanpa subjudul panjang; tombol hubungkan kartu & Scan QR di header mobile diganti dengan Floating Action Button (`+`) yang membuka form kartu lengkap (termasuk Scan QR).
    - Panel Aktivitas Tap Terbaru dengan tata letak dua baris adaptif di mobile (nama toko penuh + waktu rapi tanpa terpotong), tombol refresh, dan tes redirect aman.
 5. **Redesign Manajemen Kartu (`/admin/cards`)**:
-   - Di desktop (`lg:` ke atas), tersedia **Mode Tabel** ringkas dan **Mode Kartu Grid** dengan aksi 1x4 lengkap.
+   - Di desktop (`lg:` ke atas), langsung menggunakan **Mode Tabel** ringkas agar mudah memindai banyak toko sekaligus.
    - Di mobile (`< lg`), memakai **Kartu Ringkas Interaktif** (ikon platform Google/Instagram pembeda visual, tipografi lebih besar, tombol cepat `Reset Tap` & `Tes`, plus drawer `Kelola` yang bisa dibuka untuk Unduh QR, Edit, Salin Link NFC, Hapus, dan rincian HPP), serta bar Cari + Urutkan sejajar horizontal dan filter chip cepat.
    - **Quick Modal (HPP) Edit**: Kartu yang belum memiliki modal awal menampilkan aksi cepat agar operator bisa langsung melengkapi HPP tanpa kebingungan.
 6. **Redesign Analitik Tap (`/admin/taps`)**:
