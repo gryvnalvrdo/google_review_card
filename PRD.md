@@ -70,7 +70,7 @@ Dokumen ini merancang perombakan antarmuka (*de-slopification*), modularisasi ko
 2. **Test Redirect Tanpa Mengotori Statistik (`?preview=1`)**:
    - Endpoint `GET /c/<code>` mendukung parameter `?preview=1` **hanya jika** sesi cookie admin valid (`isAdminLoggedIn()`).
    - Ketika mode preview aktif, server tetap melakukan validasi kartu dan redirect (atau menampilkan bridge Instagram), tetapi **melewati** `incrementTapCount` dan `addTapLog`.
-   - Tombol **"Tes Link"** di Dashboard & Daftar Kartu otomatis membuka `/c/<code>?preview=1` disertai keterangan bahwa tap tidak dihitung.
+   - Tombol **"Tes"** di Daftar Kartu (serta **"Tes Redirect"** setelah simpan kartu) otomatis membuka `/c/<code>?preview=1` disertai keterangan bahwa tap tidak dihitung.
    - Jika pengguna eksternal mencoba `?preview=1` tanpa login admin, tap tetap tercatat seperti biasa.
 3. **Smart Google Maps & Place ID Parser (Zero-Billing)**:
    - Input tujuan Google Review menerima Place ID langsung (`ChIJ...`), URL `placeid=...`, maupun tautan Google Maps / pencarian toko.

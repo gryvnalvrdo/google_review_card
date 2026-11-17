@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Clock, ExternalLink, Moon } from "lucide-react";
+import { CheckCircle2, Clock, Moon } from "lucide-react";
 import { formatTapDateTime, timeAgo } from "../../../../../lib/format";
 import type { CardRecord, TapLogEntry } from "../../../../../lib/types";
 
@@ -9,14 +9,12 @@ interface IdleCardsTabProps {
   sleepingPeriod: "today" | "last7" | "last30";
   sleepingCards: CardRecord[];
   validLogs: TapLogEntry[];
-  onNotifyTest: (storeName: string) => void;
 }
 
 export default function IdleCardsTab({
   sleepingPeriod,
   sleepingCards,
   validLogs,
-  onNotifyTest,
 }: IdleCardsTabProps) {
   if (sleepingCards.length === 0) {
     return (
@@ -79,16 +77,6 @@ export default function IdleCardsTab({
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <a
-                href={`/c/${card.code}?preview=1`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => onNotifyTest(card.storeName)}
-                className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-3 text-xs font-medium text-ink hover:border-white/20"
-              >
-                <span>Tes Link</span>
-                <ExternalLink className="h-3 w-3 text-indigo-300" />
-              </a>
               <Link
                 href="/admin/cards"
                 className="inline-flex min-h-[34px] items-center rounded-lg border border-hairline bg-elevated px-3 text-xs font-medium text-subtle hover:text-ink"

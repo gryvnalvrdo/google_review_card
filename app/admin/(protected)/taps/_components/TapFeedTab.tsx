@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, Clock, ExternalLink, Store, X } from "lucide-react";
+import { ArrowUpRight, Clock, Store, X } from "lucide-react";
 import {
   formatDateShortIndo,
   formatFullDateTime,
@@ -34,7 +34,6 @@ interface TapFeedTabProps {
   availableStoresCount: number;
   cards: CardRecord[];
   sleepingCardsCount: number;
-  onNotifyTest: (storeName: string) => void;
 }
 
 export default function TapFeedTab({
@@ -54,7 +53,6 @@ export default function TapFeedTab({
   availableStoresCount,
   cards,
   sleepingCardsCount,
-  onNotifyTest,
 }: TapFeedTabProps) {
   const [mobileSubView, setMobileSubView] = useState<"feed" | "outlets">("feed");
   const [showAllStores, setShowAllStores] = useState(false);
@@ -223,18 +221,6 @@ export default function TapFeedTab({
                         </div>
 
                         <div className="flex shrink-0 items-center gap-1.5">
-                          <a
-                            href={`/c/${log.code}?preview=1`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => onNotifyTest(resolvedStoreName)}
-                            className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-2.5 text-[11px] font-medium text-subtle transition-colors hover:text-ink"
-                            title="Tes redirect tanpa menambah statistik tap"
-                          >
-                            <span>Tes</span>
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-
                           {reviewUrl && (
                             <a
                               href={reviewUrl}

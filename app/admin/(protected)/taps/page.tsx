@@ -42,7 +42,6 @@ export default function TapsPage() {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [tapDisplayLimit, setTapDisplayLimit] = useState(10);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const datePickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -474,19 +473,8 @@ export default function TapsPage() {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [cards, validLogs, sleepingPeriod, search]);
 
-  function notifyTest(storeName: string) {
-    setToast(`Tes redirect ${storeName} (tidak dihitung ke statistik)`);
-    setTimeout(() => setToast(null), 2800);
-  }
-
   return (
     <div className="space-y-5">
-      {toast && (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full border border-hairline bg-elevated px-4 py-2 text-xs font-medium text-ink shadow-xl md:bottom-6">
-          {toast}
-        </div>
-      )}
-
       <div className="rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h1 className="truncate text-lg font-semibold tracking-tight text-ink sm:text-xl">
@@ -703,7 +691,6 @@ export default function TapsPage() {
           availableStoresCount={availableStores.length}
           cards={cards}
           sleepingCardsCount={sleepingCards.length}
-          onNotifyTest={notifyTest}
         />
       ) : activeTab === "bulanan" ? (
         <LeaderboardTab
@@ -720,7 +707,6 @@ export default function TapsPage() {
           sleepingPeriod={sleepingPeriod}
           sleepingCards={sleepingCards}
           validLogs={validLogs}
-          onNotifyTest={notifyTest}
         />
       )}
 

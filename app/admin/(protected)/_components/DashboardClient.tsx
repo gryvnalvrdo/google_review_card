@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ArrowUpRight,
   CreditCard,
-  ExternalLink,
   MousePointerClick,
   Plus,
   RefreshCw,
@@ -33,7 +32,6 @@ export default function DashboardClient() {
   const [editingCard, setEditingCard] = useState<CardRecord | null>(null);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [previewToast, setPreviewToast] = useState<string | null>(null);
 
   const activeCardMap = useMemo(() => new Map(cards.map((c) => [c.code, c.storeName])), [cards]);
   const activeCodesSet = useMemo(() => new Set(cards.map((c) => c.code)), [cards]);
@@ -184,11 +182,6 @@ export default function DashboardClient() {
     }
   }
 
-  function notifyTestRedirect(storeName: string) {
-    setPreviewToast(`Membuka tes redirect untuk ${storeName} (tidak dihitung ke statistik)`);
-    setTimeout(() => setPreviewToast(null), 3200);
-  }
-
   return (
     <div className="space-y-5">
       {showScanner && (
@@ -199,12 +192,6 @@ export default function DashboardClient() {
           }}
           onClose={() => setShowScanner(false)}
         />
-      )}
-
-      {previewToast && (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full border border-indigo-500/30 bg-surface px-4 py-2 text-xs font-medium text-indigo-200 shadow-xl md:bottom-6">
-          {previewToast}
-        </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -415,34 +402,21 @@ export default function DashboardClient() {
                         <span className="whitespace-nowrap rounded-full border border-hairline bg-elevated px-2.5 py-1 text-[11px] font-medium tabular-nums text-emerald-300">
                           {timeAgo(log.tappedAt)}
                         </span>
-                        <div className="flex shrink-0 items-center gap-1.5">
+                        {reviewUrl && (
                           <a
-                            href={`/c/${log.code}?preview=1`}
+                            href={reviewUrl}
                             target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => notifyTestRedirect(resolvedStoreName)}
-                            className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-2.5 text-[11px] font-medium text-subtle transition-colors hover:border-white/20 hover:text-ink"
-                            title="Tes redirect kartu tanpa mencatat tap ke statistik"
+                            rel="noreferrer"
+                            className={`inline-flex min-h-[34px] items-center gap-1 rounded-lg border px-2.5 text-[11px] font-medium transition-colors ${
+                              isIg
+                                ? "border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                                : "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                            }`}
                           >
-                            <span>Tes</span>
-                            <ExternalLink className="h-3 w-3" />
+                            <span>{isIg ? "IG" : "Ulasan"}</span>
+                            <ArrowUpRight className="h-3 w-3" />
                           </a>
-                          {reviewUrl && (
-                            <a
-                              href={reviewUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={`inline-flex min-h-[34px] items-center gap-1 rounded-lg border px-2.5 text-[11px] font-medium transition-colors ${
-                                isIg
-                                  ? "border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
-                                  : "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
-                              }`}
-                            >
-                              <span>{isIg ? "IG" : "Ulasan"}</span>
-                              <ArrowUpRight className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
                   );
