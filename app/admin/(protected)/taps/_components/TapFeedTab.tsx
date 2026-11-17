@@ -193,60 +193,64 @@ export default function TapFeedTab({
                   return (
                     <div
                       key={`${log.code}-${log.tappedAt}-${i}`}
-                      className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.02]"
+                      className="flex flex-col gap-2.5 px-4 py-3.5 transition-colors hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between sm:px-5"
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-hairline bg-elevated text-xs font-semibold text-subtle">
                           {getStoreInitials(resolvedStoreName)}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium text-ink">
                             {resolvedStoreName}
                           </div>
-                          <div className="mt-0.5 flex items-center gap-2 text-xs text-muted">
-                            <span className="rounded border border-hairline bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-indigo-300">
+                          <div className="mt-1 flex items-center gap-2 text-xs text-muted">
+                            <span className="shrink-0 rounded border border-hairline bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-indigo-300">
                               {log.code}
                             </span>
-                            <span>{dateStr}</span>
+                            <span className="whitespace-nowrap tabular-nums">
+                              {dateStr}, {timeStr}
+                            </span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-2.5">
-                        <div className="text-right tabular-nums" title={formatFullDateTime(log.tappedAt)}>
-                          <div className="text-xs font-medium text-emerald-300">
+                      <div className="flex items-center justify-between gap-2 pl-12 sm:shrink-0 sm:justify-end sm:pl-0">
+                        <div className="tabular-nums sm:text-right" title={formatFullDateTime(log.tappedAt)}>
+                          <span className="whitespace-nowrap rounded-full border border-hairline bg-elevated px-2.5 py-1 text-[11px] font-medium text-emerald-300 sm:border-0 sm:bg-transparent sm:p-0 sm:text-xs">
                             {timeAgo(log.tappedAt)}
-                          </div>
-                          <div className="font-mono text-[11px] text-muted">{timeStr}</div>
+                          </span>
+                          <div className="hidden font-mono text-[11px] text-muted sm:block">{timeStr}</div>
                         </div>
 
-                        <a
-                          href={`/c/${log.code}?preview=1`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => onNotifyTest(resolvedStoreName)}
-                          className="inline-flex min-h-[32px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-2.5 text-[11px] font-medium text-subtle transition-colors hover:text-ink"
-                          title="Tes redirect tanpa menambah statistik tap"
-                        >
-                          <span>Tes</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-
-                        {reviewUrl && (
+                        <div className="flex shrink-0 items-center gap-1.5">
                           <a
-                            href={reviewUrl}
+                            href={`/c/${log.code}?preview=1`}
                             target="_blank"
-                            rel="noreferrer"
-                            className={`inline-flex min-h-[32px] items-center gap-1 rounded-lg border px-2.5 text-[11px] font-medium ${
-                              isIg
-                                ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
-                                : "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                            }`}
+                            rel="noopener noreferrer"
+                            onClick={() => onNotifyTest(resolvedStoreName)}
+                            className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-2.5 text-[11px] font-medium text-subtle transition-colors hover:text-ink"
+                            title="Tes redirect tanpa menambah statistik tap"
                           >
-                            <span>{isIg ? "IG" : "Ulasan"}</span>
-                            <ArrowUpRight className="h-3 w-3" />
+                            <span>Tes</span>
+                            <ExternalLink className="h-3 w-3" />
                           </a>
-                        )}
+
+                          {reviewUrl && (
+                            <a
+                              href={reviewUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`inline-flex min-h-[34px] items-center gap-1 rounded-lg border px-2.5 text-[11px] font-medium ${
+                                isIg
+                                  ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                                  : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                              }`}
+                            >
+                              <span>{isIg ? "IG" : "Ulasan"}</span>
+                              <ArrowUpRight className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

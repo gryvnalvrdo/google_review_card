@@ -138,6 +138,34 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function safeJsonForScript(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
+function isLikelyPrefetchOrBot(req: NextRequest): boolean {
+  if (req.method === "HEAD") return true;
+  const purpose = (
+    req.headers.get("purpose") ||
+    req.headers.get("sec-purpose") ||
+    req.headers.get("x-purpose") ||
+    req.headers.get("x-moz") ||
+    ""
+  ).toLowerCase();
+  if (purpose.includes("prefetch") || purpose.includes("preview") || purpose.includes("prerender")) {
+    return true;
+  }
+  const ua = req.headers.get("user-agent") || "";
+  if (!ua) return true;
+  return /WhatsApp|TelegramBot|facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|Googlebot|bingbot|Applebot|HeadlessChrome|curl\/|Wget\/|python-requests/i.test(
+    ua
+  );
+}
+
 function instagramBridgeHtml(
   storeName: string,
   deepLinks: { username: string; webUrl: string; iosUrl: string; androidIntent: string },
@@ -260,8 +288,8 @@ function instagramBridgeHtml(
       (function() {
         var userAgent = navigator.userAgent || navigator.vendor || window.opera || "";
         var isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-        var iosUrl = ${JSON.stringify(deepLinks.iosUrl)};
-        var androidIntent = ${JSON.stringify(deepLinks.androidIntent)};
+        var iosUrl = ${safeJsonForScript(deepLinks.iosUrl)};
+        var androidIntent = ${safeJsonForScript(deepLinks.androidIntent)};
         var targetDeepLink = isIOS ? iosUrl : androidIntent;
         var appBtn = document.getElementById("app-btn");
         if (appBtn) {
@@ -289,6 +317,17 @@ export async function GET(
   const rawCode = params?.code || "";
   const code = rawCode.trim();
   const wantsPreview = req.nextUrl.searchParams.get("preview") === "1";
+
+  if (!/^[a-zA-Z0-9_-]{1,20}$/.test(code) || code.toLowerCase() === "_index") {
+    return new NextResponse(NOT_ACTIVE_HTML, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
+  }
+
   let card = null;
 
   try {
@@ -340,8 +379,9 @@ export async function GET(
   }
 
   const isPreview = wantsPreview ? await isAdminLoggedIn().catch(() => false) : false;
+  const skipTracking = isPreview || isLikelyPrefetchOrBot(req);
 
-  if (!isPreview) {
+  if (!skipTracking) {
     Promise.allSettled([
       incrementTapCount(card.code || code),
       addTapLog({

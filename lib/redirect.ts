@@ -1,19 +1,23 @@
-const ALLOWED_HOSTS = [
+const ALLOWED_GOOGLE_HOSTS = new Set([
   "search.google.com",
+  "maps.google.com",
+  "maps.google.co.id",
   "www.google.com",
   "google.com",
+  "www.google.co.id",
+  "google.co.id",
   "g.page",
   "maps.app.goo.gl",
-  "maps.google.com",
   "goo.gl",
   "g.co",
-  "google.co.id",
-  "www.google.co.id",
-  "maps.google.co.id",
+]);
+
+const ALLOWED_INSTAGRAM_HOSTS = new Set([
   "instagram.com",
   "www.instagram.com",
+  "m.instagram.com",
   "instagr.am",
-];
+]);
 
 export type GoogleInputParseResult = {
   kind: "empty" | "placeid" | "url" | "invalid";
@@ -28,13 +32,8 @@ export function isInstagramUrl(url?: string): boolean {
   try {
     const parsed = new URL(url.trim());
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-    const host = parsed.hostname.toLowerCase();
-    return (
-      host === "instagram.com" ||
-      host.endsWith(".instagram.com") ||
-      host === "instagr.am" ||
-      host.endsWith(".instagr.am")
-    );
+    if (parsed.username || parsed.password) return false;
+    return ALLOWED_INSTAGRAM_HOSTS.has(parsed.hostname.toLowerCase());
   } catch {
     return false;
   }
@@ -48,12 +47,12 @@ export function extractInstagramUsername(urlOrUsername?: string): string {
       const parsed = new URL(clean);
       const segments = parsed.pathname.split("/").filter(Boolean);
       if (segments.length > 0 && !["p", "reel", "stories", "tv", "explore"].includes(segments[0].toLowerCase())) {
-        return segments[0];
+        return segments[0].replace(/[^a-zA-Z0-9._]/g, "");
       }
     } catch {}
   }
-  clean = clean.replace(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\//i, "");
-  clean = clean.split("/")[0].split("?")[0].trim();
+  clean = clean.replace(/^(?:https?:\/\/)?(?:www\.|m\.)?instagram\.com\//i, "");
+  clean = clean.split("/")[0].split("?")[0].replace(/[^a-zA-Z0-9._]/g, "").trim();
   return clean;
 }
 
@@ -65,7 +64,7 @@ export function formatInstagramUrl(input: string): string {
     try {
       const parsed = new URL(raw);
       if (isInstagramUrl(raw)) {
-        const pathname = parsed.pathname.replace(/\/+$/, "");
+        const pathname = parsed.pathname.replace(/\/+$/, "").replace(/[<>"'\\]/g, "");
         return `https://www.instagram.com${pathname}/`;
       }
     } catch {}
@@ -94,13 +93,15 @@ export function getInstagramDeepLinks(urlOrUsername: string): {
   if (isPostOrReel) {
     try {
       const parsed = new URL(clean);
-      const pathname = parsed.pathname.replace(/^\/|\/$/g, "");
-      return {
-        username: "",
-        webUrl,
-        iosUrl: `instagram://${pathname}`,
-        androidIntent: `intent://www.instagram.com/${pathname}/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(webUrl)};end;`,
-      };
+      const pathname = parsed.pathname.replace(/^\/|\/$/g, "").replace(/[^a-zA-Z0-9/_-]/g, "");
+      if (pathname) {
+        return {
+          username: "",
+          webUrl,
+          iosUrl: `instagram://${pathname}`,
+          androidIntent: `intent://www.instagram.com/${pathname}/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(webUrl)};end;`,
+        };
+      }
     } catch {}
   }
 
@@ -118,26 +119,21 @@ export function isAllowedReviewUrl(url: string): boolean {
   try {
     const parsed = new URL(url.trim());
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    if (parsed.username || parsed.password) return false;
     const host = parsed.hostname.toLowerCase();
-    if (ALLOWED_HOSTS.includes(host)) return true;
-    if (
-      host === "google.com" ||
-      host.endsWith(".google.com") ||
-      host === "google.co.id" ||
-      host.endsWith(".google.co.id") ||
-      host === "goo.gl" ||
-      host.endsWith(".goo.gl") ||
-      host === "g.page" ||
-      host.endsWith(".g.page") ||
-      host === "g.co" ||
-      host.endsWith(".g.co") ||
-      host === "instagram.com" ||
-      host.endsWith(".instagram.com") ||
-      host === "instagr.am" ||
-      host.endsWith(".instagr.am")
-    ) {
+    const path = parsed.pathname.toLowerCase();
+
+    if (ALLOWED_INSTAGRAM_HOSTS.has(host)) {
       return true;
     }
+
+    if (ALLOWED_GOOGLE_HOSTS.has(host)) {
+      if ((host.includes("google.") || host === "goo.gl") && (path === "/url" || path.startsWith("/url/"))) {
+        return false;
+      }
+      return true;
+    }
+
     return false;
   } catch {
     return false;

@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { clearStok } from "../../../../../lib/kv";
-import { isAdminLoggedIn } from "../../../../../lib/auth";
+import { isAdminLoggedIn, isValidSameOrigin } from "../../../../../lib/auth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function DELETE(request: Request) {
+export async function DELETE(req: NextRequest) {
+  if (!isValidSameOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

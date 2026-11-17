@@ -100,7 +100,7 @@ function StoreContributionList({
               <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
                 <div
                   className={`h-full rounded-full ${
-                    idx === 0 ? "bg-amber-400" : "bg-indigo-500"
+                    idx === 0 ? "bg-emerald-500" : "bg-indigo-500"
                   }`}
                   style={{ width: `${pct}%` }}
                 />
@@ -442,7 +442,7 @@ export default function TrendsTab({
             </div>
           </div>
 
-          <BarChart data={drilldownHourData} color="#38BDF8" yAxisUnit="Tap" xAxisTitle="Jam" />
+          <BarChart data={drilldownHourData} yAxisUnit="Tap" xAxisTitle="Jam" />
 
           <StoreContributionList
             title={`Outlet pada ${formatDateShortIndo(selectedDrilldownDate)}`}
@@ -547,7 +547,6 @@ export default function TrendsTab({
 
               <BarChart
                 data={hourData}
-                color="#6366F1"
                 yAxisUnit="Tap"
                 xAxisTitle="Jam"
                 selectedIndex={activeHour}
@@ -555,6 +554,23 @@ export default function TrendsTab({
                   if (hourFilteredLogs.length > 0) setSelectedHour(i);
                 }}
               />
+
+              <div className="flex flex-wrap items-center gap-4 text-[11px] text-subtle">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-[#10B981]" />
+                  <span>Tertinggi</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-[#525BB8]" />
+                  <span>Jam Lainnya</span>
+                </span>
+                {activeHour !== null && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-[#818CF8]" />
+                    <span>Dipilih</span>
+                  </span>
+                )}
+              </div>
 
               {activeHour !== null && activeHours.length > 0 && (
                 <div className="rounded-xl border border-hairline bg-canvas/50 p-4">
@@ -610,7 +626,7 @@ export default function TrendsTab({
                       onClick={() => setTrendRange(opt.id)}
                       className={`flex items-center justify-between rounded-xl border px-3.5 py-3 text-left text-xs transition-colors ${
                         trendRange === opt.id
-                          ? "border-amber-500/60 bg-amber-500/10 text-amber-200"
+                          ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200"
                           : "border-hairline bg-canvas/50 text-subtle hover:border-white/20 hover:text-ink"
                       }`}
                     >
@@ -646,13 +662,27 @@ export default function TrendsTab({
 
                 <BarChart
                   data={activeDaily}
-                  color="#F59E0B"
                   yAxisUnit="Tap"
                   xAxisTitle="Tanggal"
                   onBarClick={(_idx, item) => {
                     if (item.dateKey) setSelectedDrilldownDate(item.dateKey);
                   }}
                 />
+
+                <div className="flex flex-wrap items-center gap-4 text-[11px] text-subtle">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-[#10B981]" />
+                    <span>Tertinggi</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-[#38BDF8]" />
+                    <span>Hari Ini</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-[#525BB8]" />
+                    <span>Hari Lainnya</span>
+                  </span>
+                </div>
 
                 <StoreContributionList
                   title="Peringkat Outlet pada Rentang Ini"
@@ -677,14 +707,13 @@ export default function TrendsTab({
                       <ArrowLeft className="h-3.5 w-3.5" />
                       <span>Kembali ke Mingguan</span>
                     </button>
-                    <span className="text-xs font-semibold tabular-nums text-amber-300">
+                    <span className="text-xs font-semibold tabular-nums text-emerald-300">
                       Total: {selectedWeekObj.count} tap
                     </span>
                   </div>
 
                   <BarChart
                     data={weekDailyData}
-                    color="#F59E0B"
                     yAxisUnit="Tap"
                     xAxisTitle="Hari"
                     onBarClick={(_idx, item) => {
@@ -720,7 +749,7 @@ export default function TrendsTab({
                           }}
                           className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                             weeklyPeriodType === opt.id
-                              ? "border-amber-500/60 bg-amber-500/15 text-amber-200"
+                              ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200"
                               : "border-hairline bg-canvas/50 text-subtle hover:text-ink"
                           }`}
                         >
@@ -775,13 +804,27 @@ export default function TrendsTab({
 
                   <BarChart
                     data={weeklyChartData}
-                    color="#F59E0B"
                     yAxisUnit="Tap"
                     xAxisTitle="Minggu"
                     onBarClick={(_idx, item) => {
                       if (item.weekKey) setSelectedWeekKey(item.weekKey);
                     }}
                   />
+
+                  <div className="flex flex-wrap items-center gap-4 text-[11px] text-subtle">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#10B981]" />
+                      <span>Tertinggi</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#38BDF8]" />
+                      <span>Minggu Ini</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#525BB8]" />
+                      <span>Minggu Lainnya</span>
+                    </span>
+                  </div>
                 </>
               )}
             </div>

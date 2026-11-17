@@ -2,21 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
-  Camera,
   Check,
+  ChevronDown,
   Copy,
   CreditCard,
   Download,
   ExternalLink,
   LayoutGrid,
   Pencil,
-  Plus,
   RotateCcw,
   Search,
   Star,
@@ -32,18 +30,19 @@ import { getPublicGoogleReviewUrl, isInstagramUrl } from "../../../../lib/redire
 import CardForm from "../../components/CardForm";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PriceStepperInput } from "../../components/PriceStepperInput";
-import QRScanner from "../../components/QRScanner";
 
 const QR_EXPORT_SIZE = 1000;
 
 type SortOption = "date" | "tap" | "name" | "price" | "profit" | "missing_cost";
+type PlatformFilter = "all" | "google" | "instagram" | "missing_cost";
 
 export default function CardsPage() {
-  const router = useRouter();
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
+  const [expandedCode, setExpandedCode] = useState<string | null>(null);
   const [desktopView, setDesktopView] = useState<"table" | "grid">("table");
 
   const [deleteTarget, setDeleteTarget] = useState<CardRecord | null>(null);
@@ -59,7 +58,6 @@ export default function CardsPage() {
 
   const [downloadingQrCode, setDownloadingQrCode] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showScanner, setShowScanner] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [toast, setToast] = useState<string | null>(null);
 
@@ -232,10 +230,15 @@ export default function CardsPage() {
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return cards
-      .filter(
-        (c) =>
-          !q || c.storeName.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
-      )
+      .filter((c) => {
+        const matchesQuery =
+          !q || c.storeName.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+        if (platformFilter === "instagram") return isInstagramUrl(c.googleReviewUrl);
+        if (platformFilter === "google") return !isInstagramUrl(c.googleReviewUrl);
+        if (platformFilter === "missing_cost") return !c.cost || c.cost <= 0;
+        return true;
+      })
       .sort((a, b) => {
         if (sortBy === "missing_cost") {
           const missingA = !a.cost || a.cost <= 0 ? 1 : 0;
@@ -254,7 +257,16 @@ export default function CardsPage() {
         if (sortBy === "price") return (b.price ?? 50000) - (a.price ?? 50000);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [cards, searchTerm, sortBy]);
+  }, [cards, searchTerm, sortBy, platformFilter]);
+
+  const googleCount = useMemo(
+    () => cards.filter((c) => !isInstagramUrl(c.googleReviewUrl)).length,
+    [cards]
+  );
+  const instagramCount = useMemo(
+    () => cards.filter((c) => isInstagramUrl(c.googleReviewUrl)).length,
+    [cards]
+  );
 
   const cardsWithCost = useMemo(
     () => cards.filter((c) => typeof c.cost === "number" && c.cost > 0),
@@ -273,16 +285,6 @@ export default function CardsPage() {
 
   return (
     <div className="space-y-5">
-      {showScanner && (
-        <QRScanner
-          onScan={(code) => {
-            setShowScanner(false);
-            router.push(`/admin?code=${encodeURIComponent(code)}`);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
-
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full border border-hairline bg-elevated px-4 py-2 text-xs font-medium text-ink shadow-xl md:bottom-6">
           {toast}
@@ -327,32 +329,9 @@ export default function CardsPage() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
-            Daftar Kartu Toko
-          </h1>
-          <p className="mt-0.5 text-xs text-subtle">
-            Kelola tujuan ulasan, harga jual, modal HPP, dan link NFC tiap outlet.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowScanner(true)}
-            className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg border border-hairline bg-surface px-3 text-xs font-medium text-ink transition-colors hover:border-white/20"
-          >
-            <Camera className="h-3.5 w-3.5 text-indigo-400" />
-            <span>Scan QR</span>
-          </button>
-          <Link
-            href="/admin"
-            className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Tambah</span>
-          </Link>
-        </div>
+        <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
+          Daftar Kartu Toko
+        </h1>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -409,63 +388,97 @@ export default function CardsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Cari nama toko atau kode kartu..."
-            className="w-full rounded-xl border border-hairline bg-surface py-2.5 pl-10 pr-9 text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-indigo-500/70"
-          />
-          {searchTerm && (
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari toko atau kode..."
+              className="w-full rounded-xl border border-hairline bg-surface py-2.5 pl-9 pr-8 text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-indigo-500/70"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-ink"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="h-[42px] w-[132px] shrink-0 rounded-xl border border-hairline bg-surface px-2.5 text-xs font-medium text-ink outline-none focus:border-indigo-500/70 sm:w-auto sm:px-3"
+          >
+            <option value="date">Terbaru</option>
+            {missingCostCount > 0 && (
+              <option value="missing_cost">Belum Modal ({missingCostCount})</option>
+            )}
+            <option value="profit">Profit Tertinggi</option>
+            <option value="price">Harga Tertinggi</option>
+            <option value="tap">Tap Terbanyak</option>
+            <option value="name">Abjad A s/d Z</option>
+          </select>
+
+          <div className="hidden items-center rounded-xl border border-hairline bg-surface p-1 lg:inline-flex">
             <button
               type="button"
-              onClick={() => setSearchTerm("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-ink"
+              onClick={() => setDesktopView("table")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                desktopView === "table" ? "bg-elevated text-ink" : "text-subtle hover:text-ink"
+              }`}
             >
-              <X className="h-4 w-4" />
+              <Table2 className="h-3.5 w-3.5" />
+              <span>Tabel</span>
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setDesktopView("grid")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                desktopView === "grid" ? "bg-elevated text-ink" : "text-subtle hover:text-ink"
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span>Kartu</span>
+            </button>
+          </div>
         </div>
 
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="min-h-[42px] rounded-xl border border-hairline bg-surface px-3 text-xs font-medium text-ink outline-none focus:border-indigo-500/70"
-        >
-          <option value="date">Terbaru Ditambahkan</option>
-          {missingCostCount > 0 && (
-            <option value="missing_cost">Belum Ada Modal ({missingCostCount})</option>
-          )}
-          <option value="profit">Keuntungan Tertinggi</option>
-          <option value="price">Harga Jual Tertinggi</option>
-          <option value="tap">Tap Terbanyak</option>
-          <option value="name">Nama Toko (Abjad)</option>
-        </select>
-
-        <div className="hidden items-center rounded-xl border border-hairline bg-surface p-1 lg:inline-flex">
-          <button
-            type="button"
-            onClick={() => setDesktopView("table")}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              desktopView === "table" ? "bg-elevated text-ink" : "text-subtle hover:text-ink"
-            }`}
-          >
-            <Table2 className="h-3.5 w-3.5" />
-            <span>Tabel</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setDesktopView("grid")}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              desktopView === "grid" ? "bg-elevated text-ink" : "text-subtle hover:text-ink"
-            }`}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            <span>Kartu</span>
-          </button>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          {(
+            [
+              { id: "all", label: "Semua", count: cards.length },
+              { id: "google", label: "Google", count: googleCount },
+              { id: "instagram", label: "Instagram", count: instagramCount },
+              ...(missingCostCount > 0
+                ? [{ id: "missing_cost" as const, label: "Perlu HPP", count: missingCostCount }]
+                : []),
+            ] as const
+          ).map((chip) => {
+            const active = platformFilter === chip.id;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setPlatformFilter(chip.id)}
+                className={`inline-flex min-h-[34px] shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+                  active
+                    ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200"
+                    : "border-hairline bg-surface text-subtle hover:border-white/20 hover:text-ink"
+                }`}
+              >
+                {chip.id === "google" && <Star className="h-3 w-3 text-amber-400" />}
+                {chip.id === "instagram" && <InstagramIcon className="h-3 w-3 text-rose-400" />}
+                <span>{chip.label}</span>
+                <span className="tabular-nums opacity-75">{chip.count}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -594,10 +607,11 @@ export default function CardsPage() {
                                 <button
                                   type="button"
                                   onClick={() => setResetTarget(card)}
-                                  className="rounded-md p-1.5 text-muted hover:bg-amber-500/10 hover:text-amber-300"
+                                  className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/20"
                                   title="Reset tap ke 0"
                                 >
-                                  <RotateCcw className="h-3.5 w-3.5" />
+                                  <RotateCcw className="h-3 w-3" />
+                                  <span>Reset</span>
                                 </button>
                               )}
                             </div>
@@ -692,11 +706,259 @@ export default function CardsPage() {
             </div>
           )}
 
-          <div
-            className={`grid grid-cols-1 gap-3.5 md:grid-cols-2 ${
-              desktopView === "table" ? "lg:hidden" : ""
-            }`}
-          >
+          <div className="space-y-3 lg:hidden">
+            {filtered.map((card) => {
+              const fullCardUrl = `${baseUrl}/c/${card.code}`;
+              const hasCost = typeof card.cost === "number" && card.cost > 0;
+              const isIg = isInstagramUrl(card.googleReviewUrl);
+              const targetUrl = getPublicGoogleReviewUrl(card.googleReviewUrl, card.storeName);
+              const cardPrice = card.price ?? 50000;
+              const cardCost = card.cost ?? 0;
+              const cardProfit = cardPrice - cardCost;
+              const isExpanded = expandedCode === card.code;
+
+              return (
+                <div
+                  key={card.code}
+                  className={`overflow-hidden rounded-2xl border bg-surface transition-colors ${
+                    !hasCost ? "border-amber-500/35" : "border-hairline"
+                  }`}
+                >
+                  <div className="p-4">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setExpandedCode((prev) => (prev === card.code ? null : card.code))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandedCode((prev) => (prev === card.code ? null : card.code));
+                        }
+                      }}
+                      className="flex cursor-pointer items-start justify-between gap-3"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${
+                            isIg
+                              ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                              : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                          }`}
+                        >
+                          {isIg ? (
+                            <InstagramIcon className="h-5 w-5" />
+                          ) : (
+                            <Star className="h-5 w-5" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-[15px] font-semibold leading-snug text-ink">
+                            {card.storeName}
+                          </h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyWithFeedback(card.code, `code:${card.code}`, "Kode disalin");
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md border border-hairline bg-elevated px-2 py-0.5 font-mono text-xs font-medium text-indigo-300"
+                            >
+                              <span>{card.code}</span>
+                              {copiedId === `code:${card.code}` ? (
+                                <Check className="h-3 w-3 text-emerald-400" />
+                              ) : (
+                                <Copy className="h-3 w-3 text-muted" />
+                              )}
+                            </button>
+                            {!hasCost && (
+                              <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-300">
+                                Perlu HPP
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 flex-col items-end gap-1 tabular-nums">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            (card.tapCount ?? 0) > 0
+                              ? "bg-emerald-500/15 text-emerald-300"
+                              : "bg-elevated text-subtle"
+                          }`}
+                        >
+                          {card.tapCount ?? 0} tap
+                        </span>
+                        <span
+                          className={`text-xs font-semibold ${
+                            hasCost
+                              ? cardProfit >= 0
+                                ? "text-emerald-300"
+                                : "text-rose-300"
+                              : "text-subtle"
+                          }`}
+                        >
+                          {hasCost ? `+${formatRupiah(cardProfit)}` : formatRupiah(cardPrice)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3.5 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
+                        }
+                        className="inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
+                      >
+                        {copiedId === `url:${card.code}` ? (
+                          <Check className="h-4 w-4 shrink-0" />
+                        ) : (
+                          <Copy className="h-4 w-4 shrink-0" />
+                        )}
+                        <span>{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
+                      </button>
+
+                      <a
+                        href={`/c/${card.code}?preview=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() =>
+                          showToast(`Tes redirect ${card.storeName} (tidak dihitung ke statistik)`)
+                        }
+                        className="inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-xl border border-hairline bg-elevated px-3.5 text-xs font-medium text-ink"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 text-indigo-300" />
+                        <span>Tes</span>
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedCode((prev) => (prev === card.code ? null : card.code))
+                        }
+                        aria-expanded={isExpanded}
+                        className="inline-flex min-h-[42px] items-center justify-center gap-1 rounded-xl border border-hairline bg-elevated px-3 text-xs font-medium text-subtle hover:text-ink"
+                      >
+                        <span>Kelola</span>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform duration-150 ${
+                            isExpanded ? "rotate-180 text-indigo-300" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="space-y-3 border-t border-hairline bg-canvas/45 px-4 py-3.5">
+                      <div className="grid grid-cols-3 gap-2 text-center tabular-nums">
+                        <div>
+                          <div className="text-[11px] text-muted">Harga Jual</div>
+                          <div className="mt-0.5 text-xs font-semibold text-ink">
+                            {formatRupiah(cardPrice)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-muted">Modal HPP</div>
+                          {hasCost ? (
+                            <div className="mt-0.5 text-xs font-semibold text-subtle">
+                              {formatRupiah(cardCost)}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickCostCard(card);
+                                setQuickCostValue(25000);
+                              }}
+                              className="mt-0.5 rounded bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-300"
+                            >
+                              Isi Modal
+                            </button>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-muted">Dibuat</div>
+                          <div className="mt-0.5 text-xs font-medium text-subtle">
+                            {formatDateShortIndo(card.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => downloadQrOnly(card)}
+                          disabled={downloadingQrCode === card.code || !baseUrl}
+                          className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-hairline bg-elevated px-3 text-xs font-medium text-ink disabled:opacity-40"
+                        >
+                          <Download className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Unduh QR</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditingCard(card)}
+                          className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-hairline bg-elevated px-3 text-xs font-medium text-ink"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-indigo-300" />
+                          <span>Edit Kartu</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setResetTarget(card)}
+                          disabled={(card.tapCount ?? 0) === 0}
+                          className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-hairline bg-elevated px-3 text-xs font-medium text-ink disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 text-indigo-300" />
+                          <span>Reset Tap</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(card)}
+                          className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-medium text-rose-300"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-hairline pt-2.5 text-xs">
+                        <a
+                          href={targetUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`inline-flex items-center gap-1 font-medium ${
+                            isIg ? "text-rose-300" : "text-amber-300"
+                          }`}
+                        >
+                          {isIg ? <InstagramIcon className="h-3.5 w-3.5" /> : <Star className="h-3.5 w-3.5" />}
+                          <span>{isIg ? "Profil Instagram" : "Halaman Google Review"}</span>
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </a>
+
+                        <Link
+                          href={`/admin/taps?search=${encodeURIComponent(card.storeName)}&period=all`}
+                          className="inline-flex items-center gap-1 font-medium text-subtle hover:text-ink"
+                        >
+                          <span>Riwayat Tap</span>
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {desktopView === "grid" && (
+            <div className="hidden grid-cols-2 gap-3.5 lg:grid">
             {filtered.map((card) => {
               const fullCardUrl = `${baseUrl}/c/${card.code}`;
               const hasCost = typeof card.cost === "number" && card.cost > 0;
@@ -751,16 +1013,6 @@ export default function CardsPage() {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1">
-                      {(card.tapCount ?? 0) > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setResetTarget(card)}
-                          className="rounded-lg border border-hairline bg-elevated p-2 text-subtle hover:text-amber-300"
-                          title="Reset Tap ke 0"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={() => setEditingCard(card)}
@@ -828,14 +1080,14 @@ export default function CardsPage() {
                       onClick={() =>
                         copyWithFeedback(fullCardUrl, `url:${card.code}`, "Link NFC disalin")
                       }
-                      className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 sm:col-span-2"
+                      className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
                     >
                       {copiedId === `url:${card.code}` ? (
-                        <Check className="h-3.5 w-3.5" />
+                        <Check className="h-3.5 w-3.5 shrink-0" />
                       ) : (
-                        <Copy className="h-3.5 w-3.5" />
+                        <Copy className="h-3.5 w-3.5 shrink-0" />
                       )}
-                      <span>{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
+                      <span className="truncate">{copiedId === `url:${card.code}` ? "Tersalin" : "Salin Link NFC"}</span>
                     </button>
 
                     <a
@@ -847,7 +1099,7 @@ export default function CardsPage() {
                       }
                       className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border border-hairline bg-elevated px-2.5 text-xs font-medium text-ink hover:border-white/20"
                     >
-                      <ExternalLink className="h-3.5 w-3.5 text-indigo-300" />
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-indigo-300" />
                       <span>Tes</span>
                     </a>
 
@@ -857,8 +1109,19 @@ export default function CardsPage() {
                       disabled={downloadingQrCode === card.code || !baseUrl}
                       className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border border-hairline bg-elevated px-2.5 text-xs font-medium text-ink hover:border-white/20 disabled:opacity-40"
                     >
-                      <Download className="h-3.5 w-3.5 text-emerald-400" />
+                      <Download className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                       <span>QR</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setResetTarget(card)}
+                      disabled={(card.tapCount ?? 0) === 0}
+                      title={(card.tapCount ?? 0) === 0 ? "Tap kartu masih 0" : "Reset jumlah tap ke 0"}
+                      className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border border-hairline bg-elevated px-2.5 text-xs font-medium text-amber-300 transition-colors hover:border-amber-500/40 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:text-muted disabled:opacity-45 disabled:hover:border-hairline disabled:hover:bg-elevated"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                      <span>Reset Tap</span>
                     </button>
                   </div>
 
@@ -887,7 +1150,8 @@ export default function CardsPage() {
                 </div>
               );
             })}
-          </div>
+            </div>
+          )}
         </>
       )}
 

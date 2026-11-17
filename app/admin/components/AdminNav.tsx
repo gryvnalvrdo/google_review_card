@@ -66,7 +66,7 @@ export default function AdminNav({ active }: AdminNavProps) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", shortLabel: "Dashboard", href: "/admin", Icon: LayoutDashboard },
     { id: "cards", label: "Kartu Toko", shortLabel: "Kartu", href: "/admin/cards", Icon: CreditCard },
-    { id: "stock", label: "Stok Kartu", shortLabel: "Stok", href: "/admin/stock", Icon: Package },
+    { id: "stock", label: "Stok Kartu", shortLabel: "Stok", href: "/admin/stock", Icon: Package, desktopOnly: true },
     { id: "taps", label: "Riwayat Tap", shortLabel: "Analitik", href: "/admin/taps", Icon: BarChart3 },
     { id: "print", label: "Cetak QR", shortLabel: "Cetak", href: "/admin/print", Icon: Printer, desktopOnly: true },
   ] as const;
@@ -137,7 +137,7 @@ export default function AdminNav({ active }: AdminNavProps) {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-surface/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md md:hidden"
         aria-label="Navigasi Utama"
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 gap-1 px-2 py-1.5">
+        <div className="mx-auto grid max-w-md grid-cols-3 gap-1 px-2 py-1.5">
           {navItems
             .filter((item) => !("desktopOnly" in item && item.desktopOnly))
             .map((item) => {

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminLoggedIn } from "../../../../lib/auth";
-import { addStokCodes, listStokCodes, removeStokCode } from "../../../../lib/kv";
+import { isAdminLoggedIn, isValidSameOrigin } from "../../../../lib/auth";
+import { addStokCodes, listCards, listStokCodes, removeStokCode } from "../../../../lib/kv";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const MAX_BATCH = 200;
+const CODE_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 
 export async function GET() {
   if (!(await isAdminLoggedIn())) {
@@ -19,6 +20,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isValidSameOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -33,12 +37,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Maksimal ${MAX_BATCH} kode per batch.` }, { status: 400 });
   }
 
-  const sanitized = codes
-    .filter((c): c is string => typeof c === "string" && c.trim().length > 0 && c.trim().length <= 20)
-    .map((c) => c.trim());
+  const activeCards = await listCards();
+  const activeSet = new Set(activeCards.map((c) => c.code.toLowerCase()));
+
+  const sanitized = Array.from(
+    new Set(
+      codes
+        .filter((c): c is string => typeof c === "string")
+        .map((c) => c.trim())
+        .filter((c) => CODE_PATTERN.test(c) && c.toLowerCase() !== "_index" && !activeSet.has(c.toLowerCase()))
+    )
+  );
 
   if (sanitized.length === 0) {
-    return NextResponse.json({ error: "Tidak ada kode valid." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Tidak ada kode stok baru yang valid atau semua kode sudah aktif." },
+      { status: 400 }
+    );
   }
 
   await addStokCodes(sanitized);
@@ -46,6 +61,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  if (!isValidSameOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

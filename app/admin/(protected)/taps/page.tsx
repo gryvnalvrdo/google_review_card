@@ -33,7 +33,8 @@ export default function TapsPage() {
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"tren" | "harian" | "bulanan" | "tidur">("tren");
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [activeTab, setActiveTab] = useState<"tren" | "harian" | "bulanan" | "tidur">("harian");
   const [dailyMode, setDailyMode] = useState<"today" | "last7" | "last30" | "all" | "custom">(
     "today"
   );
@@ -46,6 +47,18 @@ export default function TapsPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 768px)");
+    const syncDesktop = (matches: boolean) => {
+      setIsDesktop(matches);
+      if (!matches) {
+        setActiveTab((prev) => (prev === "tren" ? "harian" : prev));
+      }
+    };
+    syncDesktop(mq.matches);
+
+    const onChange = (e: MediaQueryListEvent) => syncDesktop(e.matches);
+    mq.addEventListener("change", onChange);
+
     const params = new URLSearchParams(window.location.search);
     const urlSearch = params.get("search") || params.get("store") || params.get("q");
     const urlPeriod = params.get("period");
@@ -63,6 +76,8 @@ export default function TapsPage() {
       setDailyMode(urlPeriod);
       setActiveTab("harian");
     }
+
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   const fetchData = useCallback(async (isBackground = false) => {
@@ -473,23 +488,20 @@ export default function TapsPage() {
       )}
 
       <div className="rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
-              Riwayat &amp; Analitik Tap
-            </h1>
-            <p className="mt-0.5 text-xs text-subtle">
-              Pantau volume tap, jam sibuk pelanggan, leaderboard toko, dan kartu pasif.
-            </p>
-          </div>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h1 className="truncate text-lg font-semibold tracking-tight text-ink sm:text-xl">
+            Riwayat &amp; Analitik Tap
+          </h1>
           <button
             type="button"
             onClick={() => fetchData(true)}
             disabled={isUpdating}
-            className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg border border-hairline bg-elevated px-3 text-xs font-medium text-ink transition-colors hover:border-white/20 disabled:opacity-50"
+            aria-label="Sinkronkan"
+            title="Sinkronkan"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-hairline bg-elevated text-xs font-medium text-ink transition-colors hover:border-white/20 disabled:opacity-50 sm:h-9 sm:w-auto sm:px-3"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isUpdating ? "animate-spin" : ""}`} />
-            <span>Sinkronkan</span>
+            <span className="hidden sm:inline">Sinkronkan</span>
           </button>
         </div>
 
@@ -534,13 +546,13 @@ export default function TapsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-hairline bg-surface p-1 sm:grid-cols-4">
+      <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-hairline bg-surface p-1 md:grid-cols-4">
         {(
           [
-            { id: "tren", label: "Tren & Jam", Icon: BarChart3 },
-            { id: "harian", label: "Riwayat Tap", Icon: ListOrdered },
-            { id: "bulanan", label: "Leaderboard", Icon: Trophy },
-            { id: "tidur", label: "Belum Ada Tap", Icon: Moon, count: sleepingCards.length },
+            { id: "tren", label: "Tren & Jam", mobileLabel: "Tren & Jam", Icon: BarChart3, desktopOnly: true },
+            { id: "harian", label: "Riwayat Tap", mobileLabel: "Riwayat", Icon: ListOrdered, desktopOnly: false },
+            { id: "bulanan", label: "Leaderboard", mobileLabel: "Peringkat", Icon: Trophy, desktopOnly: false },
+            { id: "tidur", label: "Belum Ada Tap", mobileLabel: "Pasif", Icon: Moon, count: sleepingCards.length, desktopOnly: false },
           ] as const
         ).map((tab) => {
           const isActive = activeTab === tab.id;
@@ -550,7 +562,9 @@ export default function TapsPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors ${
+              className={`${
+                tab.desktopOnly ? "hidden md:inline-flex" : "inline-flex"
+              } min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition-colors sm:px-3 ${
                 isActive
                   ? tab.id === "tidur"
                     ? "bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/40"
@@ -559,7 +573,8 @@ export default function TapsPage() {
               }`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{tab.label}</span>
+              <span className="truncate sm:hidden">{tab.mobileLabel}</span>
+              <span className="hidden truncate sm:inline">{tab.label}</span>
               {"count" in tab && tab.count > 0 && (
                 <span className="rounded-full bg-rose-500/25 px-1.5 py-0.5 text-[10px] tabular-nums text-rose-200">
                   {tab.count}
@@ -570,21 +585,21 @@ export default function TapsPage() {
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama cafe, resto, atau kode kartu..."
-            className="w-full rounded-xl border border-hairline bg-surface py-2.5 pl-10 pr-9 text-sm text-ink outline-none placeholder:text-muted focus:border-indigo-500/70"
+            placeholder="Cari toko atau kode..."
+            className="w-full rounded-xl border border-hairline bg-surface py-2.5 pl-9 pr-8 text-sm text-ink outline-none placeholder:text-muted focus:border-indigo-500/70"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-ink"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-ink"
             >
               <X className="h-4 w-4" />
             </button>
@@ -592,21 +607,28 @@ export default function TapsPage() {
         </div>
 
         {activeTab === "harian" && (
-          <div className="relative flex items-center">
+          <div className="relative flex shrink-0 items-center">
             <button
               type="button"
               onClick={() => {
                 if (datePickerRef.current?.showPicker) datePickerRef.current.showPicker();
                 else datePickerRef.current?.focus();
               }}
-              className={`inline-flex min-h-[42px] items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition-colors ${
+              className={`inline-flex h-[42px] items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors ${
                 customDate
                   ? "border-indigo-500 bg-indigo-600 text-white"
                   : "border-hairline bg-surface text-ink hover:border-white/20"
               }`}
             >
-              <Calendar className="h-3.5 w-3.5" />
-              <span>{customDate ? formatDateShortIndo(customDate) : "Pilih Tanggal"}</span>
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
+              {customDate ? (
+                <span>{formatDateShortIndo(customDate)}</span>
+              ) : (
+                <>
+                  <span className="sm:hidden">Tanggal</span>
+                  <span className="hidden sm:inline">Pilih Tanggal</span>
+                </>
+              )}
             </button>
             <input
               ref={datePickerRef}
@@ -646,15 +668,17 @@ export default function TapsPage() {
             <div key={i} className="h-20 animate-pulse rounded-xl border border-hairline bg-surface" />
           ))}
         </div>
-      ) : activeTab === "tren" ? (
-        <TrendsTab
-          storeFilteredLogs={storeFilteredLogs}
-          activeCardMap={activeCardMap}
-          earliestAssignedDate={earliestAssignedDate}
-          monthsByYear={monthsByYear}
-          thisMonthKey={thisMonthKey}
-        />
-      ) : activeTab === "harian" ? (
+      ) : activeTab === "tren" && isDesktop ? (
+        <div className="hidden md:block">
+          <TrendsTab
+            storeFilteredLogs={storeFilteredLogs}
+            activeCardMap={activeCardMap}
+            earliestAssignedDate={earliestAssignedDate}
+            monthsByYear={monthsByYear}
+            thisMonthKey={thisMonthKey}
+          />
+        </div>
+      ) : activeTab === "harian" || (activeTab === "tren" && !isDesktop) ? (
         <TapFeedTab
           dailyMode={dailyMode}
           customDate={customDate}

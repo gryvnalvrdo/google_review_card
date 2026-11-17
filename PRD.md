@@ -77,16 +77,17 @@ Dokumen ini merancang perombakan antarmuka (*de-slopification*), modularisasi ko
    - Input tujuan Google Review menerima Place ID langsung (`ChIJ...`), URL `placeid=...`, maupun tautan Google Maps / pencarian toko.
    - Helper pencarian langsung membuka Google Place ID Finder / Google Maps dengan nama toko yang sudah terisi otomatis di query URL tanpa API berbayar Google Cloud.
 4. **Redesign Dashboard (`/admin`)**:
-   - KPI Ringkas (Kartu Aktif, Keuntungan Bersih + indikator kartu tanpa HPP, Total Tap, Sisa Stok Kartu).
-   - Form Hubungkan/Edit Kartu yang bersih dengan pemilih stok cepat (autocomplete/pilih dari stok tersedia) + QR Scanner kamera.
-   - Panel Aktivitas Tap Terbaru dengan tombol refresh dan tes redirect aman.
+   - KPI Ringkas (Kartu Aktif, Total Tap, Keuntungan Bersih dengan `col-span-2` di mobile, serta Sisa Stok Kartu khusus desktop `md:` ke atas).
+   - Header bersih tanpa subjudul panjang; tombol hubungkan kartu & Scan QR di header mobile diganti dengan Floating Action Button (`+`) yang membuka form kartu lengkap (termasuk Scan QR).
+   - Panel Aktivitas Tap Terbaru dengan tata letak dua baris adaptif di mobile (nama toko penuh + waktu rapi tanpa terpotong), tombol refresh, dan tes redirect aman.
 5. **Redesign Manajemen Kartu (`/admin/cards`)**:
-   - Kartu ringkas bebas kotak bertumpuk (*flat elevation*), ditambah **Mode Tabel** di desktop untuk memindai banyak toko sekaligus.
+   - Di desktop (`lg:` ke atas), tersedia **Mode Tabel** ringkas dan **Mode Kartu Grid** dengan aksi 1x4 lengkap.
+   - Di mobile (`< lg`), memakai **Kartu Ringkas Interaktif** (ikon platform Google/Instagram pembeda visual, tipografi lebih besar, tombol cepat `Salin Link NFC` & `Tes`, plus drawer `Kelola` yang bisa dibuka untuk Unduh QR, Edit, Reset Tap, Hapus, dan rincian HPP), serta bar Cari + Urutkan sejajar horizontal dan filter chip cepat.
    - **Quick Modal (HPP) Edit**: Kartu yang belum memiliki modal awal menampilkan aksi cepat agar operator bisa langsung melengkapi HPP tanpa kebingungan.
-   - Menu aksi rapi (Salin Link NFC, Tes Link Aman, Unduh QR HD, Edit, Reset Tap, Hapus).
 6. **Redesign Analitik Tap (`/admin/taps`)**:
-   - Seluruh 4 tampilan (**Tren & Jam**, **Riwayat Tap**, **Leaderboard Toko**, **Kartu Belum Ada Tap**) dapat diakses di **desktop maupun mobile** dengan skala chart adaptif.
-   - Pertahankan drilldown 3-level (Mingguan -> Harian -> Rincian 24 Jam & Breakdown Outlet) serta filter pencarian, periode, dan tanggal kustom.
+   - Halaman bawaan langsung membuka **Riwayat Tap Hari Ini** agar pengecekan aktivitas harian cepat diakses, disertai tombol sinkronkan ringkas di header dan filter tanggal sejajar di mobile.
+   - Di desktop (`md:` ke atas), seluruh 4 tampilan (**Riwayat Tap**, **Leaderboard Toko**, **Belum Ada Tap**, **Tren & Jam**) tersedia dengan drilldown 3 level serta grafik batang berwarna tenang (Emerald untuk batang tertinggi, Sky untuk periode berjalan, Indigo Slate untuk lainnya).
+   - Di mobile (`< md`), tampilan dipadatkan menjadi 3 tab utama (**Riwayat**, **Peringkat**, **Pasif**) tanpa grafik Tren & Jam agar cepat dibaca di layar kecil, dengan baris riwayat tap responsif 2 baris yang rapi.
    - Hapus kode mati laporan klien WhatsApp/print handout yang tidak digunakan.
 7. **Redesign Print Studio (`/admin/print`)**:
    - Pertahankan seluruh mesin canvas (Template Standar Hantic vs Upload Desain Klien, auto-detect & hapus dummy QR, *center in slot*, custom dot style/logo/warna, upscale 1x s/d 4x, unsharp mask, export PNG/ZIP, auto-save ke stok).
@@ -109,3 +110,4 @@ Dokumen ini merancang perombakan antarmuka (*de-slopification*), modularisasi ko
 3. Seluruh CSS terstruktur rapi menggunakan Tailwind CSS + file CSS modular kecil (tidak ada lagi CSS monolitik ribuan baris).
 4. Keamanan redirect (`lib/redirect.ts`), auth (`lib/auth.ts`), dan pencatatan KV (`lib/kv.ts`) tetap berjalan dengan perilaku yang akurat, termasuk fitur `?preview=1` yang hanya melewati pencatatan jika admin terautentikasi.
 5. Setiap halaman admin nyaman di desktop (`1280px+`) dan mobile (`375px`) tanpa horizontal overflow atau teks/tombol terpotong.
+6. Setiap perubahan yang sudah dikonfirmasi lulus seluruh pemeriksaan (`npx tsc --noEmit`, `npm run build`, serta bebas emoji/komentar/simbol dekoratif) langsung di-commit secara aman tanpa file rahasia dan di-push ke repository GitHub (`origin/main`).

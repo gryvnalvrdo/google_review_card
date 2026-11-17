@@ -15,7 +15,7 @@ interface BarChartProps {
 
 export default function BarChart({
   data,
-  color = "#6366F1",
+  color = "#525BB8",
   yAxisUnit = "Tap",
   xAxisTitle = "",
   showValue = true,
@@ -67,12 +67,6 @@ export default function BarChart({
         role="img"
         aria-label="Grafik Batang Aktivitas Tap"
       >
-        <defs>
-          <linearGradient id="currentPeakGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#F59E0B" />
-            <stop offset="100%" stopColor="#10B981" />
-          </linearGradient>
-        </defs>
 
         {ticks.map((val) => {
           const y = y0 - (val / niceMax) * chartH;
@@ -167,13 +161,11 @@ export default function BarChart({
           const isClickable = Boolean(onBarClick);
 
           const barFill = isSelected
-            ? "#38BDF8"
-            : isCurrentAndPeak
-            ? "url(#currentPeakGrad)"
-            : isHighlightOnly
+            ? "#818CF8"
+            : isMaxVal
             ? "#10B981"
-            : isPeakOnly
-            ? "#F59E0B"
+            : isHighlightOnly
+            ? "#38BDF8"
             : d.value === 0
             ? "rgba(255, 255, 255, 0.05)"
             : color;
@@ -217,13 +209,11 @@ export default function BarChart({
                   y={by - 6}
                   fill={
                     isSelected
-                      ? "#38BDF8"
-                      : isCurrentAndPeak
-                      ? "#FCD34D"
-                      : isHighlightOnly
+                      ? "#A5B4FC"
+                      : isMaxVal
                       ? "#34D399"
-                      : isPeakOnly
-                      ? "#FBBF24"
+                      : isHighlightOnly
+                      ? "#7DD3FC"
                       : "#E6EAF2"
                   }
                   fontSize={valFontSize}
@@ -242,10 +232,10 @@ export default function BarChart({
                   x2={cx}
                   y2={y0 + 4}
                   stroke={
-                    isCurrentAndPeak || isHighlightOnly
+                    isMaxVal
                       ? "#10B981"
-                      : isPeakOnly
-                      ? "#F59E0B"
+                      : isHighlightOnly
+                      ? "#38BDF8"
                       : "rgba(255,255,255,0.25)"
                   }
                   strokeWidth={1.25}
@@ -258,10 +248,10 @@ export default function BarChart({
                     x={cx}
                     y={y0 + 14}
                     fill={
-                      isHighlightOnly || isCurrentAndPeak
+                      isMaxVal
                         ? "#34D399"
-                        : isPeakOnly
-                        ? "#FBBF24"
+                        : isHighlightOnly
+                        ? "#7DD3FC"
                         : "#E6EAF2"
                     }
                     fontSize={10}
@@ -289,10 +279,10 @@ export default function BarChart({
                       x={cx}
                       y={y0 + (d.subLabel ? 14 : 17)}
                       fill={
-                        isHighlightOnly || isCurrentAndPeak
+                        isMaxVal
                           ? "#34D399"
-                          : isPeakOnly
-                          ? "#FBBF24"
+                          : isHighlightOnly
+                          ? "#7DD3FC"
                           : "#9BA3B4"
                       }
                       fontSize={xLabelFontSize}

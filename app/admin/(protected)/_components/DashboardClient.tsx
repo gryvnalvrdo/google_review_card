@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowUpRight,
-  Camera,
   CreditCard,
   ExternalLink,
   MousePointerClick,
@@ -212,39 +211,19 @@ export default function DashboardClient() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
-            Ringkasan Operasional
-          </h1>
-          <p className="mt-0.5 text-xs text-subtle">
-            Assign kartu baru, pantau tap terbaru, dan cek ketersediaan stok kartu fisik.
-          </p>
-        </div>
-
-        <div className="grid w-full grid-cols-2 gap-2 lg:hidden">
-          <button
-            type="button"
-            onClick={() => openNewAssign("")}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Hubungkan Kartu</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowScanner(true)}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline bg-surface px-3 text-xs font-medium text-ink transition-colors hover:border-white/20"
-          >
-            <Camera className="h-4 w-4 text-indigo-400" />
-            <span>Scan QR Kartu</span>
-          </button>
-        </div>
+        <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
+          Ringkasan Operasional
+        </h1>
       </div>
 
       {(isLowStock || missingCostCount > 0) && (
-        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+        <div
+          className={`grid grid-cols-1 gap-2.5 md:grid-cols-2 ${
+            missingCostCount === 0 ? "hidden md:grid" : ""
+          }`}
+        >
           {isLowStock && (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-xs">
+            <div className="hidden items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-xs md:flex">
               <div className="flex items-center gap-2.5 text-amber-200">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
                 <span>
@@ -282,7 +261,7 @@ export default function DashboardClient() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-4">
         <div className="rounded-xl border border-hairline bg-surface p-4">
           <div className="flex items-center justify-between text-xs text-subtle">
             <span>Kartu Aktif</span>
@@ -294,7 +273,18 @@ export default function DashboardClient() {
           <div className="mt-1 text-[11px] text-muted">Terhubung ke toko</div>
         </div>
 
-        <div className="rounded-xl border border-emerald-500/20 bg-surface p-4">
+        <div className="rounded-xl border border-hairline bg-surface p-4 md:order-3">
+          <div className="flex items-center justify-between text-xs text-subtle">
+            <span>Total Tap</span>
+            <MousePointerClick className="h-4 w-4 text-amber-400" />
+          </div>
+          <div className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-ink">
+            {totalTaps.toLocaleString("id-ID")}
+          </div>
+          <div className="mt-1 text-[11px] text-muted">Tap NFC &amp; scan QR</div>
+        </div>
+
+        <div className="col-span-2 rounded-xl border border-emerald-500/20 bg-surface p-4 md:order-2 md:col-span-1">
           <div className="flex items-center justify-between text-xs text-emerald-300/90">
             <span>Keuntungan Bersih</span>
             <TrendingUp className="h-4 w-4 text-emerald-400" />
@@ -307,20 +297,9 @@ export default function DashboardClient() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-hairline bg-surface p-4">
-          <div className="flex items-center justify-between text-xs text-subtle">
-            <span>Total Tap</span>
-            <MousePointerClick className="h-4 w-4 text-amber-400" />
-          </div>
-          <div className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-ink">
-            {totalTaps.toLocaleString("id-ID")}
-          </div>
-          <div className="mt-1 text-[11px] text-muted">Tap NFC &amp; scan QR</div>
-        </div>
-
         <Link
           href="/admin/stock"
-          className={`rounded-xl border p-4 transition-colors ${
+          className={`hidden rounded-xl border p-4 transition-colors md:order-4 md:block ${
             isLowStock
               ? "border-amber-500/35 bg-amber-500/[0.06] hover:border-amber-500/50"
               : "border-hairline bg-surface hover:border-white/20"
@@ -445,7 +424,7 @@ export default function DashboardClient() {
                   return (
                     <div
                       key={`${log.code}-${log.tappedAt}-${i}`}
-                      className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.02] ${
+                      className={`flex flex-col gap-2.5 px-4 py-3.5 transition-colors hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between sm:px-5 ${
                         isNew ? "bg-emerald-500/[0.04]" : ""
                       }`}
                     >
@@ -459,16 +438,16 @@ export default function DashboardClient() {
                               {resolvedStoreName}
                             </span>
                             {isNew && (
-                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">
+                              <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">
                                 Baru
                               </span>
                             )}
                           </div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                            <span className="rounded border border-hairline bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-indigo-300">
+                          <div className="mt-1 flex items-center gap-2 text-xs text-muted">
+                            <span className="shrink-0 rounded border border-hairline bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-indigo-300">
                               {log.code}
                             </span>
-                            <span className="tabular-nums">
+                            <span className="whitespace-nowrap tabular-nums">
                               {ld.toLocaleString("id-ID", {
                                 day: "numeric",
                                 month: "short",
@@ -481,36 +460,38 @@ export default function DashboardClient() {
                         </div>
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="rounded-full border border-hairline bg-elevated px-2.5 py-1 text-[11px] font-medium tabular-nums text-emerald-300">
+                      <div className="flex items-center justify-between gap-2 pl-12 sm:shrink-0 sm:justify-end sm:pl-0">
+                        <span className="whitespace-nowrap rounded-full border border-hairline bg-elevated px-2.5 py-1 text-[11px] font-medium tabular-nums text-emerald-300">
                           {timeAgo(log.tappedAt)}
                         </span>
-                        <a
-                          href={`/c/${log.code}?preview=1`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => notifyTestRedirect(resolvedStoreName)}
-                          className="inline-flex min-h-[32px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-2.5 text-[11px] font-medium text-subtle transition-colors hover:border-white/20 hover:text-ink"
-                          title="Tes redirect kartu tanpa mencatat tap ke statistik"
-                        >
-                          <span>Tes</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                        {reviewUrl && (
+                        <div className="flex shrink-0 items-center gap-1.5">
                           <a
-                            href={reviewUrl}
+                            href={`/c/${log.code}?preview=1`}
                             target="_blank"
-                            rel="noreferrer"
-                            className={`inline-flex min-h-[32px] items-center gap-1 rounded-lg border px-2.5 text-[11px] font-medium transition-colors ${
-                              isIg
-                                ? "border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
-                                : "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
-                            }`}
+                            rel="noopener noreferrer"
+                            onClick={() => notifyTestRedirect(resolvedStoreName)}
+                            className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-2.5 text-[11px] font-medium text-subtle transition-colors hover:border-white/20 hover:text-ink"
+                            title="Tes redirect kartu tanpa mencatat tap ke statistik"
                           >
-                            <span>{isIg ? "IG" : "Ulasan"}</span>
-                            <ArrowUpRight className="h-3 w-3" />
+                            <span>Tes</span>
+                            <ExternalLink className="h-3 w-3" />
                           </a>
-                        )}
+                          {reviewUrl && (
+                            <a
+                              href={reviewUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`inline-flex min-h-[34px] items-center gap-1 rounded-lg border px-2.5 text-[11px] font-medium transition-colors ${
+                                isIg
+                                  ? "border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                                  : "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                              }`}
+                            >
+                              <span>{isIg ? "IG" : "Ulasan"}</span>
+                              <ArrowUpRight className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -518,40 +499,20 @@ export default function DashboardClient() {
               </div>
             )}
           </div>
-
-          {stockCodes.length > 0 && (
-            <div className="rounded-2xl border border-hairline bg-surface p-5">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-ink">Stok Kode Siap Assign</h3>
-                  <p className="text-xs text-subtle">
-                    Klik kode untuk langsung mengisi form penghubung kartu.
-                  </p>
-                </div>
-                <Link
-                  href="/admin/stock"
-                  className="text-xs font-medium text-indigo-300 hover:text-indigo-200"
-                >
-                  Lihat Semua ({stockCodes.length})
-                </Link>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {stockCodes.slice(0, 10).map((sc) => (
-                  <button
-                    key={sc}
-                    type="button"
-                    onClick={() => openNewAssign(sc)}
-                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-hairline bg-elevated px-3 font-mono text-xs font-medium text-ink transition-colors hover:border-indigo-500/40 hover:bg-indigo-500/10 hover:text-indigo-200"
-                  >
-                    <Package className="h-3 w-3 text-subtle" />
-                    <span>{sc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {!showMobileSheet && !showScanner && (
+        <button
+          type="button"
+          onClick={() => openNewAssign("")}
+          aria-label="Tambah kartu baru"
+          title="Tambah kartu baru"
+          className="fixed bottom-24 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl ring-1 ring-white/15 transition-transform hover:bg-indigo-500 active:scale-95 md:bottom-6 lg:hidden"
+        >
+          <Plus className="h-6 w-6" strokeWidth={2.25} />
+        </button>
+      )}
 
       {showMobileSheet && (
         <div

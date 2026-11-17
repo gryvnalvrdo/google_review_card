@@ -32,10 +32,11 @@ Skill ini memastikan seluruh antarmuka admin dan halaman publik mengikuti standa
 1. **Desktop (`lg:` ke atas)**:
    - Manfaatkan ruang horizontal: gunakan layout 2 kolom asimetris (form/inspector tetap terjangkau di samping data utama) atau tampilan tabel terstruktur untuk memindai daftar panjang.
    - Lebar kontainer maksimal `max-w-7xl mx-auto` agar teks tidak terlalu panjang melebar.
-2. **Mobile (`< lg`)**:
-   - Flow 1 kolom yang bersih dengan padding horizontal konsisten (`px-4`), tanpa overflow horizontal.
-   - KPI grid 2 kolom hanya jika label dan nominal tidak terpotong; nominal panjang (omzet/keuntungan) diberi ruang penuh (`col-span-2` bila perlu).
-   - Grafik analitik harus tetap tampil dan terbaca di mobile menggunakan viewBox adaptif atau scroll container yang halus, bukan disembunyikan.
+2. **Mobile (`< md` / `< lg`)**:
+   - Flow 1 kolom yang bersih dengan padding horizontal konsisten (`px-4`), tanpa overflow horizontal, dan tanpa kalimat pengantar 1 baris di bawah `h1`.
+   - KPI grid 2 kolom hanya jika label dan nominal tidak terpotong; nominal panjang (keuntungan/omzet) diberi ruang penuh (`col-span-2` bila perlu).
+   - Stok Kartu dan tab grafik **Tren & Jam** tidak ditampilkan di mobile agar navigasi serta analitik mobile fokus pada **Riwayat Tap**, **Leaderboard**, dan **Belum Ada Tap**.
+   - Di Dashboard mobile, pemicu tambah kartu/Scan QR menggunakan Floating Action Button (`+`) di sudut kanan bawah di atas bottom dock (`bottom-24`).
    - Beri jarak bawah ekstra pada kontainer utama agar konten terakhir tidak tertutup mobile bottom dock (`pb-28 lg:pb-12`).
 3. **Modal & Drawer**:
    - Gunakan `max-h-[90dvh]` dengan area scroll internal dan header/footer sticky agar nyaman di keyboard mobile.

@@ -3,13 +3,19 @@ import {
   createSessionCookieValue,
   ADMIN_COOKIE_NAME,
   ADMIN_COOKIE_MAX_AGE_SECONDS,
-  isRateLimited,
+  extractClientIp,
+  isRateLimitedAsync,
+  isValidSameOrigin,
   verifyPassword,
 } from "../../../../lib/auth";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
-  if (isRateLimited(ip)) {
+  if (!isValidSameOrigin(req)) {
+    return NextResponse.json({ error: "Permintaan lintas situs ditolak." }, { status: 403 });
+  }
+
+  const ip = extractClientIp(req);
+  if (await isRateLimitedAsync(ip)) {
     return NextResponse.json(
       { error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit." },
       { status: 429 }

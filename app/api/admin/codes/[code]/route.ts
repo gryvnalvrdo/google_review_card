@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminLoggedIn } from "../../../../../lib/auth";
+import { isAdminLoggedIn, isValidSameOrigin } from "../../../../../lib/auth";
 import { deleteCard, resetCardTaps } from "../../../../../lib/kv";
 
 export const dynamic = "force-dynamic";
@@ -8,17 +8,21 @@ export const revalidate = 0;
 const NO_STORE_HEADERS = {
   "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
 };
+const CODE_PATTERN = /^[a-zA-Z0-9_-]{1,20}$/;
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { code: string } }
 ) {
+  if (!isValidSameOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const code = params.code?.trim();
-  if (!code) {
+  if (!code || !CODE_PATTERN.test(code) || code.toLowerCase() === "_index") {
     return NextResponse.json({ error: "Kode tidak valid." }, { status: 400 });
   }
 
@@ -27,15 +31,18 @@ export async function DELETE(
 }
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { code: string } }
 ) {
+  if (!isValidSameOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const code = params.code?.trim();
-  if (!code) {
+  if (!code || !CODE_PATTERN.test(code) || code.toLowerCase() === "_index") {
     return NextResponse.json({ error: "Kode tidak valid." }, { status: 400 });
   }
 

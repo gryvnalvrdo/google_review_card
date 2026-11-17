@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(Number(searchParams.get("limit") ?? 100), 25000);
+  const rawLimit = Number(searchParams.get("limit") ?? 100);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 25000) : 100;
 
   const logs = await getTapLogs(limit);
   return NextResponse.json(

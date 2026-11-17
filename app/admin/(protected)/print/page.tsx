@@ -361,8 +361,17 @@ export default function PrintQRCodesPage() {
     setCodes((prev) => {
       if (count === prev.length) return prev;
       if (count > prev.length) {
+        const seen = new Set(prev);
         const extra: string[] = [];
-        for (let i = prev.length; i < count; i++) extra.push(generateRandomCode());
+        let guard = 0;
+        while (prev.length + extra.length < count && guard < count * 10) {
+          guard++;
+          const c = generateRandomCode();
+          if (!seen.has(c)) {
+            seen.add(c);
+            extra.push(c);
+          }
+        }
         return [...prev, ...extra];
       }
       prev.slice(count).forEach((c) => composedCanvases.current.delete(c));
@@ -373,8 +382,17 @@ export default function PrintQRCodesPage() {
   function handleGenerate() {
     composedCanvases.current.clear();
     setSaveResult(null);
+    const seen = new Set<string>();
     const next: string[] = [];
-    for (let i = 0; i < count; i++) next.push(generateRandomCode());
+    let guard = 0;
+    while (next.length < count && guard < count * 10) {
+      guard++;
+      const c = generateRandomCode();
+      if (!seen.has(c)) {
+        seen.add(c);
+        next.push(c);
+      }
+    }
     setCodes(next);
     setTimeout(() => {
       document.getElementById("cards-grid-section")?.scrollIntoView({ behavior: "smooth" });
@@ -559,14 +577,9 @@ export default function PrintQRCodesPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
-            Studio Cetak QR Kartu
-          </h1>
-          <p className="mt-0.5 text-xs text-subtle">
-            Generate batch kartu HD siap cetak dan simpan otomatis ke Stok Kartu.
-          </p>
-        </div>
+        <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
+          Studio Cetak QR Kartu
+        </h1>
 
         <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums">
           <span className="rounded-lg border border-hairline bg-surface px-2.5 py-1 text-subtle">

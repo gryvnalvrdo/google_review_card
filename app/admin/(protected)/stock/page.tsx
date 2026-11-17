@@ -267,14 +267,9 @@ export default function StockPage() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
-            Stok Kartu Fisik
-          </h1>
-          <p className="mt-0.5 text-xs text-subtle">
-            Kode siap pakai hasil cetak QR sebelum dihubungkan ke toko pelanggan.
-          </p>
-        </div>
+        <h1 className="text-lg font-semibold tracking-tight text-ink sm:text-xl">
+          Stok Kartu Fisik
+        </h1>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -343,9 +338,6 @@ export default function StockPage() {
         <div className="grid grid-cols-1 gap-4 rounded-2xl border border-hairline bg-surface p-5 md:grid-cols-2">
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-ink">Generate Kode Acak ke Stok</h2>
-            <p className="text-xs text-subtle">
-              Cocok untuk menyiapkan kode sebelum menulis chip NFC atau mencetak batch baru.
-            </p>
             <div className="flex flex-wrap items-center gap-2">
               {[10, 20, 50, 100].map((n) => (
                 <button

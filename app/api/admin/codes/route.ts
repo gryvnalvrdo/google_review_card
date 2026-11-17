@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminLoggedIn } from "../../../../lib/auth";
+import { isAdminLoggedIn, isValidSameOrigin } from "../../../../lib/auth";
 import { getCard, setCard, listCards, removeStokCode, resetCardTaps } from "../../../../lib/kv";
 import { isAllowedReviewUrl } from "../../../../lib/redirect";
 
@@ -9,6 +9,8 @@ export const revalidate = 0;
 const MAX_CODE_LEN = 20;
 const MAX_NAME_LEN = 100;
 const MAX_URL_LEN = 2000;
+const MAX_MONEY = 100_000_000;
+const CODE_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 
 export async function GET() {
   if (!(await isAdminLoggedIn())) {
@@ -28,20 +30,26 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isValidSameOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!(await isAdminLoggedIn())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json().catch(() => null);
-  const code = body?.code?.trim();
-  const storeName = body?.storeName?.trim();
-  const googleReviewUrl = body?.googleReviewUrl?.trim();
-  const price = typeof body?.price === "number" ? Math.max(0, body.price) : 50000;
+  const code = typeof body?.code === "string" ? body.code.trim() : "";
+  const storeName = typeof body?.storeName === "string" ? body.storeName.trim() : "";
+  const googleReviewUrl = typeof body?.googleReviewUrl === "string" ? body.googleReviewUrl.trim() : "";
+  const rawPrice = body?.price;
+  const rawCost = body?.cost ?? body?.modal;
+  const price =
+    typeof rawPrice === "number" && Number.isFinite(rawPrice)
+      ? Math.min(MAX_MONEY, Math.max(0, Math.round(rawPrice)))
+      : 50000;
   const cost =
-    typeof body?.cost === "number"
-      ? Math.max(0, body.cost)
-      : typeof body?.modal === "number"
-      ? Math.max(0, body.modal)
+    typeof rawCost === "number" && Number.isFinite(rawCost)
+      ? Math.min(MAX_MONEY, Math.max(0, Math.round(rawCost)))
       : 0;
   const explicitResetTap = Boolean(body?.resetTaps || body?.resetTap);
 
@@ -52,9 +60,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (code.length > MAX_CODE_LEN) {
+  if (code.length > MAX_CODE_LEN || !CODE_PATTERN.test(code) || code.toLowerCase() === "_index") {
     return NextResponse.json(
-      { error: `Kode terlalu panjang (maks ${MAX_CODE_LEN} karakter).` },
+      { error: `Format kode hanya boleh huruf, angka, '-' atau '_' (3 s/d ${MAX_CODE_LEN} karakter).` },
       { status: 400 }
     );
   }
