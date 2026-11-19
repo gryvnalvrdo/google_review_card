@@ -6,7 +6,7 @@ import { formatTapDateTime, timeAgo } from "../../../../../lib/format";
 import type { CardRecord, TapLogEntry } from "../../../../../lib/types";
 
 interface IdleCardsTabProps {
-  sleepingPeriod: "today" | "last7" | "last30";
+  sleepingPeriod: "today" | "last7" | "last30" | "all";
   sleepingCards: CardRecord[];
   validLogs: TapLogEntry[];
 }
@@ -21,7 +21,9 @@ export default function IdleCardsTab({
       <div className="rounded-2xl border border-emerald-500/25 bg-surface px-6 py-12 text-center">
         <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
         <h3 className="text-sm font-semibold text-emerald-300">
-          {sleepingPeriod === "today"
+          {sleepingPeriod === "all"
+            ? "Semua Kartu Sudah Pernah Di-Tap"
+            : sleepingPeriod === "today"
             ? "Semua Kartu Sudah Tap Hari Ini"
             : sleepingPeriod === "last7"
             ? "Semua Kartu Aktif dalam 7 Hari Terakhir"

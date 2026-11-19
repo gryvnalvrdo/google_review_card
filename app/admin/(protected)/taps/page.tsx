@@ -444,10 +444,30 @@ export default function TapsPage() {
     return new Date(Math.min(minTs, Date.now()));
   }, [cards, storeFilteredLogs]);
 
-  const sleepingPeriod: "today" | "last7" | "last30" =
-    dailyMode === "last30" ? "last30" : dailyMode === "last7" ? "last7" : "today";
+  const sleepingPeriod: "today" | "last7" | "last30" | "all" =
+    dailyMode === "all"
+      ? "all"
+      : dailyMode === "last30"
+      ? "last30"
+      : dailyMode === "last7"
+      ? "last7"
+      : "today";
 
   const sleepingCards = useMemo(() => {
+    const q = search.toLowerCase();
+
+    if (sleepingPeriod === "all") {
+      const everTapped = new Set(validLogs.map((l) => l.code));
+      return cards
+        .filter(
+          (c) =>
+            !everTapped.has(c.code) &&
+            (c.tapCount ?? 0) === 0 &&
+            (c.storeName.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+        )
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
     const now = new Date();
     const cutoff = new Date(now);
     if (sleepingPeriod === "today") cutoff.setHours(0, 0, 0, 0);
@@ -462,7 +482,6 @@ export default function TapsPage() {
     const activeInPeriod = new Set(
       validLogs.filter((l) => new Date(l.tappedAt) >= cutoff).map((l) => l.code)
     );
-    const q = search.toLowerCase();
 
     return cards
       .filter(
